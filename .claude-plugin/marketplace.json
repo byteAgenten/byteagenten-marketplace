@@ -1,18 +1,64 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "byteagenten-marketplace",
-  "version": "1.0.0",
-  "description": "byteAgenten Claude Code Plugin Marketplace",
   "owner": {
     "name": "byteAgenten",
-    "email": "info@byteagenten.de"
+    "email": "info@byteagenten.de",
+    "url": "https://github.com/byteAgenten"
+  },
+  "metadata": {
+    "description": "byteAgenten Claude Code Plugin Marketplace",
+    "version": "1.0.0"
   },
   "plugins": [
     {
       "name": "bytagnt-fullstack",
-      "description": "Full-stack development toolkit for Angular 21 + Spring Boot 4 applications",
       "source": "./bytagnt-fullstack",
-      "category": "development"
+      "description": "Full-stack development toolkit for Angular 21 + Spring Boot 4 applications with 10-phase workflow",
+      "version": "1.0.0",
+      "author": {
+        "name": "byteAgenten",
+        "url": "https://github.com/byteAgenten"
+      },
+      "homepage": "https://github.com/byteAgenten/byteagenten-marketplace",
+      "repository": "https://github.com/byteAgenten/byteagenten-marketplace",
+      "license": "Proprietary",
+      "keywords": [
+        "angular",
+        "spring-boot",
+        "fullstack",
+        "development",
+        "workflow"
+      ],
+      "category": "development",
+      "strict": false,
+      "commands": [
+        "./commands/full-stack-feature.md",
+        "./commands/project-setup.md",
+        "./commands/python-expert.md",
+        "./commands/theme-factory.md",
+        "./commands/ui-design-system.md",
+        "./commands/ux-researcher-designer.md"
+      ],
+      "agents": [
+        "./agents/angular-frontend-developer.md",
+        "./agents/api-architect.md",
+        "./agents/architect-planner.md",
+        "./agents/architect-reviewer.md",
+        "./agents/code-reviewer.md",
+        "./agents/postgresql-architect.md",
+        "./agents/security-auditor.md",
+        "./agents/spring-boot-developer.md",
+        "./agents/test-engineer.md",
+        "./agents/ui-ux-designer.md"
+      ],
+      "skills": [
+        "./skills/full-stack-feature",
+        "./skills/project-setup",
+        "./skills/python-expert",
+        "./skills/theme-factory",
+        "./skills/ui-design-system",
+        "./skills/ux-researcher-designer"
+      ]
     }
   ]
 }
