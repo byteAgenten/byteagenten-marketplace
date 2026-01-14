@@ -1,0 +1,9 @@
+{
+  "name": "bytagnt-fullstack",
+  "description": "Full-stack development toolkit for Angular 21 + Spring Boot 4 applications with 10-phase workflow",
+  "version": "1.0.0",
+  "author": {
+    "name": "byteAgenten",
+    "email": "info@byteagenten.de"
+  }
+}
