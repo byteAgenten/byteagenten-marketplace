@@ -11,14 +11,49 @@ Private Claude Code Plugins for byteAgenten team members.
 ## Prerequisites
 
 1. GitHub access to byteAgenten organization
-2. GitHub CLI authenticated: `gh auth login`
+2. GitHub token set: `export GITHUB_TOKEN=ghp_xxx` (or use `gh auth login`)
 
 ## Installation
 
-### bytagnt-fullstack
+### Option 1: Manual Configuration (Recommended)
 
-```bash
-claude plugins add github:byteAgenten/byteagenten-marketplace/bytagnt-fullstack
+Add this to your project's `.claude/settings.json`:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "bytagnt-fullstack": {
+      "source": {
+        "source": "github",
+        "repo": "byteAgenten/byteagenten-marketplace",
+        "path": "bytagnt-fullstack"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "bytagnt-fullstack@bytagnt-fullstack": true
+  }
+}
+```
+
+### Option 2: Pin to Specific Version
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "bytagnt-fullstack": {
+      "source": {
+        "source": "github",
+        "repo": "byteAgenten/byteagenten-marketplace",
+        "ref": "v1.0.0",
+        "path": "bytagnt-fullstack"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "bytagnt-fullstack@bytagnt-fullstack": true
+  }
+}
 ```
 
 ## Available Commands
