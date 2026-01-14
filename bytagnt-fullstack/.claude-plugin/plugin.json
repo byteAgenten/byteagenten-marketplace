@@ -1,8 +1,20 @@
 {
   "name": "bytagnt-fullstack",
-  "description": "Full-stack development toolkit for Angular 21 + Spring Boot 4 applications",
   "version": "1.0.0",
+  "description": "Full-stack development toolkit for Angular 21 + Spring Boot 4 applications",
   "author": {
-    "name": "byteAgenten"
-  }
+    "name": "byteAgenten",
+    "email": "info@byteagenten.de"
+  },
+  "repository": "https://github.com/byteAgenten/byteagenten-marketplace",
+  "license": "Proprietary",
+  "keywords": [
+    "angular",
+    "spring-boot",
+    "fullstack",
+    "development",
+    "workflow"
+  ],
+  "commands": "./commands",
+  "agents": "./agents"
 }
