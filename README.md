@@ -22,16 +22,15 @@ Add this to your project's `.claude/settings.json`:
 ```json
 {
   "extraKnownMarketplaces": {
-    "byt8": {
+    "byteagenten-marketplace": {
       "source": {
         "source": "github",
-        "repo": "byteAgenten/byteagenten-marketplace",
-        "path": "byt8"
+        "repo": "byteAgenten/byteagenten-marketplace"
       }
     }
   },
   "enabledPlugins": {
-    "byt8@byt8": true
+    "byt8@byteagenten-marketplace": true
   }
 }
 ```
@@ -41,17 +40,16 @@ Add this to your project's `.claude/settings.json`:
 ```json
 {
   "extraKnownMarketplaces": {
-    "byt8": {
+    "byteagenten-marketplace": {
       "source": {
         "source": "github",
         "repo": "byteAgenten/byteagenten-marketplace",
-        "ref": "v1.0.0",
-        "path": "byt8"
+        "ref": "v1.0.0"
       }
     }
   },
   "enabledPlugins": {
-    "byt8@byt8": true
+    "byt8@byteagenten-marketplace": true
   }
 }
 ```

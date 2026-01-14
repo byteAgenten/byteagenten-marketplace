@@ -25,7 +25,15 @@ Füge in deinem Projekt `.claude/settings.json` hinzu:
 
 ```json
 {
-  "plugins": {
+  "extraKnownMarketplaces": {
+    "byteagenten-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "byteAgenten/byteagenten-marketplace"
+      }
+    }
+  },
+  "enabledPlugins": {
     "byt8@byteagenten-marketplace": true
   }
 }
