@@ -4,4 +4,4 @@ description: One-time project initialization skill. Sets up design system (theme
 
 Führe das Project Setup aus.
 
-Lies zuerst den Skill unter `.claude-plugins/byteagent/skills/project-setup/SKILL.md` und folge dem dort definierten Workflow exakt.
+Lies zuerst den Skill unter `${CLAUDE_PLUGIN_ROOT}/skills/project-setup/SKILL.md` und folge dem dort definierten Workflow exakt.

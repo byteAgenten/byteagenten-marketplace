@@ -4,6 +4,6 @@ description: UI design system toolkit for Senior UI Designer including design to
 
 Arbeite mit dem UI Design System.
 
-Lies zuerst den Skill unter `.claude-plugins/byteagent/skills/ui-design-system/SKILL.md` und folge dem dort definierten Workflow exakt.
+Lies zuerst den Skill unter `${CLAUDE_PLUGIN_ROOT}/skills/ui-design-system/SKILL.md` und folge dem dort definierten Workflow exakt.
 
 Aufgabe: $ARGUMENTS
