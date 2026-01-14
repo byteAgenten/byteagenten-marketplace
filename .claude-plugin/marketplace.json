@@ -11,7 +11,7 @@
     {
       "name": "bytagnt-fullstack",
       "description": "Full-stack development toolkit for Angular 21 + Spring Boot 4 applications",
-      "source": "../bytagnt-fullstack",
+      "source": "./bytagnt-fullstack",
       "category": "development"
     }
   ]
