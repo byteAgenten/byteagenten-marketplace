@@ -4,8 +4,10 @@
   "description": "Full-stack development toolkit for Angular 21 + Spring Boot 4 applications",
   "author": {
     "name": "byteAgenten",
-    "email": "info@byteagenten.de"
+    "email": "info@byteagenten.de",
+    "url": "https://github.com/byteAgenten"
   },
+  "homepage": "https://github.com/byteAgenten/byteagenten-marketplace",
   "repository": "https://github.com/byteAgenten/byteagenten-marketplace",
   "license": "Proprietary",
   "keywords": [
@@ -15,6 +17,5 @@
     "development",
     "workflow"
   ],
-  "commands": "./commands",
-  "agents": "./agents"
+  "category": "development"
 }
