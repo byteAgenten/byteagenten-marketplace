@@ -155,15 +155,15 @@ START → Issue erkennen → Branch erstellen
 
 | Phase | Agent | Aufgabe | Reihenfolge |
 |-------|-------|---------|-------------|
-| 0 | `byteagent:architect-planner` | Technical Spec erstellen | |
-| 1 | `byteagent:ui-ux-designer` | Wireframes (mit Tech Spec Input) | |
-| 2 | `byteagent:api-architect` | API-Skizze (workflow-state) | |
-| 3 | `byteagent:postgresql-architect` | Migrations | |
-| 4 | `byteagent:spring-boot-developer` | Java + Tests | |
-| 5 | `byteagent:angular-frontend-developer` | Angular + Tests | |
-| 6.1 | `byteagent:test-engineer` | E2E-Tests | 1️⃣ ZUERST |
-| 6.2 | `byteagent:security-auditor` | Security-Audit | 2️⃣ DANACH |
-| 7 | `byteagent:code-reviewer` | Review + Hotfix | |
+| 0 | `architect-planner` | Technical Spec erstellen | |
+| 1 | `ui-ux-designer` | Wireframes (mit Tech Spec Input) | |
+| 2 | `api-architect` | API-Skizze (workflow-state) | |
+| 3 | `postgresql-architect` | Migrations | |
+| 4 | `spring-boot-developer` | Java + Tests | |
+| 5 | `angular-frontend-developer` | Angular + Tests | |
+| 6.1 | `test-engineer` | E2E-Tests | 1️⃣ ZUERST |
+| 6.2 | `security-auditor` | Security-Audit | 2️⃣ DANACH |
+| 7 | `code-reviewer` | Review + Hotfix | |
 | 8 | Claude (nur Git) | Push + PR | |
 | 9 | Claude (nur Git) | Merge (nach Checkliste) | |
 | 10 | Claude (Cleanup) | Branch löschen, State → idle | |
@@ -214,7 +214,7 @@ START → Issue erkennen → Branch erstellen
     "action": "CONTINUE_PHASE_3",
     "phase": 3,
     "description": "Database Migrations fortsetzen",
-    "agent": "byteagent:postgresql-architect"
+    "agent": "postgresql-architect"
   },
   "context": {
     "wireframes": {
