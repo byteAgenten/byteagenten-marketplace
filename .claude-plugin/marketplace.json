@@ -1,18 +1,18 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "byteagenten-marketplace",
-  "version": "1.0.0",
-  "description": "byteAgenten Claude Code Plugin Marketplace",
   "owner": {
     "name": "byteAgenten",
     "email": "info@byteagenten.de"
+  },
+  "metadata": {
+    "description": "byteAgenten Claude Code Plugin Marketplace",
+    "version": "1.0.0"
   },
   "plugins": [
     {
       "name": "bytagnt-fullstack",
       "description": "Full-stack development toolkit for Angular 21 + Spring Boot 4 applications with 10-phase workflow",
-      "source": "./bytagnt-fullstack",
-      "category": "development"
+      "source": "./bytagnt-fullstack"
     }
   ]
 }
