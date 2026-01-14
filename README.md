@@ -6,7 +6,7 @@ Private Claude Code Plugins for byteAgenten team members.
 
 | Plugin | Description | Version |
 |--------|-------------|---------|
-| [bytagnt-fullstack](./bytagnt-fullstack) | Full-stack development toolkit for Angular 21 + Spring Boot 4 | 1.0.0 |
+| [byt8](./byt8) | Full-stack development toolkit for Angular 21 + Spring Boot 4 | 1.0.0 |
 
 ## Prerequisites
 
@@ -22,16 +22,16 @@ Add this to your project's `.claude/settings.json`:
 ```json
 {
   "extraKnownMarketplaces": {
-    "bytagnt-fullstack": {
+    "byt8": {
       "source": {
         "source": "github",
         "repo": "byteAgenten/byteagenten-marketplace",
-        "path": "bytagnt-fullstack"
+        "path": "byt8"
       }
     }
   },
   "enabledPlugins": {
-    "bytagnt-fullstack@bytagnt-fullstack": true
+    "byt8@byt8": true
   }
 }
 ```
@@ -41,17 +41,17 @@ Add this to your project's `.claude/settings.json`:
 ```json
 {
   "extraKnownMarketplaces": {
-    "bytagnt-fullstack": {
+    "byt8": {
       "source": {
         "source": "github",
         "repo": "byteAgenten/byteagenten-marketplace",
         "ref": "v1.0.0",
-        "path": "bytagnt-fullstack"
+        "path": "byt8"
       }
     }
   },
   "enabledPlugins": {
-    "bytagnt-fullstack@bytagnt-fullstack": true
+    "byt8@byt8": true
   }
 }
 ```
@@ -62,12 +62,12 @@ After installation, the following commands are available:
 
 | Command | Description |
 |---------|-------------|
-| `/bytagnt-fullstack:full-stack-feature` | 10-phase workflow for full-stack feature development |
-| `/bytagnt-fullstack:project-setup` | One-time design system initialization |
-| `/bytagnt-fullstack:theme-factory` | Apply themes to artifacts (slides, docs, etc.) |
-| `/bytagnt-fullstack:ui-design-system` | UI design system toolkit |
-| `/bytagnt-fullstack:ux-researcher-designer` | UX research and design methodology |
-| `/bytagnt-fullstack:python-expert` | Python development support |
+| `/byt8:full-stack-feature` | 10-phase workflow for full-stack feature development |
+| `/byt8:project-setup` | One-time design system initialization |
+| `/byt8:theme-factory` | Apply themes to artifacts (slides, docs, etc.) |
+| `/byt8:ui-design-system` | UI design system toolkit |
+| `/byt8:ux-researcher-designer` | UX research and design methodology |
+| `/byt8:python-expert` | Python development support |
 
 ## Plugin Architecture
 
@@ -76,19 +76,19 @@ Each plugin is independently installable and versioned:
 ```
 byteagenten-marketplace/
 ├── marketplace.json           # Plugin registry
-├── bytagnt-fullstack/         # Full-stack development
+├── byt8/         # Full-stack development
 │   ├── .claude-plugin/
 │   │   └── plugin.json
 │   ├── agents/                # 10 specialized agents
 │   ├── commands/              # 6 slash commands
 │   └── skills/                # Workflow implementations
-├── bytagnt-docs/              # (planned)
-└── bytagnt-design/            # (planned)
+├── byt8-docs/              # (planned)
+└── byt8-design/            # (planned)
 ```
 
 ## Adding New Plugins
 
-1. Create a new folder: `bytagnt-[name]/`
+1. Create a new folder: `byt8-[name]/`
 2. Add `.claude-plugin/plugin.json` with unique name
 3. Add commands, agents, and skills
 4. Update root `marketplace.json`

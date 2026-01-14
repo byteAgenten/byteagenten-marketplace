@@ -10,9 +10,9 @@
   },
   "plugins": [
     {
-      "name": "bytagnt-fullstack",
+      "name": "byt8",
       "description": "Full-stack development toolkit for Angular 21 + Spring Boot 4 applications with 10-phase workflow",
-      "source": "./plugins/bytagnt-fullstack",
+      "source": "./plugins/byt8",
       "commands": [
         "./commands/full-stack-feature.md",
         "./commands/project-setup.md",

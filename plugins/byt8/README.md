@@ -1,4 +1,4 @@
-# bytagnt-fullstack Plugin
+# byt8 Plugin
 
 Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 10-Phasen Workflow und Approval Gates.
 
@@ -16,7 +16,7 @@ Dieses Plugin orchestriert spezialisierte Agents durch einen strukturierten Entw
 
 ```bash
 # In Claude Code
-/plugins install bytagnt-fullstack
+/plugins install byt8
 ```
 
 ### Via GitHub
@@ -26,7 +26,7 @@ Füge in deinem Projekt `.claude/settings.json` hinzu:
 ```json
 {
   "plugins": {
-    "bytagnt-fullstack@byteagenten-marketplace": true
+    "byt8@byteagenten-marketplace": true
   }
 }
 ```
@@ -37,17 +37,17 @@ Füge in deinem Projekt `.claude/settings.json` hinzu:
 
 | Command | Beschreibung |
 |---------|--------------|
-| `/bytagnt-fullstack:full-stack-feature` | 10-Phasen Feature Development Workflow |
-| `/bytagnt-fullstack:project-setup` | Einmalige Design System Initialisierung |
-| `/bytagnt-fullstack:theme-factory` | Theme-Auswahl und -Generierung |
-| `/bytagnt-fullstack:ui-design-system` | UI Design System Toolkit |
-| `/bytagnt-fullstack:ux-researcher-designer` | UX Research und Design Workflow |
-| `/bytagnt-fullstack:python-expert` | Python Development Support |
+| `/byt8:full-stack-feature` | 10-Phasen Feature Development Workflow |
+| `/byt8:project-setup` | Einmalige Design System Initialisierung |
+| `/byt8:theme-factory` | Theme-Auswahl und -Generierung |
+| `/byt8:ui-design-system` | UI Design System Toolkit |
+| `/byt8:ux-researcher-designer` | UX Research und Design Workflow |
+| `/byt8:python-expert` | Python Development Support |
 
 ### Beispiel
 
 ```bash
-/bytagnt-fullstack:full-stack-feature #42
+/byt8:full-stack-feature #42
 ```
 
 ---
@@ -113,7 +113,7 @@ Der Workflow pausiert an kritischen Punkten für User-Approval:
 ## Plugin-Struktur
 
 ```
-bytagnt-fullstack/
+byt8/
 ├── .claude-plugin/
 │   └── plugin.json
 ├── agents/
