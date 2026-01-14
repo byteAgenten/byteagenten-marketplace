@@ -1,0 +1,25 @@
+{
+  "name": "byteagenten-marketplace",
+  "description": "byteAgenten Claude Code Plugin Marketplace",
+  "owner": {
+    "name": "byteAgenten"
+  },
+  "plugins": [
+    {
+      "name": "bytagnt-fullstack",
+      "path": "./bytagnt-fullstack",
+      "description": "Full-stack development toolkit for Angular 21 + Spring Boot 4 applications",
+      "version": "1.0.0",
+      "category": "development",
+      "installation": "claude plugins add github:byteAgenten/byteagenten-marketplace/bytagnt-fullstack",
+      "commands": [
+        "bytagnt-fullstack:full-stack-feature",
+        "bytagnt-fullstack:project-setup",
+        "bytagnt-fullstack:theme-factory",
+        "bytagnt-fullstack:ui-design-system",
+        "bytagnt-fullstack:ux-researcher-designer",
+        "bytagnt-fullstack:python-expert"
+      ]
+    }
+  ]
+}
