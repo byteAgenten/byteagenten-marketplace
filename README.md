@@ -6,7 +6,7 @@ Private Claude Code Plugins for byteAgenten team members.
 
 | Plugin | Description | Version |
 |--------|-------------|---------|
-| [byt8](./byt8) | Full-stack development toolkit for Angular 21 + Spring Boot 4 | 1.0.0 |
+| [byt8](./plugins/byt8) | Full-stack development toolkit for Angular 21 + Spring Boot 4 | 1.0.0 |
 
 ## Prerequisites
 
@@ -73,23 +73,26 @@ Each plugin is independently installable and versioned:
 
 ```
 byteagenten-marketplace/
-├── marketplace.json           # Plugin registry
-├── byt8/         # Full-stack development
-│   ├── .claude-plugin/
-│   │   └── plugin.json
-│   ├── agents/                # 10 specialized agents
-│   ├── commands/              # 6 slash commands
-│   └── skills/                # Workflow implementations
-├── byt8-docs/              # (planned)
-└── byt8-design/            # (planned)
+├── .claude-plugin/
+│   └── marketplace.json       # Plugin registry
+├── plugins/
+│   ├── byt8/                  # Full-stack development
+│   │   ├── .claude-plugin/
+│   │   │   └── plugin.json
+│   │   ├── agents/            # 10 specialized agents
+│   │   ├── commands/          # 6 slash commands
+│   │   └── skills/            # Workflow implementations
+│   ├── byt8-docs/             # (planned)
+│   └── byt8-design/           # (planned)
+└── README.md
 ```
 
 ## Adding New Plugins
 
-1. Create a new folder: `byt8-[name]/`
+1. Create a new folder: `plugins/byt8-[name]/`
 2. Add `.claude-plugin/plugin.json` with unique name
 3. Add commands, agents, and skills
-4. Update root `marketplace.json`
+4. Update `.claude-plugin/marketplace.json`
 5. Create PR for review
 
 ## License
