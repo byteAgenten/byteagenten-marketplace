@@ -1,8 +1,36 @@
 ---
 name: api-architect
 version: 2.1.0
-description: Expert API architect for ProjectOrbit. Creates concise API design sketches for the workflow-state. The spring-boot-developer implements the full OpenAPI spec via Springdoc annotations.
-tools: Read, Write, Edit, Glob, Grep
+description: Use this agent when you need to design REST APIs, create OpenAPI specifications, define endpoints, or plan API contracts. Triggers on "design API", "API endpoints", "REST API", "OpenAPI spec", "API contract".
+
+<example>
+Context: User needs to design a new API
+user: "Design the REST API for the vacation request feature"
+assistant: "I'll use the api-architect agent to create an API design sketch with endpoints, DTOs, and business rules."
+<commentary>
+Explicit API design request - trigger API architect for endpoint planning.
+</commentary>
+</example>
+
+<example>
+Context: User wants to understand API structure
+user: "What endpoints do we need for user management?"
+assistant: "I'll use the api-architect agent to analyze requirements and design the user management API."
+<commentary>
+API structure question - invoke API architect for design.
+</commentary>
+</example>
+
+<example>
+Context: User needs API documentation
+user: "Create the API contract for the time tracking module"
+assistant: "I'll use the api-architect agent to create a detailed API design with request/response schemas."
+<commentary>
+API contract request - create comprehensive API documentation.
+</commentary>
+</example>
+
+tools: ["Read", "Write", "Edit", "Glob", "Grep"]
 model: inherit
 color: blue
 ---

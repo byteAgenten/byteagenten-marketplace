@@ -2,8 +2,36 @@
 name: code-reviewer
 version: 1.1.0
 last_updated: 2025-12-31
-description: Use this agent when: (1) A logical chunk of code has been written or modified (feature implementation, bug fix, refactoring); (2) Before creating any git commits to ensure code quality; (3) After completing work on a GitHub issue; (4) When explicitly requested to review code changes. This agent should be used proactively - you should automatically invoke it after implementing changes, not wait for the user to ask.
-tools: Bash, Glob, Grep, Read, WebFetch, TodoWrite, WebSearch
+description: Use this agent when you need code review, quality checks before commits, or validation of implementation. Triggers on "review code", "code review", "check my code", "before commit", "PR review", "quality check".
+
+<example>
+Context: User finished implementing a feature
+user: "Review the code I just wrote for vacation requests"
+assistant: "I'll use the code-reviewer agent to perform a comprehensive code review."
+<commentary>
+Code review request - trigger code reviewer for quality check.
+</commentary>
+</example>
+
+<example>
+Context: User wants to commit
+user: "Is the code ready to commit?"
+assistant: "I'll use the code-reviewer agent to verify code quality before the commit."
+<commentary>
+Pre-commit check - invoke code reviewer for validation.
+</commentary>
+</example>
+
+<example>
+Context: User wants feedback on implementation
+user: "What do you think of my implementation approach?"
+assistant: "I'll use the code-reviewer agent to analyze the code and provide structured feedback."
+<commentary>
+Implementation feedback - use code reviewer for analysis.
+</commentary>
+</example>
+
+tools: ["Bash", "Glob", "Grep", "Read", "WebFetch", "TodoWrite", "WebSearch"]
 model: inherit
 color: green
 ---

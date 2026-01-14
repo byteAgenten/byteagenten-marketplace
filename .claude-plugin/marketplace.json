@@ -2,7 +2,7 @@
   "name": "byteagenten-marketplace",
   "owner": {
     "name": "byteAgenten",
-    "email": "info@byteagenten.de"
+    "email": "hans.pickelmann@byteagenten.de"
   },
   "metadata": {
     "description": "byteAgenten Claude Code Plugin Marketplace",
@@ -12,7 +12,35 @@
     {
       "name": "bytagnt-fullstack",
       "description": "Full-stack development toolkit for Angular 21 + Spring Boot 4 applications with 10-phase workflow",
-      "source": "./bytagnt-fullstack"
+      "source": "./plugins/bytagnt-fullstack",
+      "commands": [
+        "./commands/full-stack-feature.md",
+        "./commands/project-setup.md",
+        "./commands/theme-factory.md",
+        "./commands/ui-design-system.md",
+        "./commands/ux-researcher-designer.md",
+        "./commands/python-expert.md"
+      ],
+      "agents": [
+        "./agents/architect-planner.md",
+        "./agents/api-architect.md",
+        "./agents/angular-frontend-developer.md",
+        "./agents/spring-boot-developer.md",
+        "./agents/postgresql-architect.md",
+        "./agents/test-engineer.md",
+        "./agents/ui-ux-designer.md",
+        "./agents/security-auditor.md",
+        "./agents/code-reviewer.md",
+        "./agents/architect-reviewer.md"
+      ],
+      "skills": [
+        "./skills/full-stack-feature",
+        "./skills/project-setup",
+        "./skills/theme-factory",
+        "./skills/ui-design-system",
+        "./skills/ux-researcher-designer",
+        "./skills/python-expert"
+      ]
     }
   ]
 }

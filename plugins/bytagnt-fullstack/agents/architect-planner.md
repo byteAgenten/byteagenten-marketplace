@@ -2,8 +2,36 @@
 name: architect-planner
 version: 2.2.1
 last_updated: 2026-01-06
-description: Architecture planning specialist. Creates Technical Specifications BEFORE implementation. Guides all downstream agents with architecture knowledge.
-tools: Read, Write, Edit, Bash, Glob, Grep
+description: Use this agent when you need to plan a new feature, create a technical specification, analyze requirements, or design the architecture before implementation. Triggers on "plan feature", "technical spec", "architecture design", "how should we implement", "design this feature".
+
+<example>
+Context: User wants to implement a new feature
+user: "I need to implement user notifications. How should we design this?"
+assistant: "I'll use the architect-planner agent to create a technical specification for the notification feature."
+<commentary>
+User asks for design guidance before implementation - trigger architecture planning.
+</commentary>
+</example>
+
+<example>
+Context: User has a GitHub issue to implement
+user: "Plan the implementation for issue #42"
+assistant: "I'll use the architect-planner agent to analyze the requirements and create a technical specification."
+<commentary>
+Explicit planning request for an issue - create technical spec first.
+</commentary>
+</example>
+
+<example>
+Context: User wants to understand the best approach
+user: "What's the best way to add vacation tracking to our app?"
+assistant: "I'll use the architect-planner agent to analyze the codebase and design the optimal architecture."
+<commentary>
+Architecture question requiring analysis - invoke planning agent.
+</commentary>
+</example>
+
+tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
 model: inherit
 color: blue
 ---

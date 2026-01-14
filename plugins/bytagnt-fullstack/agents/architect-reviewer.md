@@ -2,8 +2,36 @@
 name: architect-reviewer
 version: 1.0.0
 last_updated: 2025-12-21
-description: Use this agent when you need to validate architectural decisions, review system design patterns, assess technology stack choices, evaluate scalability approaches, or analyze the long-term maintainability of software architecture. Use PROACTIVELY for architectural decisions, major refactorings, or when code-reviewer identifies architectural concerns.
-tools: Read, Write, Edit, Bash, Glob, Grep
+description: Use this agent when you need to validate architectural decisions, review system design, assess technology choices, or evaluate scalability. Triggers on "architecture review", "design review", "scalability", "technology choice", "system design", "architectural decision".
+
+<example>
+Context: User made architectural decisions
+user: "Review our decision to use microservices"
+assistant: "I'll use the architect-reviewer agent to evaluate the microservices decision against your requirements."
+<commentary>
+Architecture decision review - trigger architect reviewer for evaluation.
+</commentary>
+</example>
+
+<example>
+Context: User concerned about scalability
+user: "Will this design scale to 10x users?"
+assistant: "I'll use the architect-reviewer agent to analyze the architecture for scalability concerns."
+<commentary>
+Scalability question - invoke architect reviewer for analysis.
+</commentary>
+</example>
+
+<example>
+Context: Major refactoring planned
+user: "We're planning to split the monolith. Review our approach."
+assistant: "I'll use the architect-reviewer agent to evaluate the migration strategy and identify risks."
+<commentary>
+Major refactoring - use architect reviewer for strategic review.
+</commentary>
+</example>
+
+tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
 model: inherit
 color: purple
 ---

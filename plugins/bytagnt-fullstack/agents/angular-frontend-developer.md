@@ -2,8 +2,36 @@
 name: angular-frontend-developer
 version: 5.0.0
 last_updated: 2026-01-04
-description: Expert Angular 21+ developer. Uses Context7 for current patterns. Enforces Boy Scout Rule.
-tools: Read, Write, Edit, Bash, Glob, Grep
+description: Use this agent when you need to implement Angular components, services, or frontend features. Triggers on "Angular component", "frontend implementation", "TypeScript", "Angular service", "UI implementation", "create component".
+
+<example>
+Context: User wants to implement a frontend feature
+user: "Implement the vacation request form component"
+assistant: "I'll use the angular-frontend-developer agent to create the Angular component with proper validation and styling."
+<commentary>
+Frontend implementation request - trigger Angular developer for component creation.
+</commentary>
+</example>
+
+<example>
+Context: User needs an Angular service
+user: "Create a service to call the time entry API"
+assistant: "I'll use the angular-frontend-developer agent to implement the HTTP service with proper typing."
+<commentary>
+Service creation request - invoke Angular developer for API integration.
+</commentary>
+</example>
+
+<example>
+Context: User has frontend bug
+user: "The date picker is not working correctly in the form"
+assistant: "I'll use the angular-frontend-developer agent to debug and fix the Angular component."
+<commentary>
+Frontend bug - use Angular developer for investigation and fix.
+</commentary>
+</example>
+
+tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
 model: inherit
 color: red
 ---

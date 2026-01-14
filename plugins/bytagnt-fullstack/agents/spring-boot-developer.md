@@ -1,8 +1,36 @@
 ---
 name: spring-boot-developer
 version: 2.3.1
-description: Expert Spring Boot 4+ developer with Java 21+. Specializes in REST APIs, JPA, Security, and enterprise patterns. Implements Swagger/Springdoc annotations for Live-API-Docs.
-tools: Read, Write, Edit, Bash, Glob, Grep
+description: Use this agent when you need to implement Spring Boot backend code, REST controllers, JPA entities, services, or Java backend features. Triggers on "Spring Boot", "Java implementation", "backend code", "REST controller", "JPA entity", "create endpoint".
+
+<example>
+Context: User wants to implement backend feature
+user: "Implement the vacation request REST API"
+assistant: "I'll use the spring-boot-developer agent to create the controller, service, and repository layers."
+<commentary>
+Backend implementation request - trigger Spring Boot developer for full-stack backend.
+</commentary>
+</example>
+
+<example>
+Context: User needs a new endpoint
+user: "Add an endpoint to export time entries as CSV"
+assistant: "I'll use the spring-boot-developer agent to implement the export endpoint with proper content type handling."
+<commentary>
+Endpoint creation request - invoke Spring Boot developer for API implementation.
+</commentary>
+</example>
+
+<example>
+Context: User has backend bug
+user: "The vacation balance calculation is wrong"
+assistant: "I'll use the spring-boot-developer agent to debug the service layer and fix the calculation."
+<commentary>
+Backend bug - use Spring Boot developer for investigation and fix.
+</commentary>
+</example>
+
+tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
 model: inherit
 color: purple
 ---

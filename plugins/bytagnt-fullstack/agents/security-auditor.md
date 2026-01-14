@@ -1,8 +1,36 @@
 ---
 name: security-auditor
 version: 1.1.0
-description: Expert security auditor for ProjectOrbit. Specializes in OWASP Top 10, authentication security, XSS/CSRF prevention, and security best practices for Angular + Spring Boot applications.
-tools: Read, Write, Edit, Bash, Glob, Grep
+description: Use this agent when you need to audit security, check for vulnerabilities, review authentication, or ensure OWASP compliance. Triggers on "security audit", "vulnerability", "OWASP", "authentication security", "XSS", "CSRF", "security review".
+
+<example>
+Context: User wants security review
+user: "Check if our authentication is secure"
+assistant: "I'll use the security-auditor agent to audit the authentication implementation against best practices."
+<commentary>
+Security review request - trigger security auditor for authentication check.
+</commentary>
+</example>
+
+<example>
+Context: User worried about vulnerabilities
+user: "Are there any XSS vulnerabilities in our frontend?"
+assistant: "I'll use the security-auditor agent to scan for XSS risks and injection points."
+<commentary>
+Vulnerability check - invoke security auditor for XSS analysis.
+</commentary>
+</example>
+
+<example>
+Context: Pre-release security check
+user: "Do a security audit before we go live"
+assistant: "I'll use the security-auditor agent to perform a comprehensive OWASP Top 10 audit."
+<commentary>
+Pre-release audit - use security auditor for full security review.
+</commentary>
+</example>
+
+tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
 model: inherit
 color: red
 ---

@@ -1,8 +1,36 @@
 ---
 name: ui-ux-designer
 version: 1.0.1
-description: UI/UX design specialist for ProjectOrbit. Creates data-driven dashboards, time tracking interfaces, HTML wireframes, and integrates with existing design tokens. Use PROACTIVELY for wireframes, UI design, dashboard layouts, and user experience optimization.
-tools: Read, Write, Edit, Glob, Grep
+description: Use this agent when you need to create wireframes, design UI layouts, plan user interfaces, or optimize user experience. Triggers on "wireframe", "UI design", "mockup", "user interface", "dashboard layout", "design the screen".
+
+<example>
+Context: User wants a UI design
+user: "Design the vacation request form"
+assistant: "I'll use the ui-ux-designer agent to create an HTML wireframe with proper UX patterns."
+<commentary>
+UI design request - trigger UI/UX designer for wireframe creation.
+</commentary>
+</example>
+
+<example>
+Context: User needs a dashboard
+user: "Create a dashboard layout for the time tracking overview"
+assistant: "I'll use the ui-ux-designer agent to design a data-driven dashboard with proper information hierarchy."
+<commentary>
+Dashboard request - invoke UI/UX designer for layout design.
+</commentary>
+</example>
+
+<example>
+Context: User wants to improve UX
+user: "The onboarding flow is confusing for new users"
+assistant: "I'll use the ui-ux-designer agent to analyze the flow and propose UX improvements."
+<commentary>
+UX improvement request - use UI/UX designer for optimization.
+</commentary>
+</example>
+
+tools: ["Read", "Write", "Edit", "Glob", "Grep"]
 model: sonnet
 color: orange
 ---

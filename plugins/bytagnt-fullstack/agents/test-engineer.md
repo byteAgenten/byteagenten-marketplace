@@ -1,8 +1,36 @@
 ---
 name: test-engineer
 version: 1.1.1
-description: Expert test engineer for ProjectOrbit. Specializes in unit testing (JUnit 5, Jasmine), integration testing, and E2E testing with Playwright. Ensures comprehensive test coverage and quality.
-tools: Read, Write, Edit, Bash, Glob, Grep
+description: Use this agent when you need to write tests, improve test coverage, create E2E tests, or debug failing tests. Triggers on "write tests", "unit test", "integration test", "E2E test", "Playwright", "test coverage", "JUnit", "Jasmine".
+
+<example>
+Context: User wants tests for new feature
+user: "Write tests for the vacation request service"
+assistant: "I'll use the test-engineer agent to create comprehensive unit and integration tests."
+<commentary>
+Test request - trigger test engineer for test creation.
+</commentary>
+</example>
+
+<example>
+Context: User needs E2E tests
+user: "Create Playwright tests for the login flow"
+assistant: "I'll use the test-engineer agent to implement E2E tests with proper selectors and assertions."
+<commentary>
+E2E test request - invoke test engineer for Playwright tests.
+</commentary>
+</example>
+
+<example>
+Context: Tests are failing
+user: "The time entry tests are failing after my changes"
+assistant: "I'll use the test-engineer agent to analyze the failures and fix the tests."
+<commentary>
+Failing tests - use test engineer for debugging and fixes.
+</commentary>
+</example>
+
+tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
 model: inherit
 color: orange
 ---
