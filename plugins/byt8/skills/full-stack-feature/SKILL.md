@@ -19,27 +19,68 @@ author: byteagent - Hans Pickelmann
 cat CLAUDE.md 2>/dev/null | head -20 || echo "NICHT VORHANDEN"
 ```
 
-**Falls NICHT VORHANDEN → SOFORT STOPPEN!**
+**Falls NICHT VORHANDEN → Projekt scannen und CLAUDE.md erstellen:**
 
 ```
-⛔ STOP! Projekt nicht initialisiert.
-
-Dieses Projekt hat keine CLAUDE.md. Der Workflow kann NICHT gestartet werden.
-
-Bitte führe in deinem Terminal aus:
-  claude init
-
-Dies scannt dein Projekt und erstellt eine CLAUDE.md mit Projekt-Kontext.
-
-Danach erneut /byt8:full-stack-feature aufrufen.
+ℹ️ Keine CLAUDE.md gefunden. Ich scanne das Projekt und erstelle eine.
 ```
 
-**⚠️ WICHTIG: Claude darf KEINE eigene CLAUDE.md erstellen!**
-- Nur `claude init` scannt das Projekt korrekt
-- Eine manuell erstellte CLAUDE.md hat keinen Projekt-Kontext
-- Der Workflow wird ohne korrektes Projekt-Scanning fehlschlagen
+**Claude MUSS folgende Schritte ausführen:**
 
-**KEINE Alternative anbieten! Einfach stoppen und warten.**
+1. **Projekt-Struktur analysieren:**
+```bash
+find . -type f -name "*.json" -o -name "*.md" -o -name "*.java" -o -name "*.ts" | head -50
+ls -la
+```
+
+2. **Package-Dateien lesen (falls vorhanden):**
+   - `package.json` (Frontend)
+   - `pom.xml` oder `build.gradle` (Backend)
+   - `README.md`
+
+3. **CLAUDE.md mit Write-Tool erstellen:**
+
+```markdown
+# CLAUDE.md
+
+This file provides guidance to Claude Code when working with this repository.
+
+## byt8 Workflow Recovery
+
+Bei Session-Start oder Context-Overflow IMMER prüfen:
+
+\`\`\`bash
+cat .workflow/workflow-state.json 2>/dev/null || echo "KEIN WORKFLOW"
+\`\`\`
+
+Falls `"status": "active"`:
+→ Skill neu laden: `/byt8:full-stack-feature`
+→ Workflow wird automatisch fortgesetzt
+
+---
+
+## Project Overview
+
+[Kurze Beschreibung basierend auf README/package.json]
+
+## Tech Stack
+
+- Frontend: [aus package.json]
+- Backend: [aus pom.xml/build.gradle]
+- Database: [falls erkennbar]
+
+## Repository Structure
+
+[Wichtigste Ordner auflisten]
+```
+
+4. **User informieren:**
+```
+✅ CLAUDE.md erstellt mit Projekt-Kontext und Recovery-Sektion.
+   Workflow kann jetzt gestartet werden.
+```
+
+5. **Weiter zu Schritt 3** (Workflow-State prüfen)
 
 ### Schritt 2: Recovery-Sektion in CLAUDE.md vorhanden?
 
