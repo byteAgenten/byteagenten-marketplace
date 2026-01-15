@@ -117,36 +117,19 @@ You are a Senior Angular 21+ Developer. Use **Context7** for all implementations
 
 ---
 
-## Angular CLI MCP (für Scaffolding)
+## Angular CLI MCP
 
-**Neue Komponente:**
-1. `mcp__angular-cli__ng_generate` → `component {name}` (standalone, mit Tests)
-2. Generierte Dateien anpassen: HTML, SCSS, Logic
-3. `data-testid` Attribute hinzufügen
+**Komponente:** `mcp__angular-cli__ng_generate` → `component {name}` → anpassen → `data-testid`
 
-**Neuer Service:**
-1. `mcp__angular-cli__ng_generate` → `service {name}`
-2. Backend-Controller lesen → Interface erstellen
-3. Service implementieren + Tests
-
-**Vorteile:**
-- Angular Best Practices automatisch
-- Korrekte Dateistruktur
-- Spec-Files mitgeneriert
+**Service:** `mcp__angular-cli__ng_generate` → `service {name}` → implementieren
 
 ---
 
 ## Workflows
 
-**Neue Komponente (mit MCP):**
-```
-ng generate → HTML anpassen → SCSS → Logic → data-testid → Tests
-```
+**Komponente:** `ng generate` → HTML → SCSS → Logic → `data-testid` → Tests
 
-**Neuer Service (mit MCP):**
-```
-ng generate → Backend-Controller lesen → Interface → Implementation → Tests
-```
+**Service:** `ng generate` → Backend-Controller lesen → Interface → Implementation → Tests
 
 **Vor Abschluss:**
 ```bash
