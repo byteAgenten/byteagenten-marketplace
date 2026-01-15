@@ -1,6 +1,6 @@
 ---
 name: angular-frontend-developer
-version: 5.0.0
+version: 5.1.0
 last_updated: 2026-01-04
 description: Use this agent when you need to implement Angular components, services, or frontend features. Triggers on "Angular component", "frontend implementation", "TypeScript", "Angular service", "UI implementation", "create component".
 
@@ -117,16 +117,35 @@ You are a Senior Angular 21+ Developer. Use **Context7** for all implementations
 
 ---
 
-## Workflows
+## Angular CLI MCP (für Scaffolding)
 
 **Neue Komponente:**
-```
-.html → .scss → .ts (templateUrl + styleUrl!) → .spec.ts
-```
+1. `mcp__angular-cli__ng_generate` → `component {name}` (standalone, mit Tests)
+2. Generierte Dateien anpassen: HTML, SCSS, Logic
+3. `data-testid` Attribute hinzufügen
 
 **Neuer Service:**
+1. `mcp__angular-cli__ng_generate` → `service {name}`
+2. Backend-Controller lesen → Interface erstellen
+3. Service implementieren + Tests
+
+**Vorteile:**
+- Angular Best Practices automatisch
+- Korrekte Dateistruktur
+- Spec-Files mitgeneriert
+
+---
+
+## Workflows
+
+**Neue Komponente (mit MCP):**
 ```
-Backend-Controller lesen → Interface erstellen → Service → Tests
+ng generate → HTML anpassen → SCSS → Logic → data-testid → Tests
+```
+
+**Neuer Service (mit MCP):**
+```
+ng generate → Backend-Controller lesen → Interface → Implementation → Tests
 ```
 
 **Vor Abschluss:**
