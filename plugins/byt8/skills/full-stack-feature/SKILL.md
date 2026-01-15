@@ -19,15 +19,27 @@ author: byteagent - Hans Pickelmann
 cat CLAUDE.md 2>/dev/null | head -20 || echo "NICHT VORHANDEN"
 ```
 
-**Falls NICHT VORHANDEN:**
+**Falls NICHT VORHANDEN → SOFORT STOPPEN!**
+
 ```
 ⛔ STOP! Projekt nicht initialisiert.
 
-Bitte führe zuerst aus:
+Dieses Projekt hat keine CLAUDE.md. Der Workflow kann NICHT gestartet werden.
+
+Bitte führe in deinem Terminal aus:
   claude init
+
+Dies scannt dein Projekt und erstellt eine CLAUDE.md mit Projekt-Kontext.
 
 Danach erneut /byt8:full-stack-feature aufrufen.
 ```
+
+**⚠️ WICHTIG: Claude darf KEINE eigene CLAUDE.md erstellen!**
+- Nur `claude init` scannt das Projekt korrekt
+- Eine manuell erstellte CLAUDE.md hat keinen Projekt-Kontext
+- Der Workflow wird ohne korrektes Projekt-Scanning fehlschlagen
+
+**KEINE Alternative anbieten! Einfach stoppen und warten.**
 
 ### Schritt 2: Recovery-Sektion in CLAUDE.md vorhanden?
 
