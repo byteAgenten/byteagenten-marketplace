@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "weather": {
+    "context7": {
       "command": "npx",
-      "args": ["-y", "@h1deya/mcp-server-weather"]
+      "args": ["-y", "@upstash/context7-mcp"]
     }
   }
 }
