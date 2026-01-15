@@ -19,29 +19,11 @@ author: byteagent - Hans Pickelmann
 cat CLAUDE.md 2>/dev/null | head -20 || echo "NICHT VORHANDEN"
 ```
 
-**Falls NICHT VORHANDEN → `/init` automatisch aufrufen:**
+**Falls NICHT VORHANDEN → `/init` aufrufen:**
 
-```
-ℹ️ Keine CLAUDE.md gefunden. Führe /init aus...
-```
-
-**Claude MUSS das Skill-Tool verwenden um `/init` aufzurufen:**
-
-```
-Skill tool aufrufen mit: skill = "init"
-```
-
-Dies:
-- Scannt das GESAMTE Repository
-- Erstellt eine umfassende CLAUDE.md mit Projekt-Kontext
-- Ist der offizielle Claude Code Befehl für Projekt-Initialisierung
-
-**Nach `/init` Erfolg:**
-```
-✅ CLAUDE.md wurde erstellt. Fahre mit Schritt 2 fort.
-```
-
-**Weiter zu Schritt 2** (Recovery-Sektion prüfen)
+1. User informieren: "Keine CLAUDE.md gefunden. Führe /init aus..."
+2. `/init` ausführen
+3. Nach Erfolg: Weiter zu Schritt 2
 
 ### Schritt 2: Recovery-Sektion in CLAUDE.md vorhanden?
 
