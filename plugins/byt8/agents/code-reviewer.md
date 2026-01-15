@@ -430,6 +430,7 @@ Before code review, the orchestrator provides all implementation context:
 {
   "action": "retrieve",
   "keys": ["technicalSpec", "apiDesign", "backendImpl", "frontendImpl", "testResults", "securityAudit"],
+  "rootFields": ["targetCoverage"],
   "forPhase": 7
 }
 ```
@@ -441,6 +442,7 @@ Use retrieved context to:
 - **frontendImpl**: Check components, routes, state management
 - **testResults**: Verify coverage targets met
 - **securityAudit**: Review security findings addressed
+- **targetCoverage**: Verify coverage meets target (50%/70%/85%/95%)
 
 ### Output (Store Review Feedback)
 

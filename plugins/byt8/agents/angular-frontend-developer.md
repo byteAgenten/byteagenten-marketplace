@@ -155,8 +155,11 @@ npm run lint && npm test -- --no-watch --browsers=ChromeHeadless && npm run buil
 
 **Input (von Orchestrator):**
 ```json
-{ "action": "retrieve", "keys": ["wireframes", "apiDesign", "backendImpl"], "forPhase": 5 }
+{ "action": "retrieve", "keys": ["technicalSpec", "wireframes", "apiDesign", "backendImpl"], "rootFields": ["targetCoverage"], "forPhase": 5 }
 ```
+
+- **technicalSpec**: Architecture decisions, affected layers
+- **targetCoverage**: Test coverage target (50%/70%/85%/95%)
 
 **Output (nach Abschluss):**
 ```json

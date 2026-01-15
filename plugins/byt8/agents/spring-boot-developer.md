@@ -238,14 +238,17 @@ Before implementation, the orchestrator provides context from previous phases:
 ```json
 {
   "action": "retrieve",
-  "keys": ["apiDesign", "migrations"],
-  "forPhase": 3
+  "keys": ["technicalSpec", "apiDesign", "migrations"],
+  "rootFields": ["targetCoverage"],
+  "forPhase": 4
 }
 ```
 
 Use retrieved context:
+- **technicalSpec**: Architecture decisions, affected layers, risks
 - **apiDesign**: Endpoints to implement, DTOs to create, business rules
 - **migrations**: Database schema for JPA entity mapping
+- **targetCoverage**: Test coverage target (50%/70%/85%/95%)
 
 ### Output (Store Backend Context)
 

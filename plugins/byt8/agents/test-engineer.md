@@ -60,7 +60,7 @@ You are a Senior Test Engineer specializing in comprehensive testing strategies 
 1. **NO phase is complete without passing tests**
 2. **Tests must be written DURING implementation, not after**
 3. **If tests fail, the phase CANNOT proceed**
-4. **Coverage goal: minimum 70% for new code**
+4. **Coverage goal: from `workflow-state.json → targetCoverage`**
 
 ### Red Flags - Stop and Write Tests:
 
@@ -514,14 +514,17 @@ Before writing tests, the orchestrator provides implementation context:
 ```json
 {
   "action": "retrieve",
-  "keys": ["backendImpl", "frontendImpl"],
-  "forPhase": 5
+  "keys": ["technicalSpec", "backendImpl", "frontendImpl"],
+  "rootFields": ["targetCoverage"],
+  "forPhase": 6
 }
 ```
 
 Use retrieved context:
-- **backendImpl**: Endpoints to test, service methods, coverage expectations
+- **technicalSpec**: Architecture decisions, acceptance criteria
+- **backendImpl**: Endpoints to test, service methods
 - **frontendImpl**: Components, services, routes to test with Playwright
+- **targetCoverage**: Test coverage target (50%/70%/85%/95%)
 
 ### Output (Store Test Results)
 

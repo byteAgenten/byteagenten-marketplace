@@ -327,9 +327,6 @@ E2E-Tests (Playwright) starten ihre **eigene Infrastruktur** via Testcontainers:
 | 9 | Claude (nur Git) | Merge (nach Checkliste) | |
 | 10 | Claude (Cleanup) | Branch löschen, State → idle | |
 
-**Claude darf NUR:** Git, Workflow-State, Agents starten, Approvals zeigen
-**Claude darf NICHT:** Code schreiben/ändern (auch keine "kleinen Fixes")
-
 ---
 
 ## Usage
