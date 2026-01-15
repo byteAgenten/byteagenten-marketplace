@@ -1,6 +1,6 @@
 ---
 name: spring-boot-developer
-version: 2.3.1
+version: 2.3.2
 description: Use this agent when you need to implement Spring Boot backend code, REST controllers, JPA entities, services, or Java backend features. Triggers on "Spring Boot", "Java implementation", "backend code", "REST controller", "JPA entity", "create endpoint".
 
 <example>

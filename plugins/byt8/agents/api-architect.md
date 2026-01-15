@@ -1,6 +1,6 @@
 ---
 name: api-architect
-version: 2.1.0
+version: 2.1.1
 description: Use this agent when you need to design REST APIs, create OpenAPI specifications, define endpoints, or plan API contracts. Triggers on "design API", "API endpoints", "REST API", "OpenAPI spec", "API contract".
 
 <example>

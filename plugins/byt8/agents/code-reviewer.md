@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-version: 1.1.0
+version: 1.1.1
 last_updated: 2025-12-31
 description: Use this agent when you need code review, quality checks before commits, or validation of implementation. Triggers on "review code", "code review", "check my code", "before commit", "PR review", "quality check".
 

@@ -1,6 +1,6 @@
 ---
 name: test-engineer
-version: 1.1.1
+version: 1.1.2
 description: Use this agent when you need to write tests, improve test coverage, create E2E tests, or debug failing tests. Triggers on "write tests", "unit test", "integration test", "E2E test", "Playwright", "test coverage", "JUnit", "Jasmine".
 
 <example>

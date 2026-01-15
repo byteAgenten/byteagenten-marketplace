@@ -1,6 +1,6 @@
 ---
 name: angular-frontend-developer
-version: 5.1.0
+version: 5.1.1
 last_updated: 2026-01-04
 description: Use this agent when you need to implement Angular components, services, or frontend features. Triggers on "Angular component", "frontend implementation", "TypeScript", "Angular service", "UI implementation", "create component".
 

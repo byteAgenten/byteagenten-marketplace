@@ -1,6 +1,6 @@
 ---
 name: ui-ux-designer
-version: 2.0.0
+version: 2.0.1
 description: Use this agent when you need to create wireframes, design UI layouts, plan user interfaces, or optimize user experience. Triggers on "wireframe", "UI design", "mockup", "user interface", "dashboard layout", "design the screen".
 
 <example>

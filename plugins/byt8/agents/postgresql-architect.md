@@ -1,6 +1,6 @@
 ---
 name: postgresql-architect
-version: 1.1.0
+version: 1.1.1
 description: Use this agent when you need to design database schemas, create Flyway migrations, optimize queries, or work with PostgreSQL. Triggers on "database schema", "migration", "Flyway", "PostgreSQL", "SQL", "create table", "database design".
 
 <example>
