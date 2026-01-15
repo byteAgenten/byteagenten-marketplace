@@ -19,30 +19,29 @@ author: byteagent - Hans Pickelmann
 cat CLAUDE.md 2>/dev/null | head -20 || echo "NICHT VORHANDEN"
 ```
 
-**Falls NICHT VORHANDEN → User auffordern `/init` auszuführen:**
+**Falls NICHT VORHANDEN → `/init` automatisch aufrufen:**
 
 ```
-⛔ STOP! Keine CLAUDE.md gefunden.
-
-Bitte führe zuerst den Befehl /init aus.
-
-Dies scannt dein gesamtes Repository und erstellt eine CLAUDE.md
-mit vollständigem Projekt-Kontext (Struktur, Dependencies, etc.).
-
-Nach /init: Rufe erneut /byt8:full-stack-feature auf.
+ℹ️ Keine CLAUDE.md gefunden. Führe /init aus...
 ```
 
-**⚠️ WICHTIG:**
-- `/init` ist ein offizieller Claude Code Befehl
-- Er scannt das GESAMTE Repository (nicht nur einzelne Dateien)
-- Erstellt eine umfassende Projekt-Analyse
-- Nur so hat Claude echten Projekt-Kontext
+**Claude MUSS das Skill-Tool verwenden um `/init` aufzurufen:**
 
-**Claude darf NICHT selbst eine CLAUDE.md erstellen!**
-→ Das wäre nur oberflächlich (paar Dateien lesen)
-→ `/init` macht tiefe Repository-Analyse
+```
+Skill tool aufrufen mit: skill = "init"
+```
 
-**Nach `/init` → Weiter zu Schritt 2** (Recovery-Sektion prüfen)
+Dies:
+- Scannt das GESAMTE Repository
+- Erstellt eine umfassende CLAUDE.md mit Projekt-Kontext
+- Ist der offizielle Claude Code Befehl für Projekt-Initialisierung
+
+**Nach `/init` Erfolg:**
+```
+✅ CLAUDE.md wurde erstellt. Fahre mit Schritt 2 fort.
+```
+
+**Weiter zu Schritt 2** (Recovery-Sektion prüfen)
 
 ### Schritt 2: Recovery-Sektion in CLAUDE.md vorhanden?
 
