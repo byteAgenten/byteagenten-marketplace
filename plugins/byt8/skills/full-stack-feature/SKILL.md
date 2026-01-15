@@ -19,11 +19,15 @@ author: byteagent - Hans Pickelmann
 cat CLAUDE.md 2>/dev/null | head -20 || echo "NICHT VORHANDEN"
 ```
 
-**Falls NICHT VORHANDEN → `/init` aufrufen:**
+**Falls NICHT VORHANDEN → User fragen:**
 
-1. User informieren: "Keine CLAUDE.md gefunden. Führe /init aus..."
-2. `/init` ausführen
-3. Nach Erfolg: Weiter zu Schritt 2
+Mit AskUserQuestion:
+- Frage: "Keine CLAUDE.md gefunden. Soll ich /init für dich ausführen?"
+- Option 1: "Ja, führe /init aus"
+- Option 2: "Nein, ich mache es selbst"
+
+Bei Option 1: `/init` ausführen, dann weiter zu Schritt 2
+Bei Option 2: Stoppen und warten bis User /init selbst ausgeführt hat
 
 ### Schritt 2: Recovery-Sektion in CLAUDE.md vorhanden?
 
