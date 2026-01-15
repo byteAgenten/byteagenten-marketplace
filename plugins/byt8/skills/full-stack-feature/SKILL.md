@@ -102,7 +102,7 @@ START → Issue erkennen → Branch erstellen
 ├─────────────────────────────────────────────────────┤
 │ PHASE 1: UI/UX Design → ui-ux-designer              │
 │ Input: Technical Spec (verfügbare Daten, Services)  │
-│ Output: frontend/wireframes/*.html                  │
+│ Output: wireframes/*.html                           │
 ├─────────────────────────────────────────────────────┤
 │ ⛔ STOP: AskUserQuestion                            │
 │    → "Sind die Wireframes akzeptiert?"              │
