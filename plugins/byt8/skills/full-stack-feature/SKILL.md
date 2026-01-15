@@ -1,13 +1,89 @@
 ---
 name: full-stack-feature
 description: Orchestrates full-stack feature development with approval gates and agent delegation.
-version: 2.4.0
+version: 2.6.0
 author: byteagent - Hans Pickelmann
 ---
 
 # Full-Stack Feature Development Skill
 
 **When to use:** GitHub Issues, neue Features, Bugfixes die mehrere Layer betreffen (DB → Backend → Frontend).
+
+---
+
+## ⚠️ SKILL BOOTSTRAP - BEI JEDEM AUFRUF PRÜFEN!
+
+### Schritt 1: CLAUDE.md vorhanden?
+
+```bash
+cat CLAUDE.md 2>/dev/null | head -20 || echo "NICHT VORHANDEN"
+```
+
+**Falls NICHT VORHANDEN:**
+```
+⛔ STOP! Projekt nicht initialisiert.
+
+Bitte führe zuerst aus:
+  claude init
+
+Danach erneut /byt8:full-stack-feature aufrufen.
+```
+
+### Schritt 2: Recovery-Sektion in CLAUDE.md vorhanden?
+
+Prüfe ob die Zeile `## byt8 Workflow Recovery` in CLAUDE.md existiert.
+
+**Falls NICHT vorhanden → Mit Edit-Tool am ANFANG der CLAUDE.md hinzufügen:**
+
+```markdown
+## byt8 Workflow Recovery
+
+Bei Session-Start oder Context-Overflow IMMER prüfen:
+
+\`\`\`bash
+cat .workflow/workflow-state.json 2>/dev/null || echo "KEIN WORKFLOW"
+\`\`\`
+
+Falls `"status": "active"`:
+→ Skill neu laden: `/byt8:full-stack-feature`
+→ Workflow wird automatisch fortgesetzt
+
+---
+
+```
+
+**Hinweis an User:**
+```
+✅ Recovery-Sektion zu CLAUDE.md hinzugefügt.
+   Bei Context-Overflow wird der Workflow automatisch erkannt.
+```
+
+### Schritt 3: Aktiver Workflow vorhanden?
+
+```bash
+cat .workflow/workflow-state.json 2>/dev/null || echo "KEIN WORKFLOW"
+```
+
+| Status | Aktion |
+|--------|--------|
+| `"status": "active"` | Resume: "Aktiver Workflow gefunden (Phase X). Fortsetzen?" |
+| `"status": "idle"` | Neuen Workflow starten |
+| Nicht vorhanden | Neuen Workflow starten |
+
+---
+
+## Context Overflow Recovery (für Claude nach Neustart)
+
+Falls diese Nachricht erscheint:
+> "This session is being continued from a previous conversation that ran out of context."
+
+**Der User's CLAUDE.md enthält bereits die Anweisung, diesen Skill zu laden!**
+
+Nach Skill-Load:
+1. `workflow-state.json` lesen (Schritt 3 oben)
+2. `currentPhase` und `nextStep` notieren
+3. Workflow ab `nextStep.action` fortsetzen
+4. **NIEMALS improvisieren - nur definierte Schritte!**
 
 ---
 
@@ -134,20 +210,103 @@ START → Issue erkennen → Branch erstellen
 
 ---
 
-## ⛔ CRITICAL: Befolge CLAUDE.md Constraints 1-8!
+## ⛔ KRITISCHE PROJEKT-CONSTRAINTS (Self-Contained)
 
-| # | Constraint | Kurzfassung |
-|---|------------|-------------|
-| 1 | Kein main commit | Feature-Branch Pflicht |
-| 2 | Commit Approval | Vor Push/PR/Merge User fragen (WIP-Commits siehe #4) |
-| 3 | Merge-Strategie | `--merge` (kein squash/rebase) |
-| 4 | WIP-Commits | Phase 3,4,5: Automatisch nach Gate. Phase 1,6: Nach User-Approval |
-| 5 | Hotfix-Loop | Änderungen → zurück zur passenden Phase |
-| 6 | Agent Delegation | Code NUR über Agents ändern! |
-| 7 | Context7 | IMMER für Library/Framework-Syntax nutzen |
-| 8 | E2E-Tests | Testcontainers: Backend :8081, Frontend :4201 |
+Diese Regeln gelten für JEDEN Workflow-Durchlauf. **Kein externes CLAUDE.md erforderlich!**
 
-**Phasen-Commits:** Siehe GATES-Tabelle oben (WIP-Commit Spalte). Phase 8+9 nur Push + PR + Merge.
+### Constraint 1: Branch-Strategie
+
+**NIEMALS direkt auf `main` committen!**
+
+```bash
+# Vor dem ersten Commit prüfen:
+git branch --show-current
+# Falls "main" → STOP! Erst Branch erstellen!
+```
+
+- Feature-Branch erstellen: `feature/issue-{N}-{kurzbeschreibung}`
+- Branch erst nach Phase 7 (Code Review) APPROVED pushen
+- **VIOLATION = WORKFLOW FAILURE**
+
+### Constraint 2: Git Commit Approval
+
+**VOR JEDEM Push/PR/Merge: User-Genehmigung einholen!**
+
+1. Vollständige Commit Message präsentieren
+2. Fragen: "Soll ich diesen Commit durchführen?"
+3. Auf Bestätigung ("ja", "yes") warten
+4. Erst NACH Bestätigung ausführen
+
+**AUSNAHME:** WIP-Commits nach Test-Gates (Phase 3, 4, 5) erfolgen automatisch nach PASS.
+
+### Constraint 3: Merge-Strategie
+
+```bash
+gh pr merge --merge   # NICHT --squash oder --rebase!
+```
+
+Commit-Historie erhalten!
+
+### Constraint 4: WIP-Commits pro Phase
+
+| Phase | Commit erlaubt? | Wann? |
+|-------|-----------------|-------|
+| 0 | ❌ | - |
+| 1 | ✅ | Nach User-Approval |
+| 2 | ❌ | - |
+| 3 | ✅ | Automatisch nach Phase |
+| 4 | ✅ | Nach Test PASS |
+| 5 | ✅ | Nach Test PASS |
+| 6 | ✅ | Nach QA Approval |
+| 7 | ❌ | - |
+
+**Phase 8+9:** Kein Commit - nur Push, PR, Merge.
+
+### Constraint 5: Hotfix-Loop
+
+Bei Änderungen im Workflow → zurück zur passenden Phase, dann alle nachfolgenden Phasen erneut durchlaufen. Details siehe "Hotfix-Loop" Sektion.
+
+### Constraint 6: Code-Änderungen NUR über Agents
+
+**Im Workflow-Modus:**
+
+| Typ | Agent |
+|-----|-------|
+| Frontend (.ts, .html, .scss) | `angular-frontend-developer` |
+| Backend (.java) | `spring-boot-developer` |
+| Tests (.spec.ts) | `test-engineer` |
+| DB (.sql) | `postgresql-architect` |
+
+**Claude darf NUR:** Git, Workflow-State, Agents starten, Approvals zeigen
+**Claude darf NICHT:** Code schreiben/ändern (auch keine "kleinen Fixes")
+
+**VIOLATION = WORKFLOW FAILURE**
+
+### Constraint 7: Context7 für Best Practices
+
+**IMMER Context7 MCP nutzen bei:**
+- Library-Versionen und Breaking Changes
+- Framework-Syntax (Angular 21, Spring Boot 4)
+- CLI-Befehle und Flags
+- API-Methoden und Parameter
+
+```
+mcp__context7__resolve-library-id → mcp__context7__query-docs
+```
+
+**NIEMALS:** Flags/Parameter/API-Methoden erfinden!
+
+### Constraint 8: E2E-Tests Infrastruktur
+
+E2E-Tests (Playwright) starten ihre **eigene Infrastruktur** via Testcontainers:
+
+| Komponente | E2E-Port | Dev-Port |
+|------------|----------|----------|
+| PostgreSQL | Dynamisch | 5432 |
+| Backend | 8081 | 8080 |
+| Frontend | 4201 | 4200 |
+
+**Kein manuelles Starten nötig!** Tests starten/stoppen alles automatisch.
 
 ---
 
@@ -183,13 +342,57 @@ START → Issue erkennen → Branch erstellen
 
 ---
 
-## Startup-Logik (Kein Argument)
+## Startup-Logik
 
-**Ohne Argument:**
-1. `workflow-state.json` aktiv? → Resume anbieten
-2. Kein aktiver Workflow? → Fragen: "Was möchtest du implementieren?"
+### Bei Skill-Start (IMMER ausführen!)
 
-**WICHTIG:** Keine AskUserQuestion! Einfach auf Eingabe warten (`#42` oder Beschreibung).
+**1. Workflow-Verzeichnis erstellen:**
+```bash
+mkdir -p .workflow
+```
+
+**2. State prüfen:**
+```bash
+cat .workflow/workflow-state.json 2>/dev/null || echo "NICHT VORHANDEN"
+```
+
+**3. Entscheidung:**
+
+| State | Aktion |
+|-------|--------|
+| `"status": "active"` | Resume anbieten: "Aktiver Workflow gefunden (Phase X). Fortsetzen?" |
+| `"status": "idle"` oder nicht vorhanden | Neuen Workflow starten |
+
+**4. Falls neuer Workflow:** State initialisieren mit Write-Tool:
+
+```json
+{
+  "workflow": "full-stack-feature",
+  "status": "active",
+  "issue": { "number": null, "title": "", "url": "" },
+  "branch": "",
+  "currentPhase": 0,
+  "startedAt": "[ISO-TIMESTAMP]",
+  "phases": {},
+  "nextStep": {
+    "action": "START_PHASE_0",
+    "phase": 0,
+    "description": "Technical Specification erstellen",
+    "agent": "architect-planner"
+  },
+  "context": {}
+}
+```
+
+### Argument-Handling
+
+| Argument | Aktion |
+|----------|--------|
+| `#42` | GitHub Issue laden, Titel + URL in State speichern |
+| `"Implement X"` | Als Titel verwenden, kein Issue-Link |
+| Kein Argument | Fragen: "Was möchtest du implementieren?" |
+
+**WICHTIG:** Keine AskUserQuestion für Argument! Einfach auf Eingabe warten.
 
 ---
 
@@ -249,7 +452,74 @@ START → Issue erkennen → Branch erstellen
 
 **`context`:** Speichert Phase-Outputs für Downstream-Agents und Session-Recovery.
 
-**Bei Skill-Start:** State prüfen → Resume anbieten falls vorhanden
+---
+
+## ⚠️ CLAUDE ORCHESTRATOR: State Update nach JEDER Phase (PFLICHT!)
+
+**Nach Abschluss eines Agents MUSST du als Orchestrator:**
+
+### 1. Agent-Output lesen
+
+Der Agent gibt am Ende einen "CONTEXT STORE REQUEST" oder Summary aus.
+
+### 2. State-Datei lesen
+
+```bash
+cat .workflow/workflow-state.json
+```
+
+### 3. State aktualisieren mit Write-Tool
+
+**PFLICHT-Felder bei jedem Update:**
+
+| Feld | Aktualisieren auf |
+|------|-------------------|
+| `currentPhase` | Nächste Phase-Nummer |
+| `phases[N].status` | `"completed"` |
+| `nextStep.action` | Nächste Aktion (z.B. `START_PHASE_2`) |
+| `nextStep.phase` | Nächste Phase-Nummer |
+| `nextStep.description` | Beschreibung der nächsten Phase |
+| `nextStep.agent` | Agent für nächste Phase |
+| `context[key]` | Summary vom Agent |
+
+### 4. Beispiel: Nach Phase 0 (architect-planner)
+
+```json
+{
+  "currentPhase": 1,
+  "phases": {
+    "0": { "status": "completed", "completedAt": "2026-01-15T10:30:00Z" }
+  },
+  "nextStep": {
+    "action": "START_PHASE_1",
+    "phase": 1,
+    "description": "UI/UX Wireframes erstellen",
+    "agent": "ui-ux-designer"
+  },
+  "context": {
+    "technicalSpec": {
+      "storedAt": "2026-01-15T10:30:00Z",
+      "storedByPhase": 0,
+      "data": {
+        "affectedLayers": ["frontend", "backend"],
+        "newEntities": ["VacationRequest"],
+        "risks": []
+      }
+    }
+  }
+}
+```
+
+### 5. ERST DANN zur nächsten Phase/Gate
+
+**REIHENFOLGE:**
+1. Agent fertig → Output lesen
+2. State-Datei lesen
+3. State mit Write-Tool aktualisieren
+4. Gate prüfen (falls vorhanden)
+5. Nächste Phase starten
+
+**VIOLATION = State geht bei Context-Overflow verloren!**
 
 ---
 
