@@ -18,7 +18,7 @@
         "./commands/project-setup.md",
         "./commands/theme-factory.md",
         "./commands/ui-design-system.md",
-        "./commands/ux-researcher-designer.md",
+        "./commands/ux-research.md",
         "./commands/python-expert.md"
       ],
       "agents": [
@@ -38,7 +38,7 @@
         "./skills/project-setup",
         "./skills/theme-factory",
         "./skills/ui-design-system",
-        "./skills/ux-researcher-designer",
+        "./skills/ux-research",
         "./skills/python-expert"
       ]
     }

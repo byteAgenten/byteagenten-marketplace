@@ -536,7 +536,7 @@ python skills/ui-design-system/scripts/design_token_generator.py "#1976d2" moder
 ### Use UX Researcher Designer
 For persona-driven design:
 ```
-→ Invoke /byt8:ux-researcher-designer
+→ Invoke /byt8:ux-research
 → Generate user personas
 → Create user journey maps
 → Validate wireframes against user needs

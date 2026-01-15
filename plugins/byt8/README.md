@@ -49,7 +49,7 @@ Füge in deinem Projekt `.claude/settings.json` hinzu:
 | `/byt8:project-setup` | Einmalige Design System Initialisierung |
 | `/byt8:theme-factory` | Theme-Auswahl und -Generierung |
 | `/byt8:ui-design-system` | UI Design System Toolkit |
-| `/byt8:ux-researcher-designer` | UX Research und Design Workflow |
+| `/byt8:ux-research` | UX Research und Design Workflow |
 | `/byt8:python-expert` | Python Development Support |
 
 ### Beispiel
@@ -113,7 +113,7 @@ Der Workflow pausiert an kritischen Punkten für User-Approval:
 | `project-setup` | Design System Initialisierung |
 | `theme-factory` | 10 vordefinierte Themes + Custom Generation |
 | `ui-design-system` | Design Tokens, Typography, Spacing |
-| `ux-researcher-designer` | Personas, Journey Maps, Usability |
+| `ux-research` | Personas, Journey Maps, Usability |
 | `python-expert` | Async, Typing, Testing Patterns |
 
 ---

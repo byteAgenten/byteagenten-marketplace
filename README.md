@@ -64,7 +64,7 @@ After installation, the following commands are available:
 | `/byt8:project-setup` | One-time design system initialization |
 | `/byt8:theme-factory` | Apply themes to artifacts (slides, docs, etc.) |
 | `/byt8:ui-design-system` | UI design system toolkit |
-| `/byt8:ux-researcher-designer` | UX research and design methodology |
+| `/byt8:ux-research` | UX research and design methodology |
 | `/byt8:python-expert` | Python development support |
 
 ## Plugin Architecture

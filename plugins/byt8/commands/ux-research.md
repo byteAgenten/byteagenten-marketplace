@@ -4,6 +4,6 @@ description: UX research and design toolkit for Senior UX Designer/Researcher in
 
 Führe UX Research oder Design durch.
 
-Lies zuerst den Skill unter `${CLAUDE_PLUGIN_ROOT}/skills/ux-researcher-designer/SKILL.md` und folge dem dort definierten Workflow exakt.
+Lies zuerst den Skill unter `${CLAUDE_PLUGIN_ROOT}/skills/ux-research/SKILL.md` und folge dem dort definierten Workflow exakt.
 
 Aufgabe: $ARGUMENTS
