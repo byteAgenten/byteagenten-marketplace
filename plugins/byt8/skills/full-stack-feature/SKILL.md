@@ -1,7 +1,7 @@
 ---
 name: full-stack-feature
 description: Orchestrates full-stack feature development with approval gates and agent delegation.
-version: 2.6.0
+version: 2.7.0
 author: byteagent - Hans Pickelmann
 ---
 
@@ -394,6 +394,14 @@ cat .workflow/workflow-state.json 2>/dev/null || echo "NICHT VORHANDEN"
 
 **WICHTIG:** Keine AskUserQuestion für Argument! Einfach auf Eingabe warten.
 
+### Nach Issue-Laden, vor Phase 0: Test-Coverage festlegen
+
+Mit AskUserQuestion:
+- Frage: "Welche Test-Coverage soll erreicht werden?"
+- Optionen: 50% / 70% / 85% / 95%
+
+In workflow-state speichern: `"targetCoverage": "70%"` (oder gewählter Wert)
+
 ---
 
 ## Workflow State
@@ -657,8 +665,6 @@ Nach jeder Phase speichert Claude eine **Summary** mit allen relevanten Details:
 | 4 | `mvn test` | ✅ PASS required |
 | 5 | `npm test -- --no-watch --browsers=ChromeHeadless` | ✅ PASS required |
 | 6 | `mvn failsafe:integration-test` + `npx playwright test` | ✅ PASS required |
-
-**Coverage:** User zu Beginn fragen (50%/70%/85%/95%)
 
 ---
 
