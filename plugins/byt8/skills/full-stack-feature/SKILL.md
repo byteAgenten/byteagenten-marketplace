@@ -1,7 +1,7 @@
 ---
 name: full-stack-feature
 description: Orchestrates full-stack feature development with approval gates and agent delegation.
-version: 2.7.0
+version: 2.8.0
 author: byteagent - Hans Pickelmann
 ---
 
@@ -93,14 +93,14 @@ Nach Skill-Load:
 START → Issue erkennen → Branch erstellen
     ↓
 ┌─────────────────────────────────────────────────────┐
-│ PHASE 0: Architecture Planning → architect-planner  │
+│ PHASE 0: Architecture Planning → byt8:architect-planner  │
 │ Output: Technical Spec in workflow-state            │
 ├─────────────────────────────────────────────────────┤
 │ ⛔ STOP: AskUserQuestion                            │
 │    → "Ist die Architektur/Technical Spec akzeptiert?"│
 │    → Weiter NUR bei "Ja"                            │
 ├─────────────────────────────────────────────────────┤
-│ PHASE 1: UI/UX Design → ui-ux-designer              │
+│ PHASE 1: UI/UX Design → byt8:ui-ux-designer              │
 │ Input: Technical Spec (verfügbare Daten, Services)  │
 │ Output: wireframes/*.html                           │
 ├─────────────────────────────────────────────────────┤
@@ -109,28 +109,28 @@ START → Issue erkennen → Branch erstellen
 │    → Weiter NUR bei "Ja"                            │
 │ ✅ Bei "Ja": WIP-Commit (nach User Approval)        │
 ├─────────────────────────────────────────────────────┤
-│ PHASE 2: API Design → api-architect                 │
+│ PHASE 2: API Design → byt8:api-architect                 │
 │ Input: Technical Spec + Wireframes                  │
 │ Output: Markdown-Skizze in workflow-state.apiDesign │
 ├─────────────────────────────────────────────────────┤
-│ PHASE 3: Database → postgresql-architect            │
+│ PHASE 3: Database → byt8:postgresql-architect            │
 │ Output: db/migration/V*.sql                         │
 │ ✅ WIP-Commit (nach Phase-Abschluss)                │
 ├─────────────────────────────────────────────────────┤
-│ PHASE 4: Backend → spring-boot-developer            │
+│ PHASE 4: Backend → byt8:spring-boot-developer            │
 │ Output: Java + JUnit Tests                          │
 │ Gate: mvn test → muss PASS sein (Claude prüft)      │
 │ ✅ Bei PASS: WIP-Commit (automatisch, kein User-Q)  │
 ├─────────────────────────────────────────────────────┤
-│ PHASE 5: Frontend → angular-frontend-developer      │
+│ PHASE 5: Frontend → byt8:angular-frontend-developer      │
 │ Output: Angular + Jasmine Tests                     │
 │ Gate: npm test → muss PASS sein (Claude prüft)      │
 │ ✅ Bei PASS: WIP-Commit (automatisch, kein User-Q)  │
 ├─────────────────────────────────────────────────────┤
 │ PHASE 6: Quality Assurance (2 Agents SEQUENTIELL!)  │
-│ 1. test-engineer → E2E-Tests erstellen + ausführen  │
+│ 1. byt8:test-engineer → E2E-Tests erstellen + ausführen  │
 │    → Bei FAIL: Hotfix-Loop (Phase 4/5) vor Schritt 2│
-│ 2. security-auditor → Security-Audit                │
+│ 2. byt8:security-auditor → Security-Audit                │
 │    → Bei FAIL: Hotfix-Loop (Phase 4/5)              │
 │ Output: E2E Tests + Security Report                 │
 ├─────────────────────────────────────────────────────┤
@@ -139,14 +139,14 @@ START → Issue erkennen → Branch erstellen
 │    → Weiter NUR bei "Ja"                            │
 │ ✅ Bei "Ja": WIP-Commit (nach QA Approval)          │
 ├─────────────────────────────────────────────────────┤
-│ PHASE 7: Code Review → code-reviewer                │
+│ PHASE 7: Code Review → byt8:code-reviewer                │
 │ Output: Strukturierter Review-Report:               │
 │    - Status: APPROVED / CHANGES REQUIRED            │
 │    - Issues: Liste mit Severity (Critical/Major/    │
 │      Minor/Suggestion)                              │
 │    - Pro Issue: Datei, Zeile, Beschreibung, Fix     │
 │ Bei CHANGES REQUIRED: Hotfix-Loop, dann erneut Ph 7 │
-│ Optional: Eskalation an architect-reviewer          │
+│ Optional: Eskalation an byt8:architect-reviewer          │
 ├─────────────────────────────────────────────────────┤
 │ ⛔ STOP: Code Review muss APPROVED sein             │
 │    → Bei CHANGES REQUIRED: Hotfix-Loop starten      │
@@ -272,10 +272,10 @@ Bei Änderungen im Workflow → zurück zur passenden Phase, dann alle nachfolge
 
 | Typ | Agent |
 |-----|-------|
-| Frontend (.ts, .html, .scss) | `angular-frontend-developer` |
-| Backend (.java) | `spring-boot-developer` |
-| Tests (.spec.ts) | `test-engineer` |
-| DB (.sql) | `postgresql-architect` |
+| Frontend (.ts, .html, .scss) | `byt8:angular-frontend-developer` |
+| Backend (.java) | `byt8:spring-boot-developer` |
+| Tests (.spec.ts) | `byt8:test-engineer` |
+| DB (.sql) | `byt8:postgresql-architect` |
 
 **Claude darf NUR:** Git, Workflow-State, Agents starten, Approvals zeigen
 **Claude darf NICHT:** Code schreiben/ändern (auch keine "kleinen Fixes")
@@ -314,15 +314,15 @@ E2E-Tests (Playwright) starten ihre **eigene Infrastruktur** via Testcontainers:
 
 | Phase | Agent | Aufgabe | Reihenfolge |
 |-------|-------|---------|-------------|
-| 0 | `architect-planner` | Technical Spec erstellen | |
-| 1 | `ui-ux-designer` | Wireframes (mit Tech Spec Input) | |
-| 2 | `api-architect` | API-Skizze (workflow-state) | |
-| 3 | `postgresql-architect` | Migrations | |
-| 4 | `spring-boot-developer` | Java + Tests | |
-| 5 | `angular-frontend-developer` | Angular + Tests | |
-| 6.1 | `test-engineer` | E2E-Tests | 1️⃣ ZUERST |
-| 6.2 | `security-auditor` | Security-Audit | 2️⃣ DANACH |
-| 7 | `code-reviewer` | Review + Hotfix | |
+| 0 | `byt8:architect-planner` | Technical Spec erstellen | |
+| 1 | `byt8:ui-ux-designer` | Wireframes (mit Tech Spec Input) | |
+| 2 | `byt8:api-architect` | API-Skizze (workflow-state) | |
+| 3 | `byt8:postgresql-architect` | Migrations | |
+| 4 | `byt8:spring-boot-developer` | Java + Tests | |
+| 5 | `byt8:angular-frontend-developer` | Angular + Tests | |
+| 6.1 | `byt8:test-engineer` | E2E-Tests | 1️⃣ ZUERST |
+| 6.2 | `byt8:security-auditor` | Security-Audit | 2️⃣ DANACH |
+| 7 | `byt8:code-reviewer` | Review + Hotfix | |
 | 8 | Claude (nur Git) | Push + PR | |
 | 9 | Claude (nur Git) | Merge (nach Checkliste) | |
 | 10 | Claude (Cleanup) | Branch löschen, State → idle | |
@@ -375,7 +375,7 @@ cat .workflow/workflow-state.json 2>/dev/null || echo "NICHT VORHANDEN"
     "action": "START_PHASE_0",
     "phase": 0,
     "description": "Technical Specification erstellen",
-    "agent": "architect-planner"
+    "agent": "byt8:architect-planner"
   },
   "context": {}
 }
@@ -422,7 +422,7 @@ In workflow-state speichern: `"targetCoverage": "70%"` (oder gewählter Wert)
     "action": "CONTINUE_PHASE_3",
     "phase": 3,
     "description": "Database Migrations fortsetzen",
-    "agent": "postgresql-architect"
+    "agent": "byt8:postgresql-architect"
   },
   "context": {
     "wireframes": {
@@ -487,7 +487,7 @@ cat .workflow/workflow-state.json
 | `nextStep.agent` | Agent für nächste Phase |
 | `context[key]` | Summary vom Agent |
 
-### 4. Beispiel: Nach Phase 0 (architect-planner)
+### 4. Beispiel: Nach Phase 0 (byt8:architect-planner)
 
 ```json
 {
@@ -499,7 +499,7 @@ cat .workflow/workflow-state.json
     "action": "START_PHASE_1",
     "phase": 1,
     "description": "UI/UX Wireframes erstellen",
-    "agent": "ui-ux-designer"
+    "agent": "byt8:ui-ux-designer"
   },
   "context": {
     "technicalSpec": {
@@ -673,10 +673,10 @@ Nach jeder Phase speichert Claude eine **Summary** mit allen relevanten Details:
 
    | Fix-Typ | Agent | Start |
    |---------|-------|-------|
-   | Database | `postgresql-architect` | Phase 3 |
-   | Backend | `spring-boot-developer` | Phase 4 |
-   | Frontend | `angular-frontend-developer` | Phase 5 |
-   | Tests/Docs | `test-engineer` | Phase 6 |
+   | Database | `byt8:postgresql-architect` | Phase 3 |
+   | Backend | `byt8:spring-boot-developer` | Phase 4 |
+   | Frontend | `byt8:angular-frontend-developer` | Phase 5 |
+   | Tests/Docs | `byt8:test-engineer` | Phase 6 |
 
 2. **Workflow-State:** `currentPhase` + `nextStep` auf Start-Phase setzen
 3. **Agent starten** für den Fix
