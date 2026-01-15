@@ -240,7 +240,25 @@ Focus on clear, concise API sketches. The spring-boot-developer will implement f
 
 ---
 
-## CONTEXT PROTOCOL OUTPUT
+## CONTEXT PROTOCOL
+
+### Input (Retrieve Previous Context)
+
+Before designing the API, the orchestrator provides context from previous phases:
+
+```json
+{
+  "action": "retrieve",
+  "keys": ["technicalSpec", "wireframes"],
+  "forPhase": 2
+}
+```
+
+Use retrieved context:
+- **technicalSpec**: Architecture decisions, affected layers, new entities
+- **wireframes**: UI components that need API endpoints
+
+### Output (Store API Design)
 
 After creating the API design, you MUST output a context store command for the context-manager:
 

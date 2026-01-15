@@ -608,7 +608,24 @@ Focus on creating production-ready wireframes that can be directly translated to
 
 ---
 
-## CONTEXT PROTOCOL OUTPUT
+## CONTEXT PROTOCOL
+
+### Input (Retrieve Technical Spec)
+
+Before creating wireframes, the orchestrator provides context from Phase 0:
+
+```json
+{
+  "action": "retrieve",
+  "keys": ["technicalSpec"],
+  "forPhase": 1
+}
+```
+
+Use retrieved context:
+- **technicalSpec**: Available data, services, entities to display in UI
+
+### Output (Store Wireframes)
 
 After creating wireframes, you MUST output a context store command for the context-manager:
 

@@ -561,12 +561,14 @@ Before creating migrations, the orchestrator provides the API design context:
 ```json
 {
   "action": "retrieve",
-  "keys": ["apiDesign"],
-  "forPhase": 2
+  "keys": ["technicalSpec", "apiDesign"],
+  "forPhase": 3
 }
 ```
 
-Use the `dataModel` from apiDesign to create appropriate tables, columns, and relationships.
+Use retrieved context:
+- **technicalSpec**: Architecture decisions, performance requirements
+- **apiDesign**: Data model for tables, columns, relationships
 
 ### Output (Store Migration Context)
 
