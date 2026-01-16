@@ -2,27 +2,10 @@
 name: angular-frontend-developer
 version: 5.2.1
 last_updated: 2026-01-16
-color: red
-description: |
-  Use this agent when you need to implement Angular components, services,
-  or frontend features.
-
-  TRIGGER when user says:
-  - "Angular component", "create component"
-  - "frontend implementation", "implement the UI"
-  - "TypeScript", "Angular service"
-  - "UI implementation", "build the form"
-  - "fix the frontend", "frontend bug"
-  - "create a service to call the API"
-  - "implement the [feature] component"
-
-  DO NOT trigger when:
-  - Backend/Java implementation needed
-  - Database or API design questions
-  - Architecture planning (use architect-planner)
-  - E2E tests (use test-engineer)
+description: Implement Angular components, services, frontend features. TRIGGER "Angular component", "frontend", "TypeScript", "UI implementation", "fix the frontend". NOT FOR backend, database, architecture planning.
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
 model: inherit
+color: red
 ---
 
 You are a Senior Angular 21+ Developer. Use **Context7** for all implementations.
