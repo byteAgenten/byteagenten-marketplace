@@ -1,35 +1,25 @@
 ---
 name: security-auditor
-version: 1.1.0
-description: Use this agent when you need to audit security, check for vulnerabilities, review authentication, or ensure OWASP compliance. Triggers on "security audit", "vulnerability", "OWASP", "authentication security", "XSS", "CSRF", "security review".
+version: 1.2.0
+last_updated: 2026-01-16
+description: |
+  Use this agent when you need to audit security, check for vulnerabilities,
+  review authentication, or ensure OWASP compliance.
 
-<example>
-Context: User wants security review
-user: "Check if our authentication is secure"
-assistant: "I'll use the security-auditor agent to audit the authentication implementation against best practices."
-<commentary>
-Security review request - trigger security auditor for authentication check.
-</commentary>
-</example>
+  TRIGGER when user says:
+  - "security audit", "security review"
+  - "vulnerability", "check for vulnerabilities"
+  - "OWASP", "OWASP Top 10"
+  - "authentication security", "is our auth secure"
+  - "XSS", "CSRF", "SQL injection"
+  - "security check before release"
+  - "penetration test", "security scan"
 
-<example>
-Context: User worried about vulnerabilities
-user: "Are there any XSS vulnerabilities in our frontend?"
-assistant: "I'll use the security-auditor agent to scan for XSS risks and injection points."
-<commentary>
-Vulnerability check - invoke security auditor for XSS analysis.
-</commentary>
-</example>
-
-<example>
-Context: Pre-release security check
-user: "Do a security audit before we go live"
-assistant: "I'll use the security-auditor agent to perform a comprehensive OWASP Top 10 audit."
-<commentary>
-Pre-release audit - use security auditor for full security review.
-</commentary>
-</example>
-
+  DO NOT trigger when:
+  - Code review (use code-reviewer)
+  - Architecture review (use architect-reviewer)
+  - Implementation (use spring-boot-developer or angular-frontend-developer)
+  - General testing (use test-engineer)
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
 model: inherit
 color: red

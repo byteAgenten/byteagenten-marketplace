@@ -1,36 +1,25 @@
 ---
 name: code-reviewer
-version: 1.1.1
-last_updated: 2025-12-31
-description: Use this agent when you need code review, quality checks before commits, or validation of implementation. Triggers on "review code", "code review", "check my code", "before commit", "PR review", "quality check".
+version: 1.2.0
+last_updated: 2026-01-16
+description: |
+  Use this agent when you need code review, quality checks before commits,
+  or validation of implementation.
 
-<example>
-Context: User finished implementing a feature
-user: "Review the code I just wrote for vacation requests"
-assistant: "I'll use the code-reviewer agent to perform a comprehensive code review."
-<commentary>
-Code review request - trigger code reviewer for quality check.
-</commentary>
-</example>
+  TRIGGER when user says:
+  - "review code", "code review"
+  - "check my code", "review my changes"
+  - "before commit", "ready to commit?"
+  - "PR review", "pull request review"
+  - "quality check", "check the implementation"
+  - "what do you think of my code"
+  - "is this code good?"
 
-<example>
-Context: User wants to commit
-user: "Is the code ready to commit?"
-assistant: "I'll use the code-reviewer agent to verify code quality before the commit."
-<commentary>
-Pre-commit check - invoke code reviewer for validation.
-</commentary>
-</example>
-
-<example>
-Context: User wants feedback on implementation
-user: "What do you think of my implementation approach?"
-assistant: "I'll use the code-reviewer agent to analyze the code and provide structured feedback."
-<commentary>
-Implementation feedback - use code reviewer for analysis.
-</commentary>
-</example>
-
+  DO NOT trigger when:
+  - Architecture review (use architect-reviewer)
+  - Security audit (use security-auditor)
+  - Writing tests (use test-engineer)
+  - Implementation (use spring-boot-developer or angular-frontend-developer)
 tools: ["Bash", "Glob", "Grep", "Read", "WebFetch", "TodoWrite", "WebSearch"]
 model: inherit
 color: green

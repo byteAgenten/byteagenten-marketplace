@@ -1,35 +1,26 @@
 ---
 name: spring-boot-developer
-version: 2.3.2
-description: Use this agent when you need to implement Spring Boot backend code, REST controllers, JPA entities, services, or Java backend features. Triggers on "Spring Boot", "Java implementation", "backend code", "REST controller", "JPA entity", "create endpoint".
+version: 2.4.0
+last_updated: 2026-01-16
+description: |
+  Use this agent when you need to implement Spring Boot backend code,
+  REST controllers, JPA entities, services, or Java backend features.
 
-<example>
-Context: User wants to implement backend feature
-user: "Implement the vacation request REST API"
-assistant: "I'll use the spring-boot-developer agent to create the controller, service, and repository layers."
-<commentary>
-Backend implementation request - trigger Spring Boot developer for full-stack backend.
-</commentary>
-</example>
+  TRIGGER when user says:
+  - "Spring Boot", "Java implementation"
+  - "backend code", "implement the backend"
+  - "REST controller", "create endpoint"
+  - "JPA entity", "repository"
+  - "implement the [feature] API"
+  - "fix the backend", "backend bug"
+  - "add an endpoint for..."
+  - "service layer", "business logic"
 
-<example>
-Context: User needs a new endpoint
-user: "Add an endpoint to export time entries as CSV"
-assistant: "I'll use the spring-boot-developer agent to implement the export endpoint with proper content type handling."
-<commentary>
-Endpoint creation request - invoke Spring Boot developer for API implementation.
-</commentary>
-</example>
-
-<example>
-Context: User has backend bug
-user: "The vacation balance calculation is wrong"
-assistant: "I'll use the spring-boot-developer agent to debug the service layer and fix the calculation."
-<commentary>
-Backend bug - use Spring Boot developer for investigation and fix.
-</commentary>
-</example>
-
+  DO NOT trigger when:
+  - Frontend/Angular implementation needed
+  - Database schema design (use postgresql-architect)
+  - API design only (use api-architect)
+  - Architecture planning (use architect-planner)
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
 model: inherit
 color: purple

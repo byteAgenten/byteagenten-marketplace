@@ -1,35 +1,25 @@
 ---
 name: ui-ux-designer
-version: 2.0.1
-description: Use this agent when you need to create wireframes, design UI layouts, plan user interfaces, or optimize user experience. Triggers on "wireframe", "UI design", "mockup", "user interface", "dashboard layout", "design the screen".
+version: 2.1.0
+last_updated: 2026-01-16
+description: |
+  Use this agent when you need to create wireframes, design UI layouts,
+  plan user interfaces, or optimize user experience.
 
-<example>
-Context: User wants a UI design
-user: "Design the user registration form"
-assistant: "I'll use the ui-ux-designer agent to create an HTML wireframe with proper UX patterns."
-<commentary>
-UI design request - trigger UI/UX designer for wireframe creation.
-</commentary>
-</example>
+  TRIGGER when user says:
+  - "wireframe", "create a wireframe"
+  - "UI design", "design the UI"
+  - "mockup", "create a mockup"
+  - "user interface", "interface design"
+  - "dashboard layout", "design the dashboard"
+  - "design the screen", "layout for..."
+  - "UX improvement", "improve the user experience"
 
-<example>
-Context: User needs a dashboard
-user: "Create a dashboard layout for the admin overview"
-assistant: "I'll use the ui-ux-designer agent to design a data-driven dashboard with proper information hierarchy."
-<commentary>
-Dashboard request - invoke UI/UX designer for layout design.
-</commentary>
-</example>
-
-<example>
-Context: User wants to improve UX
-user: "The onboarding flow is confusing for new users"
-assistant: "I'll use the ui-ux-designer agent to analyze the flow and propose UX improvements."
-<commentary>
-UX improvement request - use UI/UX designer for optimization.
-</commentary>
-</example>
-
+  DO NOT trigger when:
+  - Implementing the UI (use angular-frontend-developer)
+  - Backend design (use architect-planner)
+  - API design (use api-architect)
+  - Code review (use code-reviewer)
 tools: ["Read", "Write", "Edit", "Glob", "Grep"]
 model: sonnet
 color: orange

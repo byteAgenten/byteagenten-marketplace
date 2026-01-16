@@ -1,36 +1,25 @@
 ---
 name: architect-reviewer
-version: 1.0.0
-last_updated: 2025-12-21
-description: Use this agent when you need to validate architectural decisions, review system design, assess technology choices, or evaluate scalability. Triggers on "architecture review", "design review", "scalability", "technology choice", "system design", "architectural decision".
+version: 1.1.0
+last_updated: 2026-01-16
+description: |
+  Use this agent when you need to validate architectural decisions, review
+  system design, assess technology choices, or evaluate scalability.
 
-<example>
-Context: User made architectural decisions
-user: "Review our decision to use microservices"
-assistant: "I'll use the architect-reviewer agent to evaluate the microservices decision against your requirements."
-<commentary>
-Architecture decision review - trigger architect reviewer for evaluation.
-</commentary>
-</example>
+  TRIGGER when user says:
+  - "architecture review", "review the architecture"
+  - "design review", "review our design"
+  - "scalability", "will this scale"
+  - "technology choice", "should we use X or Y"
+  - "system design", "architectural decision"
+  - "evaluate our approach"
+  - "review our migration strategy"
 
-<example>
-Context: User concerned about scalability
-user: "Will this design scale to 10x users?"
-assistant: "I'll use the architect-reviewer agent to analyze the architecture for scalability concerns."
-<commentary>
-Scalability question - invoke architect reviewer for analysis.
-</commentary>
-</example>
-
-<example>
-Context: Major refactoring planned
-user: "We're planning to split the monolith. Review our approach."
-assistant: "I'll use the architect-reviewer agent to evaluate the migration strategy and identify risks."
-<commentary>
-Major refactoring - use architect reviewer for strategic review.
-</commentary>
-</example>
-
+  DO NOT trigger when:
+  - Planning new features (use architect-planner)
+  - Code review (use code-reviewer)
+  - Security audit (use security-auditor)
+  - Implementation (use spring-boot-developer or angular-frontend-developer)
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
 model: inherit
 color: purple

@@ -1,35 +1,24 @@
 ---
 name: api-architect
-version: 2.1.1
-description: Use this agent when you need to design REST APIs, create OpenAPI specifications, define endpoints, or plan API contracts. Triggers on "design API", "API endpoints", "REST API", "OpenAPI spec", "API contract".
+version: 2.2.0
+last_updated: 2026-01-16
+description: |
+  Use this agent when you need to design REST APIs, create OpenAPI
+  specifications, define endpoints, or plan API contracts.
 
-<example>
-Context: User needs to design a new API
-user: "Design the REST API for the vacation request feature"
-assistant: "I'll use the api-architect agent to create an API design sketch with endpoints, DTOs, and business rules."
-<commentary>
-Explicit API design request - trigger API architect for endpoint planning.
-</commentary>
-</example>
+  TRIGGER when user says:
+  - "design API", "design the REST API"
+  - "API endpoints", "what endpoints do we need"
+  - "REST API", "OpenAPI spec"
+  - "API contract", "create the API contract"
+  - "define the endpoints for..."
+  - "what should the API look like"
 
-<example>
-Context: User wants to understand API structure
-user: "What endpoints do we need for user management?"
-assistant: "I'll use the api-architect agent to analyze requirements and design the user management API."
-<commentary>
-API structure question - invoke API architect for design.
-</commentary>
-</example>
-
-<example>
-Context: User needs API documentation
-user: "Create the API contract for the time tracking module"
-assistant: "I'll use the api-architect agent to create a detailed API design with request/response schemas."
-<commentary>
-API contract request - create comprehensive API documentation.
-</commentary>
-</example>
-
+  DO NOT trigger when:
+  - Implementing the API (use spring-boot-developer)
+  - Frontend API calls (use angular-frontend-developer)
+  - Database schema design (use postgresql-architect)
+  - General architecture questions (use architect-planner)
 tools: ["Read", "Write", "Edit", "Glob", "Grep"]
 model: inherit
 color: blue

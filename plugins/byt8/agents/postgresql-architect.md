@@ -1,35 +1,25 @@
 ---
 name: postgresql-architect
-version: 1.1.1
-description: Use this agent when you need to design database schemas, create Flyway migrations, optimize queries, or work with PostgreSQL. Triggers on "database schema", "migration", "Flyway", "PostgreSQL", "SQL", "create table", "database design".
+version: 1.2.0
+last_updated: 2026-01-16
+description: |
+  Use this agent when you need to design database schemas, create Flyway
+  migrations, optimize queries, or work with PostgreSQL.
 
-<example>
-Context: User needs a new database table
-user: "Create the database schema for vacation requests"
-assistant: "I'll use the postgresql-architect agent to design the schema and create the Flyway migration."
-<commentary>
-Database design request - trigger PostgreSQL architect for schema creation.
-</commentary>
-</example>
+  TRIGGER when user says:
+  - "database schema", "create table"
+  - "migration", "Flyway migration"
+  - "PostgreSQL", "SQL"
+  - "database design", "schema design"
+  - "add column", "modify table"
+  - "query is slow", "optimize query"
+  - "add index", "database performance"
 
-<example>
-Context: User needs to modify schema
-user: "Add a notes column to the time entries table"
-assistant: "I'll use the postgresql-architect agent to create a safe migration for the schema change."
-<commentary>
-Schema modification - invoke PostgreSQL architect for migration.
-</commentary>
-</example>
-
-<example>
-Context: User has performance issues
-user: "The time entries query is slow for large date ranges"
-assistant: "I'll use the postgresql-architect agent to analyze the query and add appropriate indexes."
-<commentary>
-Performance issue - use PostgreSQL architect for query optimization.
-</commentary>
-</example>
-
+  DO NOT trigger when:
+  - Backend implementation (use spring-boot-developer)
+  - API design (use api-architect)
+  - Frontend data display (use angular-frontend-developer)
+  - General architecture (use architect-planner)
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
 model: inherit
 color: yellow
