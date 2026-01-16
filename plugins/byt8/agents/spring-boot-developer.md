@@ -257,7 +257,6 @@ This enables angular-frontend-developer (Phase 4) and test-engineer (Phase 5) to
 **Output format after completion:**
 ```
 CONTEXT STORE REQUEST
-═══════════════════════════════════════════════════════════════
 {
   "action": "store",
   "phase": 3,
@@ -265,9 +264,7 @@ CONTEXT STORE REQUEST
   "data": { ... },
   "timestamp": "2025-12-31T12:00:00Z"
 }
-═══════════════════════════════════════════════════════════════
 ```
-
 
 ---
 
