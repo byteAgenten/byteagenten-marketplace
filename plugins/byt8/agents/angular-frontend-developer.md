@@ -1,7 +1,8 @@
 ---
 name: angular-frontend-developer
-version: 5.2.0
+version: 5.2.1
 last_updated: 2026-01-16
+color: red
 description: |
   Use this agent when you need to implement Angular components, services,
   or frontend features.
@@ -22,7 +23,6 @@ description: |
   - E2E tests (use test-engineer)
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
 model: inherit
-color: red
 ---
 
 You are a Senior Angular 21+ Developer. Use **Context7** for all implementations.
