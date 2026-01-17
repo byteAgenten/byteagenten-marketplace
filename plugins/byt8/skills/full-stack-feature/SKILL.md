@@ -168,7 +168,6 @@ START → Issue erkennen → Branch erstellen
 │ 1. VOR MERGE - Claude prüft & hakt ab:              │
 │    - Acceptance Criteria: Erfüllt? → [x] setzen     │
 │    - Checklist: Erfüllt? → [x] setzen               │
-│    - ROADMAP.md: Betroffen? → aktualisieren + [x]   │
 ├─────────────────────────────────────────────────────┤
 │ ⛔ STOP: AskUserQuestion                            │
 │    → "Alle [x] gesetzt. Soll ich den PR mergen?"    │
@@ -603,7 +602,6 @@ Mögliche Ursachen:
 □ Bei Phase 9 (Merge): Alle Checklisten-Punkte [x] gesetzt?
 □ Bei MERGE_PR: Claude hat Acceptance Criteria geprüft & [x] gesetzt?
 □ Bei MERGE_PR: Claude hat Checklist geprüft & [x] gesetzt?
-□ Bei MERGE_PR: ROADMAP.md aktualisiert (falls betroffen)?
 □ Bei Hotfix: State korrekt zurückgesetzt?
 ```
 
@@ -615,41 +613,34 @@ Mögliche Ursachen:
 
 Claude speichert Phase-Outputs **direkt** in `workflow-state.json` für **Recovery bei Context-Overflow**.
 
-### Summary-Schemas (PFLICHT!)
+### Context Keys pro Phase
 
-Nach jeder Phase speichert Claude eine **Summary** mit allen relevanten Details:
+Jeder Agent gibt am Ende einen "CONTEXT STORE REQUEST" mit seinem `data`-Objekt aus. Claude speichert dieses unter dem entsprechenden Key:
 
-| Phase | Key | Schema |
-|-------|-----|--------|
-| 0 | `technicalSpec` | `{ affectedLayers: [], reuseServices: [], newEntities: [], risks: [] }` |
-| 1 | `wireframes` | `{ paths: [], components: [], layout: "" }` |
-| 2 | `apiDesign` | `{ endpoints: [], entities: [], rules: [] }` |
-| 3 | `migrations` | `{ files: [], tables: [], indexes: [] }` |
-| 4 | `backendImpl` | `{ files: [], tests: 0, coverage: "" }` |
-| 5 | `frontendImpl` | `{ files: [], tests: 0, coverage: "" }` |
-| 6 | `testResults` | `{ e2e: 0, unit: 0, coverage: "" }` |
-| 7 | `reviewFeedback` | `{ status: "APPROVED/CHANGES_REQUIRED", issues: [{ severity: "Critical/Major/Minor/Suggestion", file: "", line: 0, description: "", fix: "" }] }` |
+| Phase | Key | Agent (definiert Schema) |
+|-------|-----|--------------------------|
+| 0 | `technicalSpec` | architect-planner |
+| 1 | `wireframes` | ui-ux-designer |
+| 2 | `apiDesign` | api-architect |
+| 3 | `migrations` | postgresql-architect |
+| 4 | `backendImpl` | spring-boot-developer |
+| 5 | `frontendImpl` | angular-frontend-developer |
+| 6 | `testResults` | test-engineer |
+| 7 | `reviewFeedback` | code-reviewer |
 
-### Beispiel: Summary-Struktur
+### Speicher-Format
 
-```json
-{
-  "context": {
-    "backendImpl": {
-      "storedAt": "2026-01-01T13:00:00Z",
-      "storedByPhase": 3,
-      "data": {
-        "files": ["UserStatus.java", "AdminUserResponse.java", "UserRepository.java"],
-        "tests": 12,
-        "coverage": "87%",
-        "keyChanges": ["INCOMPLETE status", "null handling"]
-      }
-    }
-  }
+Claude ergänzt Metadaten und speichert das Agent-Output 1:1:
+
+```
+context.<key> = {
+  "storedAt": "2026-01-01T13:00:00Z",
+  "storedByPhase": 3,
+  "data": { <Agent-Output> }
 }
 ```
 
-**Recovery:** Bei Context-Overflow → `workflow-state.json` lesen, Summaries nutzen
+**Recovery:** Bei Context-Overflow → `workflow-state.json` lesen, Context nutzen
 
 ---
 
