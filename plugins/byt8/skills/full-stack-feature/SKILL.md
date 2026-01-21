@@ -1,7 +1,7 @@
 ---
 name: full-stack-feature
 description: Orchestrates full-stack feature development with approval gates and agent delegation.
-version: 2.14.3
+version: 2.15.0
 author: byteagent - Hans Pickelmann
 ---
 
@@ -155,6 +155,7 @@ START → Issue erkennen → Branch erstellen
 │ PHASE 8: Push & PR                                  │
 │ 1. Push zu Remote                                   │
 │ 2. PR-Inhalt ZEIGEN (Title, Body, Acceptance Crit.) │
+│    → PR gegen `baseBranch` (aus workflow-state)     │
 ├─────────────────────────────────────────────────────┤
 │ ⛔ STOP: AskUserQuestion                            │
 │    → "Soll ich diesen PR erstellen?"                │
@@ -176,7 +177,7 @@ START → Issue erkennen → Branch erstellen
 │ 2. PR mergen                                        │
 ├─────────────────────────────────────────────────────┤
 │ PHASE 10: Cleanup (AUTOMATISCH nach PR-Merge!)      │
-│ 1. git checkout main && git pull                    │
+│ 1. git checkout <baseBranch> && git pull            │
 │ 2. Branch löschen (lokal + remote)                  │
 │ 3. Duration berechnen (startedAt → jetzt)           │
 │ 4. workflow-state.json → status: "idle"             │
@@ -215,16 +216,18 @@ Diese Regeln gelten für JEDEN Workflow-Durchlauf. **Kein externes CLAUDE.md erf
 
 ### Constraint 1: Branch-Strategie
 
-**NIEMALS direkt auf `main` committen!**
+**NIEMALS direkt auf `baseBranch` committen!**
 
 ```bash
 # Vor dem ersten Commit prüfen:
 git branch --show-current
-# Falls "main" → STOP! Erst Branch erstellen!
+# Falls baseBranch (z.B. "main", "snapshot-0081") → STOP! Erst Feature-Branch erstellen!
 ```
 
 - Feature-Branch erstellen: `feature/issue-{N}-{kurzbeschreibung}`
+- Feature-Branch von `baseBranch` abzweigen (nicht von `main`, falls `--base` gesetzt!)
 - Branch erst nach Phase 7 (Code Review) APPROVED pushen
+- PR gegen `baseBranch` erstellen (aus workflow-state.json)
 - **VIOLATION = WORKFLOW FAILURE**
 
 ### Constraint 2: Git Commit Approval
@@ -240,6 +243,13 @@ git branch --show-current
 
 ### Constraint 3: Merge-Strategie
 
+**PR erstellen gegen baseBranch:**
+```bash
+gh pr create --base <baseBranch> --title "..." --body "..."
+# <baseBranch> aus workflow-state.json lesen!
+```
+
+**PR mergen:**
 ```bash
 gh pr merge --merge   # NICHT --squash oder --rebase!
 ```
@@ -332,9 +342,13 @@ E2E-Tests (Playwright) starten ihre **eigene Infrastruktur** via Testcontainers:
 
 ```
 /full-stack-feature #42
+/full-stack-feature #42 --base=snapshot-0081         # PR gegen anderen Branch
 /full-stack-feature "Implement vacation tracking"
+/full-stack-feature "Implement X" --base=develop     # Mit custom Base-Branch
 /full-stack-feature                                  # Ohne Argument
 ```
+
+**`--base` Parameter:** Legt den Ziel-Branch für PR und Merge fest. Default: `main`
 
 ---
 
@@ -347,19 +361,26 @@ E2E-Tests (Playwright) starten ihre **eigene Infrastruktur** via Testcontainers:
 mkdir -p .workflow
 ```
 
-**2. State prüfen:**
+**2. .gitignore prüfen (WICHTIG!):**
+```bash
+grep -q "^\.workflow/" .gitignore 2>/dev/null || echo ".workflow/" >> .gitignore
+```
+
+⚠️ **Das `.workflow/`-Verzeichnis darf NIEMALS eingecheckt werden!** Es enthält nur temporären Session-State.
+
+**3. State prüfen:**
 ```bash
 cat .workflow/workflow-state.json 2>/dev/null || echo "NICHT VORHANDEN"
 ```
 
-**3. Entscheidung:**
+**4. Entscheidung:**
 
 | State | Aktion |
 |-------|--------|
 | `"status": "active"` | Resume anbieten: "Aktiver Workflow gefunden (Phase X). Fortsetzen?" |
 | `"status": "idle"` oder nicht vorhanden | Neuen Workflow starten |
 
-**4. Falls neuer Workflow:** State initialisieren mit Write-Tool:
+**5. Falls neuer Workflow:** State initialisieren mit Write-Tool:
 
 ```json
 {
@@ -367,6 +388,7 @@ cat .workflow/workflow-state.json 2>/dev/null || echo "NICHT VORHANDEN"
   "status": "active",
   "issue": { "number": null, "title": "", "url": "" },
   "branch": "",
+  "baseBranch": "main",
   "currentPhase": 0,
   "startedAt": "[ISO-TIMESTAMP]",
   "phases": {},
@@ -380,13 +402,30 @@ cat .workflow/workflow-state.json 2>/dev/null || echo "NICHT VORHANDEN"
 }
 ```
 
+**`baseBranch`:** Ziel-Branch für PR und Merge. Default `"main"`, oder via `--base=<branch>` gesetzt.
+
 ### Argument-Handling
 
 | Argument | Aktion |
 |----------|--------|
 | `#42` | GitHub Issue laden, Titel + URL in State speichern |
 | `"Implement X"` | Als Titel verwenden, kein Issue-Link |
+| `--base=<branch>` | Ziel-Branch für PR/Merge setzen (statt `main`) |
 | Kein Argument | Fragen: "Was möchtest du implementieren?" |
+
+**`--base` Parsing:**
+```
+Eingabe: "#42 --base=snapshot-0081"
+→ issue.number = 42
+→ baseBranch = "snapshot-0081"
+
+Eingabe: "Implement X --base=develop"
+→ issue.title = "Implement X"
+→ baseBranch = "develop"
+
+Eingabe: "#42" (ohne --base)
+→ baseBranch = "main" (Default)
+```
 
 **WICHTIG:** Keine AskUserQuestion für Argument! Einfach auf Eingabe warten.
 
@@ -410,6 +449,7 @@ In workflow-state speichern: `"targetCoverage": "70%"` (oder gewählter Wert)
   "status": "active",
   "issue": { "number": 42, "title": "...", "url": "..." },
   "branch": "feature/issue-42-...",
+  "baseBranch": "main",
   "currentPhase": 3,
   "startedAt": "2025-12-29T12:00:00Z",
   "phases": {

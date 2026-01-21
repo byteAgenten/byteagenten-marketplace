@@ -6,7 +6,7 @@ Private Claude Code Plugins for byteAgenten team members.
 
 | Plugin | Description | Version |
 |--------|-------------|---------|
-| [byt8](./plugins/byt8) | Full-stack development toolkit for Angular 21 + Spring Boot 4 | 2.14.3 |
+| [byt8](./plugins/byt8) | Full-stack development toolkit for Angular 21 + Spring Boot 4 | 2.15.0  |
 
 ## Prerequisites
 
@@ -62,6 +62,52 @@ After installation, the following commands are available:
 |---------|-------------|
 | `/byt8:full-stack-feature` | 10-phase workflow for full-stack feature development |
 | `/byt8:project-setup` | One-time design system initialization |
+
+### Full-Stack-Feature: Branch-Auswahl (`--base`)
+
+Der Workflow unterstützt einen konfigurierbaren Ziel-Branch für PR und Merge:
+
+```bash
+# Standard: PR gegen main
+/byt8:full-stack-feature #42
+
+# PR gegen anderen Branch
+/byt8:full-stack-feature #42 --base=snapshot-0081
+/byt8:full-stack-feature #42 --base=develop
+/byt8:full-stack-feature "Feature X" --base=release/v2.0
+```
+
+**Workflow mit `--base=snapshot-0081`:**
+
+```
+snapshot-0081 ──────────────────────────────●── (Merge-Ziel)
+                \                          /
+                 feature/issue-42-xyz ────●
+```
+
+| Phase | Aktion |
+|-------|--------|
+| Start | Feature-Branch von `baseBranch` abzweigen |
+| 8 | `gh pr create --base snapshot-0081` |
+| 9 | PR in `snapshot-0081` mergen |
+| 10 | `git checkout snapshot-0081 && git pull` |
+
+### Workflow-State ausschließen (`.workflow/`)
+
+Das `.workflow/`-Verzeichnis enthält temporären Session-State und darf **nicht eingecheckt** werden. Der Workflow fügt es automatisch zur `.gitignore` hinzu.
+
+Falls `.workflow/` bereits eingecheckt wurde:
+
+```bash
+# Aus Git-Tracking entfernen (lokale Dateien bleiben)
+git rm -r --cached .workflow/
+echo ".workflow/" >> .gitignore
+git add .gitignore
+git commit -m "chore: exclude .workflow/ from version control"
+```
+
+| Command | Description |
+|---------|-------------|
 | `/byt8:theme-factory` | Apply themes to artifacts (slides, docs, etc.) |
 | `/byt8:ui-design-system` | UI design system toolkit |
 | `/byt8:ux-research` | UX research and design methodology |
