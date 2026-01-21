@@ -6,7 +6,7 @@ Private Claude Code Plugins for byteAgenten team members.
 
 | Plugin | Description | Version |
 |--------|-------------|---------|
-| [byt8](./plugins/byt8) | Full-stack development toolkit for Angular 21 + Spring Boot 4 | 2.15.0  |
+| [byt8](./plugins/byt8) | Full-stack development toolkit for Angular 21 + Spring Boot 4 | 2.17.0 |
 
 ## Prerequisites
 
@@ -63,34 +63,43 @@ After installation, the following commands are available:
 | `/byt8:full-stack-feature` | 10-phase workflow for full-stack feature development |
 | `/byt8:project-setup` | One-time design system initialization |
 
-### Full-Stack-Feature: Branch-Auswahl (`--base`)
+### Full-Stack-Feature: Branch-Auswahl
 
-Der Workflow unterstützt einen konfigurierbaren Ziel-Branch für PR und Merge:
+**Am Start:** Nur `fromBranch` angeben (von wo abzweigen)
 
 ```bash
-# Standard: PR gegen main
-/byt8:full-stack-feature #42
-
-# PR gegen anderen Branch
-/byt8:full-stack-feature #42 --base=snapshot-0081
-/byt8:full-stack-feature #42 --base=develop
-/byt8:full-stack-feature "Feature X" --base=release/v2.0
+/byt8:full-stack-feature #42              # Von main abzweigen
+/byt8:full-stack-feature #42 develop      # Von develop abzweigen
+/byt8:full-stack-feature #42 release/v2.0 # Von release/v2.0 abzweigen
 ```
 
-**Workflow mit `--base=snapshot-0081`:**
+**In Phase 8:** `intoBranch` wird abgefragt (wohin PR erstellen)
 
 ```
-snapshot-0081 ──────────────────────────────●── (Merge-Ziel)
-                \                          /
-                 feature/issue-42-xyz ────●
+→ "Gegen welchen Branch soll der PR erstellt werden?"
+  - develop (Default = fromBranch)
+  - main
+  - Anderer: ___
+```
+
+**Beispiel-Flow:**
+
+```
+develop ──────────────────────────────────  (fromBranch - am Start)
+         \
+          feature/issue-42-xyz ────●
+                                    \
+main ────────────────────────────────●──  (intoBranch - in Phase 8 gewählt)
 ```
 
 | Phase | Aktion |
 |-------|--------|
-| Start | Feature-Branch von `baseBranch` abzweigen |
-| 8 | `gh pr create --base snapshot-0081` |
-| 9 | PR in `snapshot-0081` mergen |
-| 10 | `git checkout snapshot-0081 && git pull` |
+| Start | `fromBranch` angeben → Feature-Branch erstellen |
+| 0-7 | Entwicklung |
+| 8 | `intoBranch` abfragen → PR-Inhalt zeigen → Push + PR |
+| ✅ | Workflow fertig, PR-URL ausgeben |
+
+**Merge + Cleanup erfolgt manuell** nach PR-Review
 
 ### Workflow-State ausschließen (`.workflow/`)
 
