@@ -1,7 +1,7 @@
 ---
 name: full-stack-feature
 description: Orchestrates full-stack feature development with approval gates and agent delegation.
-version: 2.18.0
+version: 2.19.0
 author: byteagent - Hans Pickelmann
 ---
 
@@ -89,10 +89,52 @@ Bei "This session is being continued from a previous conversation...":
 
 ⛔ **NIEMALS Branch erstellen ohne User-Bestätigung!**
 
+**Zuerst verfügbare Branches vom Remote holen:**
+```bash
+git fetch --prune
+git branch -r | grep -v HEAD | sed 's/origin\///'
+```
+
+**Branch-Auswahl (max. 10 anzeigen, priorisiert):**
+
+Priorität:
+1. `main` oder `master` (falls vorhanden)
+2. `develop` (falls vorhanden)
+3. `release/*` Branches
+4. Restliche Branches (alphabetisch)
+
+Falls mehr als 10 Branches → nur Top 10 anzeigen + Hinweis "Andere eingeben"
+
 | Situation | Aktion |
 |-----------|--------|
-| `fromBranch` explizit angegeben | Bestätigen: "Branch wird von `<fromBranch>` erstellt. OK?" |
-| `fromBranch` NICHT angegeben | Fragen: "Von welchem Branch soll ich abzweigen?" → Optionen: `main`, `develop`, oder eigene Eingabe |
+| `fromBranch` explizit angegeben | Prüfen ob Branch existiert, dann bestätigen lassen |
+| `fromBranch` NICHT angegeben | Top-Branches auflisten, User wählen lassen |
+
+**Beispiel-Dialog (Paginierung bei vielen Branches):**
+```
+Von welchem Branch soll ich für Issue #42 abzweigen?
+
+Seite 1/5 (1-10 von 47 Branches):
+1. main
+2. develop
+3. release/v2.1
+4. release/v2.0
+5. release/v1.9
+6. feature/user-auth
+7. feature/dashboard
+8. feature/api-v2
+9. hotfix/login-bug
+10. hotfix/memory-leak
+
+[n] Nächste Seite | [b] Branch-Name eingeben
+Auswahl:
+```
+
+**Paginierung:**
+- 10 Branches pro Seite
+- `n` = nächste Seite, `p` = vorherige Seite
+- Nummer (1-10) = Branch auswählen
+- `b` = Branch-Name manuell eingeben
 
 **Erst NACH User-Bestätigung:**
 ```bash
