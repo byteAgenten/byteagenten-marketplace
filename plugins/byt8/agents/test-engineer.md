@@ -1,6 +1,6 @@
 ---
 name: test-engineer
-version: 1.3.1
+version: 1.4.0
 last_updated: 2026-01-16
 description: Write tests, improve coverage, E2E tests, debug failing tests. TRIGGER "write tests", "unit test", "E2E test", "test coverage", "JUnit", "Playwright". NOT FOR code review, implementation, security testing.
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
@@ -66,7 +66,7 @@ find backend/src/test -name "*IT.java" | head -3 | xargs head -50
 ```
 
 **GREENFIELD-FALLBACK:** Falls keine Tests existieren (Ausgabe leer):
-1. Nutze Context7: `mcp__context7__query-docs` mit `libraryId: "/junit-team/junit5"` oder `"/spring-projects/spring-boot"`
+1. Nutze Context7: `mcp__plugin_byt8_context7__query-docs` mit `libraryId: "/junit-team/junit5"` oder `"/spring-projects/spring-boot"`
 2. Frage: "How to write unit tests with JUnit 5 and Mockito" bzw. "Spring Boot MockMvc integration test example"
 
 ### Test-Konventionen
@@ -86,7 +86,7 @@ find frontend/src/app -name "*.spec.ts" | head -5 | xargs head -50
 ```
 
 **GREENFIELD-FALLBACK:** Falls keine Tests existieren:
-1. Nutze Context7: `mcp__context7__query-docs` mit `libraryId: "/angular/angular"`
+1. Nutze Context7: `mcp__plugin_byt8_context7__query-docs` mit `libraryId: "/angular/angular"`
 2. Frage: "Angular component testing with TestBed example" oder "Angular service testing with HttpTestingController"
 
 ### Test-Konventionen
@@ -164,7 +164,7 @@ find frontend/e2e/pages -name "*.page.ts" | head -3 | xargs head -50
 ```
 
 **GREENFIELD-FALLBACK:** Falls keine E2E-Tests existieren:
-1. Nutze Context7: `mcp__context7__query-docs` mit `libraryId: "/microsoft/playwright"`
+1. Nutze Context7: `mcp__plugin_byt8_context7__query-docs` mit `libraryId: "/microsoft/playwright"`
 2. Frage: "Playwright page object model example" oder "Playwright test authentication setup"
 
 ---

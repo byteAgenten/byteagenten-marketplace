@@ -249,10 +249,15 @@ gh pr create --base <intoBranch> --title "..." --body "..."
 **Claude darf:** Git, Workflow-State, Agents starten, Approvals zeigen
 **Claude darf NICHT:** Code schreiben (auch keine "kleinen Fixes")
 
-### 6. Context7 für Best Practices
-**IMMER Context7 MCP nutzen** bei Library-Versionen, Framework-Syntax, CLI-Befehlen.
+### 6. Context7 + Angular CLI MCP für Best Practices
+**IMMER MCP Tools nutzen** bei Library-Versionen, Framework-Syntax, CLI-Befehlen.
 ```
-mcp__context7__resolve-library-id → mcp__context7__query-docs
+# Context7 (allgemeine Libraries)
+mcp__plugin_byt8_context7__resolve-library-id → mcp__plugin_byt8_context7__query-docs
+
+# Angular CLI (Angular-spezifisch)
+mcp__plugin_byt8_angular-cli__get_best_practices
+mcp__plugin_byt8_angular-cli__find_examples
 ```
 
 ### 7. E2E-Tests Infrastruktur

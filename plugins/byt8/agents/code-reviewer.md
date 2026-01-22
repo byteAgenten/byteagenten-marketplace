@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-version: 1.3.1
+version: 1.4.0
 last_updated: 2026-01-16
 description: Code review, quality checks before commits. TRIGGER "review code", "code review", "check my code", "before commit", "PR review". NOT FOR architecture review, security audit, writing tests.
 tools: ["Bash", "Glob", "Grep", "Read", "WebFetch", "TodoWrite", "WebSearch"]
@@ -139,7 +139,7 @@ cd frontend && npm run build
 
 **Before Review - Check if Context7 was consulted:**
 - Query project dependencies (package.json, pom.xml)
-- Use `mcp__context7__resolve-library-id` then `mcp__context7__get-library-docs`
+- Use `mcp__plugin_byt8_context7__resolve-library-id` then `mcp__plugin_byt8_context7__query-docs`
 - Document findings in review report
 
 **Common deprecated APIs to REJECT:**

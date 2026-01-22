@@ -41,6 +41,32 @@ Füge in deinem Projekt `.claude/settings.json` hinzu:
 
 ---
 
+## MCP Server
+
+Das Plugin installiert zwei MCP Server automatisch:
+
+| Server | Beschreibung |
+|--------|--------------|
+| `context7` | Aktuelle Dokumentation für Libraries (von [Upstash](https://github.com/upstash/context7)) |
+| `angular-cli` | Angular CLI Integration |
+
+**Wichtig:** Nach der Plugin-Installation muss Claude Code **neu gestartet** werden, damit die MCP Server geladen werden.
+
+### Context7 API-Key (optional, empfohlen)
+
+Context7 funktioniert ohne Anmeldung, aber mit eingeschränkten Rate Limits. Für häufige Nutzung empfehlen wir einen kostenlosen API-Key:
+
+1. Registrieren auf [context7.com/dashboard](https://context7.com/dashboard)
+2. API-Key generieren (Format: `ctx7sk-...`)
+3. Als Umgebungsvariable setzen:
+
+```bash
+# In ~/.bashrc oder ~/.zshrc einfügen:
+export CONTEXT7_API_KEY=ctx7sk-dein-key-hier
+```
+
+---
+
 ## Commands
 
 | Command | Beschreibung |
