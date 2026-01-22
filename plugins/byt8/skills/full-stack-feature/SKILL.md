@@ -1,7 +1,7 @@
 ---
 name: full-stack-feature
 description: Orchestrates full-stack feature development with approval gates and agent delegation.
-version: 2.19.0
+version: 2.20.0
 author: byteagent - Hans Pickelmann
 ---
 
@@ -181,11 +181,13 @@ START → Issue erkennen → Branch erstellen
 │ Output: Technical Spec in workflow-state            │
 ├─────────────────────────────────────────────────────┤
 │ ⛔ STOP: "Ist die Architektur akzeptiert?"          │
+│ Bei Fragen/Feedback → zurück an architect-planner   │
 ├─────────────────────────────────────────────────────┤
 │ PHASE 1: UI/UX → byt8:ui-ux-designer                │
 │ Output: wireframes/*.html                           │
 ├─────────────────────────────────────────────────────┤
 │ ⛔ STOP: "Sind die Wireframes akzeptiert?"          │
+│ Bei Fragen/Feedback → zurück an ui-ux-designer      │
 │ ✅ Bei "Ja": WIP-Commit                             │
 ├─────────────────────────────────────────────────────┤
 │ PHASE 2: API Design → byt8:api-architect            │
@@ -247,6 +249,41 @@ START → Issue erkennen → Branch erstellen
 | 8 | User Approval | PR-Inhalt zeigen, "PR erstellen?" | Push+PR |
 
 **VIOLATION = WORKFLOW FAILURE**
+
+### User Approval: Feedback-Loop
+
+Bei User Approval Gates (Phase 0, 1, 6, 8) hat der User **drei Möglichkeiten:**
+
+| Antwort | Aktion |
+|---------|--------|
+| ✅ "Ja" / "Akzeptiert" | Weiter zur nächsten Phase |
+| ❌ "Nein" / Feedback / Fragen | **An denselben Agent zurückdelegieren!** |
+| ❓ "Abbrechen" | Workflow pausieren |
+
+⛔ **Der Orchestrator darf NIEMALS selbst auf Fragen/Feedback antworten!**
+→ Immer an den zuständigen Agent zurückdelegieren.
+
+**Beispiel Phase 0:**
+```
+User: "Warum habt ihr hier REST statt GraphQL gewählt?"
+→ Orchestrator delegiert die Frage an byt8:architect-planner
+→ architect-planner antwortet / überarbeitet
+→ Erneut fragen: "Ist die Architektur jetzt akzeptiert?"
+```
+
+**Feedback-Loop State:**
+```json
+{
+  "nextStep": {
+    "action": "AWAIT_USER_APPROVAL",
+    "phase": 0,
+    "feedbackRound": 2,
+    "agent": "byt8:architect-planner"
+  }
+}
+```
+
+Der Loop wiederholt sich bis der User "Ja" sagt.
 
 ---
 
