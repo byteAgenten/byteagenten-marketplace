@@ -6,18 +6,67 @@ Private Claude Code Plugins for byteAgenten team members.
 
 | Plugin | Description | Version |
 |--------|-------------|---------|
-| [byt8](./plugins/byt8) | Full-stack development toolkit for Angular 21 + Spring Boot 4 | 2.17.0 |
+| [byt8](./plugins/byt8) | Full-stack development toolkit for Angular 21 + Spring Boot 4 | 2.18.0 |
 
 ## Prerequisites
 
-1. GitHub access to byteAgenten organization
-2. GitHub token set: `export GITHUB_TOKEN=ghp_xxx` (or use `gh auth login`)
+### 1. GitHub-Zugang zur byteAgenten Organisation
+
+Du brauchst Zugriff auf das private Repository `byteAgenten/byteagenten-marketplace`.
+
+### 2. GitHub Token konfigurieren
+
+**Option A: GitHub CLI (empfohlen)**
+
+Die [GitHub CLI](https://cli.github.com/) (`gh`) ist ein Kommandozeilen-Tool für GitHub.
+
+```bash
+# Installation (macOS)
+brew install gh
+
+# Installation (Windows)
+winget install GitHub.cli
+
+# Einmalig anmelden - öffnet Browser zur Authentifizierung
+gh auth login
+```
+
+**Option B: Personal Access Token (PAT)**
+
+1. Gehe zu [GitHub Settings → Developer Settings → Personal Access Tokens](https://github.com/settings/tokens)
+2. Klicke "Generate new token (classic)"
+3. Wähle Scope: `repo` (Full control of private repositories)
+4. Token kopieren (beginnt mit `ghp_`)
+5. In Shell exportieren:
+
+```bash
+# In ~/.bashrc oder ~/.zshrc einfügen:
+export GITHUB_TOKEN=ghp_dein_token_hier
+```
 
 ## Installation
 
-### Option 1: Manual Configuration (Recommended)
+### Option 1: Via Claude Code (empfohlen)
 
-Add this to your project's `.claude/settings.json`:
+In Claude Code eingeben:
+
+```bash
+# Marketplace registrieren
+/plugin marketplace add byteAgenten/byteagenten-marketplace
+
+# Plugin installieren
+/plugin install byt8@byteagenten-marketplace
+```
+
+**Erklärung:**
+- `byteAgenten` = GitHub Organisation (Owner des Repositories)
+- `byteagenten-marketplace` = Name des Repositories auf GitHub
+- `byt8` = Name des Plugins
+- `@byteagenten-marketplace` = aus welchem Marketplace das Plugin kommt
+
+### Option 2: Manuelle Konfiguration
+
+Füge in deinem Projekt `.claude/settings.json` hinzu:
 
 ```json
 {
@@ -35,7 +84,9 @@ Add this to your project's `.claude/settings.json`:
 }
 ```
 
-### Option 2: Pin to Specific Version
+### Option 3: Bestimmte Version pinnen
+
+Falls du eine feste Version verwenden möchtest:
 
 ```json
 {
@@ -56,71 +107,16 @@ Add this to your project's `.claude/settings.json`:
 
 ## Available Commands
 
-After installation, the following commands are available:
-
 | Command | Description |
 |---------|-------------|
-| `/byt8:full-stack-feature` | 10-phase workflow for full-stack feature development |
+| `/byt8:full-stack-feature` | 9-phase workflow for full-stack feature development |
 | `/byt8:project-setup` | One-time design system initialization |
-
-### Full-Stack-Feature: Branch-Auswahl
-
-**Am Start:** Nur `fromBranch` angeben (von wo abzweigen)
-
-```bash
-/byt8:full-stack-feature #42              # Von main abzweigen
-/byt8:full-stack-feature #42 develop      # Von develop abzweigen
-/byt8:full-stack-feature #42 release/v2.0 # Von release/v2.0 abzweigen
-```
-
-**In Phase 8:** `intoBranch` wird abgefragt (wohin PR erstellen)
-
-```
-→ "Gegen welchen Branch soll der PR erstellt werden?"
-  - develop (Default = fromBranch)
-  - main
-  - Anderer: ___
-```
-
-**Beispiel-Flow:**
-
-```
-develop ──────────────────────────────────  (fromBranch - am Start)
-         \
-          feature/issue-42-xyz ────●
-                                    \
-main ────────────────────────────────●──  (intoBranch - in Phase 8 gewählt)
-```
-
-| Phase | Aktion |
-|-------|--------|
-| Start | `fromBranch` angeben → Feature-Branch erstellen |
-| 0-7 | Entwicklung |
-| 8 | `intoBranch` abfragen → PR-Inhalt zeigen → Push + PR |
-| ✅ | Workflow fertig, PR-URL ausgeben |
-
-**Merge + Cleanup erfolgt manuell** nach PR-Review
-
-### Workflow-State ausschließen (`.workflow/`)
-
-Das `.workflow/`-Verzeichnis enthält temporären Session-State und darf **nicht eingecheckt** werden. Der Workflow fügt es automatisch zur `.gitignore` hinzu.
-
-Falls `.workflow/` bereits eingecheckt wurde:
-
-```bash
-# Aus Git-Tracking entfernen (lokale Dateien bleiben)
-git rm -r --cached .workflow/
-echo ".workflow/" >> .gitignore
-git add .gitignore
-git commit -m "chore: exclude .workflow/ from version control"
-```
-
-| Command | Description |
-|---------|-------------|
 | `/byt8:theme-factory` | Apply themes to artifacts (slides, docs, etc.) |
 | `/byt8:ui-design-system` | UI design system toolkit |
 | `/byt8:ux-research` | UX research and design methodology |
 | `/byt8:python-expert` | Python development support |
+
+→ Details und Beispiele siehe [byt8 README](./plugins/byt8/README.md)
 
 ## Plugin Architecture
 

@@ -18,7 +18,7 @@ Falls `"status": "active"`:
 
 ## Project Overview
 
-This is the **byteAgenten Plugin Marketplace** - a private Claude Code plugin repository. The main plugin is **byt8**, a full-stack development toolkit for Angular 21 + Spring Boot 4 applications with a 10-phase workflow.
+This is the **byteAgenten Plugin Marketplace** - a private Claude Code plugin repository. The main plugin is **byt8**, a full-stack development toolkit for Angular 21 + Spring Boot 4 applications with a 9-phase workflow.
 
 ## Architecture
 
@@ -70,7 +70,7 @@ State is persisted in `.workflow/workflow-state.json` with:
 
 | Command | Description |
 |---------|-------------|
-| `/byt8:full-stack-feature` | 10-phase workflow for full-stack feature development |
+| `/byt8:full-stack-feature` | 9-phase workflow for full-stack feature development |
 | `/byt8:project-setup` | Design system initialization |
 | `/byt8:theme-factory` | Theme generation (10 predefined themes) |
 | `/byt8:ui-design-system` | UI design system toolkit |

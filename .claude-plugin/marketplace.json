@@ -6,12 +6,12 @@
   },
   "metadata": {
     "description": "byteAgenten Claude Code Plugin Marketplace",
-    "version": "2.17.0"
+    "version": "2.18.0"
   },
   "plugins": [
     {
       "name": "byt8",
-      "description": "Full-stack development toolkit for Angular 21 + Spring Boot 4 applications with 10-phase workflow",
+      "description": "Full-stack development toolkit for Angular 21 + Spring Boot 4 applications with 9-phase workflow",
       "source": "./plugins/byt8",
       "commands": [
         "./commands/full-stack-feature.md",

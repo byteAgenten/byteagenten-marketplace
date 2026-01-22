@@ -1,7 +1,7 @@
 ---
 name: full-stack-feature
 description: Orchestrates full-stack feature development with approval gates and agent delegation.
-version: 2.17.0
+version: 2.18.0
 author: byteagent - Hans Pickelmann
 ---
 
@@ -60,28 +60,50 @@ cat .workflow/workflow-state.json 2>/dev/null || echo "NICHT VORHANDEN"
 Bei "This session is being continued from a previous conversation...":
 → State lesen → `currentPhase` + `nextStep` notieren → ab `nextStep.action` fortsetzen
 
-### Argument-Handling
-
+**6. Argument-Handling:**
 ```
-/full-stack-feature #42                    # Von main abzweigen (Default)
-/full-stack-feature #42 develop            # Von develop abzweigen
-/full-stack-feature #42 --from=release/v2  # Explizit angeben
-/full-stack-feature "Implement X"          # Ohne Issue, nur Titel
+/full-stack-feature                                          # Fragt nach allem
+/full-stack-feature #42                                      # GitHub Issue → fragt nach Branch
+/full-stack-feature #42 --from=develop                       # GitHub Issue + Branch
+/full-stack-feature "Featurebeschreibung hier..."            # Inline → fragt nach Branch
+/full-stack-feature "Featurebeschreibung" --from=main        # Inline + Branch
+/full-stack-feature --file=feature.md                        # Aus Datei → fragt nach Branch
+/full-stack-feature --file=feature.md --from=develop         # Aus Datei + Branch
 ```
 
 | Argument | Aktion |
 |----------|--------|
-| `#42` | GitHub Issue laden |
-| `"Titel"` | Als Titel verwenden |
-| `develop` oder `--from=<branch>` | `fromBranch` setzen |
-| Kein Argument | Fragen: "Was möchtest du implementieren?" |
+| `#42` | GitHub Issue laden (Titel + Beschreibung aus GitHub) |
+| `"Featurebeschreibung"` | Featurebeschreibung inline (bis ~500 Zeichen praktikabel) |
+| `--file=<path>` | Längere Featurebeschreibung aus Markdown-Datei |
+| `--from=<branch>` | `fromBranch` vormerken |
+| Keine Argumente | Fragen: "Was möchtest du implementieren?" |
 
-**Branch-Parsing:**
-- `#42` → fromBranch = "main", intoBranch = null
-- `#42 develop` → fromBranch = "develop", intoBranch = null
-- `intoBranch` wird ERST in Phase 8 abgefragt!
+**Parsing-Regeln:**
+- `#42`, `"..."` und `--file=` sind **mutually exclusive** (nur eins davon)
+- `--from=<branch>` kann mit allen kombiniert werden
+- Ohne `--from=` → Schritt 7 fragt nach Branch
+- Unbekannte Argumente → Warnung: "Unbekanntes Argument."
 
-### Neuer Workflow initialisieren
+**7. Branch-Bestätigung (PFLICHT!):**
+
+⛔ **NIEMALS Branch erstellen ohne User-Bestätigung!**
+
+| Situation | Aktion |
+|-----------|--------|
+| `fromBranch` explizit angegeben | Bestätigen: "Branch wird von `<fromBranch>` erstellt. OK?" |
+| `fromBranch` NICHT angegeben | Fragen: "Von welchem Branch soll ich abzweigen?" → Optionen: `main`, `develop`, oder eigene Eingabe |
+
+**Erst NACH User-Bestätigung:**
+```bash
+git checkout <fromBranch> && git pull
+git checkout -b feature/issue-{N}-{kurzbeschreibung}
+```
+
+**8. Test-Coverage abfragen:**
+Coverage-Level abfragen (50% / 70% / 85% / 95%) → `"targetCoverage"` speichern
+
+**9. Workflow initialisieren:**
 
 Mit Write-Tool `.workflow/workflow-state.json` erstellen:
 ```json
@@ -90,7 +112,7 @@ Mit Write-Tool `.workflow/workflow-state.json` erstellen:
   "status": "active",
   "issue": { "number": null, "title": "", "url": "" },
   "branch": "",
-  "fromBranch": "main",
+  "fromBranch": "",
   "intoBranch": null,
   "currentPhase": 0,
   "startedAt": "[ISO-TIMESTAMP]",
@@ -104,8 +126,6 @@ Mit Write-Tool `.workflow/workflow-state.json` erstellen:
   "context": {}
 }
 ```
-
-**Nach Issue-Laden:** Test-Coverage abfragen (50% / 70% / 85% / 95%) → `"targetCoverage"` speichern.
 
 ---
 

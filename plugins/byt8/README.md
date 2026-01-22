@@ -1,6 +1,6 @@
 # byt8 Plugin
 
-Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 10-Phasen Workflow und Approval Gates.
+Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 9-Phasen Workflow und Approval Gates.
 
 ## Philosophy
 
@@ -45,22 +45,34 @@ Füge in deinem Projekt `.claude/settings.json` hinzu:
 
 | Command | Beschreibung |
 |---------|--------------|
-| `/byt8:full-stack-feature` | 10-Phasen Feature Development Workflow |
+| `/byt8:full-stack-feature` | 9-Phasen Feature Development Workflow |
 | `/byt8:project-setup` | Einmalige Design System Initialisierung |
 | `/byt8:theme-factory` | Theme-Auswahl und -Generierung |
 | `/byt8:ui-design-system` | UI Design System Toolkit |
 | `/byt8:ux-research` | UX Research und Design Workflow |
 | `/byt8:python-expert` | Python Development Support |
 
-### Beispiel
+### Beispiele
 
 ```bash
-/byt8:full-stack-feature #42
+# Mit GitHub Issue
+/byt8:full-stack-feature #42                          # Fragt nach Branch
+/byt8:full-stack-feature #42 --from=develop           # Branch explizit
+
+# Mit direkter Featurebeschreibung (ohne GitHub)
+/byt8:full-stack-feature "User kann sich ausloggen"   # Fragt nach Branch
+/byt8:full-stack-feature "Logout Button" --from=main  # Branch explizit
+
+# Mit Datei (für längere Specs)
+/byt8:full-stack-feature --file=feature.md            # Fragt nach Branch
+/byt8:full-stack-feature --file=feature.md --from=develop
 ```
+
+**Hinweis:** Ohne `--from=` fragt der Workflow immer nach dem Quell-Branch.
 
 ---
 
-## Der 10-Phasen Workflow
+## Der 9-Phasen Workflow
 
 Der `full-stack-feature` Command orchestriert diese Phasen:
 
@@ -109,7 +121,7 @@ Der Workflow pausiert an kritischen Punkten für User-Approval:
 
 | Skill | Beschreibung |
 |-------|--------------|
-| `full-stack-feature` | 10-Phasen Workflow mit State Management |
+| `full-stack-feature` | 9-Phasen Workflow mit State Management |
 | `project-setup` | Design System Initialisierung |
 | `theme-factory` | 10 vordefinierte Themes + Custom Generation |
 | `ui-design-system` | Design Tokens, Typography, Spacing |
