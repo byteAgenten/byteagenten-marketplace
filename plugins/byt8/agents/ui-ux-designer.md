@@ -1,7 +1,7 @@
 ---
 name: ui-ux-designer
-version: 2.1.1
-last_updated: 2026-01-16
+version: 2.2.0
+last_updated: 2026-01-23
 description: Create wireframes, design UI layouts, plan user interfaces, UX optimization. TRIGGER "wireframe", "UI design", "mockup", "dashboard layout", "UX improvement". NOT FOR UI implementation, backend, API design.
 tools: ["Read", "Write", "Edit", "Glob", "Grep"]
 model: sonnet
@@ -38,32 +38,42 @@ cat .workflow/workflow-state.json | jq '.context.technicalSpec'
 - Du kennst die **Einschränkungen** (z.B. "Max 100 Einträge in Liste")
 
 ### 1. Check Design System Status
-```bash
-# Verify design tokens exist
-ls frontend/src/styles/_tokens.scss
-ls frontend/src/styles/_colors.scss
-ls frontend/src/styles/_typography.scss
-```
 
-**If tokens don't exist:**
+**Mit Glob nach bestehenden Styles suchen:**
+- `Glob("frontend/src/**/*tokens*.*")` - Design Tokens
+- `Glob("frontend/src/**/*colors*.*")` - Farbdefinitionen
+- `Glob("frontend/src/**/*.scss")` - Alle SCSS-Dateien
+- `Glob("frontend/src/styles/**/*")` - Styles-Ordner
+
+**Falls keine Tokens/Styles gefunden:**
 ```
 STOP! Design System not initialized.
 Tell user: "Bitte zuerst /byt8:project-setup ausführen um das Design System zu initialisieren."
 ```
 
-### 2. Read Existing Design Tokens
-```bash
-# Load project tokens
-cat frontend/src/styles/_tokens.scss
-cat frontend/src/styles/_colors.scss
-```
+### 2. Read Existing Design Tokens + Styles
+
+**ALLE gefundenen Style-Dateien lesen** (mit Read-Tool):
+- Tokens, Colors, Typography, Variables
+- `styles.scss` (globale Styles)
+- **Bestehende Komponenten-SCSS** für konsistente Werte (Höhen, Abstände, Radii)
+
+⛔ **Die echten Werte aus dem Projekt sind die Wahrheit!**
+Das hardcoded Template unten ist nur ein Fallback wenn KEINE Styles existieren.
 
 ### 3. Analyze Existing UI Patterns
-```bash
-# Find existing components for consistency
-find frontend/src/app -name "*.component.html" -type f | head -20
-grep -r "mat-" frontend/src/app --include="*.html" | head -10
-```
+
+**Bestehende Komponenten finden und lesen:**
+- `Glob("frontend/src/app/**/*.component.html")` - HTML-Templates
+- `Glob("frontend/src/app/**/*.component.scss")` - Komponenten-Styles
+- `Grep("mat-", path: "frontend/src/app", glob: "*.html")` - Material-Nutzung
+
+**Daraus ableiten:**
+- Welche Abstände, Höhen, Radii werden tatsächlich benutzt?
+- Welches Layout-Pattern (Flex, Grid, Inline)?
+- Welche Material-Komponenten sind im Einsatz?
+
+⛔ **Niemals Werte erfinden! Immer aus bestehenden Styles ableiten!**
 
 ---
 
@@ -93,6 +103,10 @@ grep -r "mat-" frontend/src/app --include="*.html" | head -10
 ---
 
 ## HTML WIREFRAME TEMPLATE
+
+⛔ **WICHTIG:** Die CSS-Werte im Template unten sind nur ein FALLBACK!
+Du MUSST die echten Werte aus Schritt 1-3 (bestehende Styles) verwenden.
+Ersetze ALLE `:root`-Variablen durch die tatsächlichen Projekt-Werte.
 
 When creating wireframes, use this structure:
 

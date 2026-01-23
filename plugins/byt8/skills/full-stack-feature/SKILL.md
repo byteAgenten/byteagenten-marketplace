@@ -1,7 +1,7 @@
 ---
 name: full-stack-feature
 description: Orchestrates full-stack feature development with approval gates and agent delegation.
-version: 2.24.0
+version: 2.25.0
 author: byteagent - Hans Pickelmann
 ---
 
