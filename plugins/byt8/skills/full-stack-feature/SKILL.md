@@ -1,7 +1,7 @@
 ---
 name: full-stack-feature
 description: Orchestrates full-stack feature development with approval gates and agent delegation.
-version: 2.22.0
+version: 2.23.0
 author: byteagent - Hans Pickelmann
 ---
 
@@ -460,6 +460,17 @@ E2E-Tests starten eigene Infrastruktur via Testcontainers (eigene Ports). Kein m
    - `phases[N].status` → `"completed"`
    - `nextStep` → Nächste Aktion
    - `context[key]` → Agent-Summary
+4. ⛔ **State-Checkpoint ausgeben (PFLICHT!):**
+   ```
+   ───────────────────────────────────────
+   📍 WORKFLOW STATE UPDATE
+   Phase X → completed
+   Nächste Phase: Y (nextStep: ACTION_NAME)
+   ───────────────────────────────────────
+   ```
+   ⚠️ Wenn diese Ausgabe NICHT erscheint → State wurde NICHT aktualisiert → VIOLATION!
+
+**NIEMALS eine Phase starten ohne vorher Schritt 1-4 für die vorherige Phase abgeschlossen zu haben!**
 
 ### nextStep-Werte
 
