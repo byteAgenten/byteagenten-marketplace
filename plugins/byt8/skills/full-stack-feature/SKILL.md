@@ -1,7 +1,7 @@
 ---
 name: full-stack-feature
 description: Orchestrates full-stack feature development with approval gates and agent delegation.
-version: 2.20.0
+version: 2.21.0
 author: byteagent - Hans Pickelmann
 ---
 
@@ -33,8 +33,11 @@ cat .workflow/workflow-state.json 2>/dev/null || echo "KEIN WORKFLOW"
 \`\`\`
 
 Falls `"status": "active"`:
-→ Skill neu laden: `/byt8:full-stack-feature`
-→ Workflow wird automatisch fortgesetzt
+1. `currentPhase` + `nextStep` notieren
+2. ⛔ Skill neu laden: `/byt8:full-stack-feature`
+3. ⛔ SKILL.md wird KOMPLETT gelesen (PFLICHT!)
+4. `nextStep` VALIDIEREN bevor fortgesetzt wird
+5. NIEMALS improvisieren - nur definierte Schritte!
 
 ---
 ```
@@ -57,8 +60,29 @@ cat .workflow/workflow-state.json 2>/dev/null || echo "NICHT VORHANDEN"
 | `"status": "idle"` oder nicht vorhanden | Neuen Workflow starten |
 
 **5. Context Overflow Recovery:**
+
 Bei "This session is being continued from a previous conversation...":
-→ State lesen → `currentPhase` + `nextStep` notieren → ab `nextStep.action` fortsetzen
+
+⛔ **KEIN Code, KEINE Phase starten, KEIN Commit BEVOR diese Schritte erledigt sind:**
+
+```
+1. workflow-state.json lesen → currentPhase + nextStep notieren
+2. ⛔ DIESEN SKILL.md KOMPLETT LESEN! (PFLICHT!)
+3. nextStep.action VALIDIEREN:
+   □ Stimmt nextStep.phase mit currentPhase überein?
+   □ Sind alle vorherigen Phasen "completed"?
+   □ Bei Hotfix-Feld: → Hotfix-Detection (siehe unten)
+4. Erst DANN ab nextStep.action fortsetzen
+5. NIEMALS improvisieren - nur definierte Schritte!
+```
+
+**Hotfix-Detection (bei Context-Overflow Recovery):**
+
+Wenn `workflow-state.json` ein `hotfix`-Feld enthält:
+1. ⛔ STOP - Hotfix-Loop ist aktiv!
+2. Prüfe: Alle Phasen ab `hotfix.startedAtPhase` bis 7 auf `"pending"`?
+3. Wenn nicht → State korrigieren, DANN erst fortfahren
+4. `currentPhase` muss `hotfix.startedAtPhase + 1` sein (nächste Phase nach Fix)
 
 **6. Argument-Handling:**
 ```
@@ -478,11 +502,26 @@ Nach Hotfix: ALLE Phasen ab Hotfix bis Phase 7 durchlaufen → 7 muss APPROVED �
 | Frontend | `byt8:angular-frontend-developer` | Phase 5 |
 | Tests | `byt8:test-engineer` | Phase 6 |
 
+### ⛔ Checkpoint VOR JEDER Phase im Hotfix-Loop:
+
+```
+□ workflow-state.json gelesen?
+□ currentPhase == geplante Phase?
+□ Alle vorherigen Phasen "completed"?
+□ nextStep.action stimmt mit geplanter Aktion überein?
+→ Bei Mismatch: STOP + User informieren!
+```
+
+**NIEMALS Phasen überspringen, auch wenn sie "unnötig" erscheinen!**
+
+### Ablauf:
+
 1. `currentPhase` + `nextStep` auf Start-Phase setzen
-2. Agent starten für Fix
-3. ALLE nachfolgenden Phasen durchlaufen
-4. WIP-Commit nach jeder Phase
-5. Phase 7 APPROVED → dann weiter zu Phase 8
+2. **ALLE Phasen ab Hotfix-Start als `"pending"` setzen** (auch 5, 6, 7!)
+3. Agent starten für Fix
+4. **ALLE nachfolgenden Phasen durchlaufen** (keine darf übersprungen werden!)
+5. WIP-Commit nach jeder Phase
+6. Phase 7 APPROVED → dann weiter zu Phase 8
 
 ---
 
