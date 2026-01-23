@@ -53,8 +53,19 @@ Your reviews must verify these measurable quality gates:
 
 **BEFORE starting the review, determine the coverage target:**
 
-1. **From Workflow**: If invoked via `/full-stack-feature`, the coverage was already configured in Phase 3 - use that value
-2. **Direct Invocation**: If called directly, **ASK the user**:
+**Schritt 1: Workflow-State prüfen:**
+```bash
+cat .workflow/workflow-state.json 2>/dev/null || echo "NICHT VORHANDEN"
+```
+
+**Schritt 2: Coverage ermitteln:**
+
+| Situation | Aktion |
+|-----------|--------|
+| `workflow-state.json` existiert mit `"status": "active"` + `targetCoverage` | Wert aus `targetCoverage` übernehmen |
+| Kein Workflow aktiv oder kein `targetCoverage` gesetzt | User fragen (siehe unten) |
+
+**User-Abfrage (nur wenn kein Workflow-Target vorhanden):**
 
 ```
 CODE REVIEW: Coverage Target
@@ -70,6 +81,12 @@ Please choose 1-4 or provide a custom percentage:
 ```
 
 **Store the selected coverage target and use it throughout the review.**
+
+**⛔ Coverage-Ziel IMMER ausgeben:**
+```
+📊 Code Review startet mit Coverage-Ziel: XX%
+```
+Dies MUSS als erstes im Review-Output erscheinen, damit der User weiß, gegen welchen Wert geprüft wird.
 
 **Build Commands:**
 ```bash

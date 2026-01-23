@@ -1,7 +1,7 @@
 ---
 name: full-stack-feature
 description: Orchestrates full-stack feature development with approval gates and agent delegation.
-version: 2.21.0
+version: 2.22.0
 author: byteagent - Hans Pickelmann
 ---
 
@@ -83,6 +83,18 @@ Wenn `workflow-state.json` ein `hotfix`-Feld enthält:
 2. Prüfe: Alle Phasen ab `hotfix.startedAtPhase` bis 7 auf `"pending"`?
 3. Wenn nicht → State korrigieren, DANN erst fortfahren
 4. `currentPhase` muss `hotfix.startedAtPhase + 1` sein (nächste Phase nach Fix)
+
+**Phase-8-Recovery (bei Context-Overflow in Phase 8):**
+
+Wenn `currentPhase === 8`:
+1. `phases["8"]` auf vorhandene Felder prüfen:
+   - Kein `intoBranch` → nextStep = `PHASE_8_QUERY_INTO_BRANCH`
+   - `intoBranch` aber kein `prContent` → nextStep = `PHASE_8_GENERATE_PR`
+   - `prContent` aber nicht `approved` → nextStep = `PHASE_8_SHOW_PR`
+   - `approved = true` aber kein `prUrl` → nextStep = `PHASE_8_EXECUTE_PUSH`
+   - `prUrl` vorhanden → nextStep = `PHASE_8_COMPLETE`
+2. State korrigieren falls `nextStep` nicht zu den Feldern passt
+3. Ab korrektem Sub-Step fortsetzen
 
 **6. Argument-Handling:**
 ```
@@ -246,14 +258,17 @@ START → Issue erkennen → Branch erstellen
 ├─────────────────────────────────────────────────────┤
 │ ⛔ STOP: Code Review muss APPROVED sein             │
 ├─────────────────────────────────────────────────────┤
-│ PHASE 8: Push & PR (LETZTER SCHRITT!)               │
-│ 1. intoBranch abfragen (Default: fromBranch)        │
-│ 2. PR-Inhalt ERZEUGEN + ZEIGEN                      │
-│ ⛔ STOP: "Soll ich pushen und PR erstellen?"        │
-│ 3. git push + gh pr create --base <intoBranch>      │
-│ 4. Duration berechnen + Todos leeren                │
-│ 5. status → "idle"                                  │
-│ ✅ "Full-Stack-Feature #XX abgeschlossen!" + PR-URL │
+│ PHASE 8: Push & PR (6 SUB-STEPS!)                    │
+│ 8.1 intoBranch abfragen (Default: fromBranch)        │
+│     → phases["8"].intoBranch speichern               │
+│ 8.2 PR-Inhalt ERZEUGEN (aus Context-Keys)            │
+│     → phases["8"].prContent speichern                │
+│ 8.3 PR-Inhalt dem User ZEIGEN                        │
+│ 8.4 ⛔ STOP: "Soll ich pushen und PR erstellen?"    │
+│     → phases["8"].approved = true                    │
+│ 8.5 git push + gh pr create --base <intoBranch>      │
+│     → phases["8"].prUrl speichern                    │
+│ 8.6 Duration + Abschlussmeldung → status "idle"      │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -269,8 +284,8 @@ START → Issue erkennen → Branch erstellen
 | 4 | Automatisch | `mvn test` → PASS | ✅ |
 | 5 | Automatisch | `npm test` → PASS | ✅ |
 | 6 | Beide | Security + E2E PASS, "QA bestanden?" | ✅ Nach "Ja" |
-| 7 | Automatisch | Code Review APPROVED | ❌ |
-| 8 | User Approval | PR-Inhalt zeigen, "PR erstellen?" | Push+PR |
+| 7 | User Approval | Code Review APPROVED | ❌ |
+| 8 | User Approval (6 Sub-Steps!) | Siehe "Phase 8: Push & PR (Detail)" | Push+PR |
 
 **VIOLATION = WORKFLOW FAILURE**
 
@@ -381,7 +396,7 @@ E2E-Tests starten eigene Infrastruktur via Testcontainers (eigene Ports). Kein m
 | 6.1 | `byt8:test-engineer` | E2E-Tests (ZUERST) |
 | 6.2 | `byt8:security-auditor` | Security-Audit (DANACH) |
 | 7 | `byt8:code-reviewer` | Review + Hotfix |
-| 8 | Claude (nur Git) | Push + PR → FERTIG |
+| 8 | Claude (nur Git, 6 Sub-Steps!) | Push + PR → FERTIG |
 
 ---
 
@@ -454,7 +469,12 @@ E2E-Tests starten eigene Infrastruktur via Testcontainers (eigene Ports). Kein m
 | `CONTINUE_PHASE_X` | Phase X fortsetzen | Phase X in_progress |
 | `HOTFIX_PHASE_X` | Hotfix starten | Fehler erkannt |
 | `AWAIT_USER_APPROVAL` | Auf User warten | Gate erreicht |
-| `PUSH_AND_PR` | Push + PR | Phase 7 APPROVED |
+| `PHASE_8_QUERY_INTO_BRANCH` | intoBranch abfragen | Phase 7 APPROVED |
+| `PHASE_8_GENERATE_PR` | PR-Inhalt generieren | intoBranch gespeichert |
+| `PHASE_8_SHOW_PR` | PR-Inhalt zeigen | prContent gespeichert |
+| `PHASE_8_AWAIT_APPROVAL` | User-Approval | PR gezeigt |
+| `PHASE_8_EXECUTE_PUSH` | Push + PR erstellen | approved = true |
+| `PHASE_8_COMPLETE` | Abschluss + Duration | prUrl gespeichert |
 
 ### ⛔ Validation (vor JEDER Aktion!)
 
@@ -463,6 +483,11 @@ E2E-Tests starten eigene Infrastruktur via Testcontainers (eigene Ports). Kein m
 □ nextStep.action === geplante Aktion?
 □ Alle vorherigen Phasen completed?
 □ Bei Hotfix: Phasen 7+ auf "pending" zurückgesetzt?
+□ Bei Phase 8: phases["8"]-Felder prüfen:
+  → intoBranch fehlt? → PHASE_8_QUERY_INTO_BRANCH
+  → prContent fehlt? → PHASE_8_GENERATE_PR
+  → approved fehlt? → PHASE_8_SHOW_PR
+  → Fehlende Felder = Sub-Step übersprungen → STOP!
 ```
 
 **Bei Mismatch: STOP! User informieren!**
@@ -477,7 +502,7 @@ Bei Hotfix ALLE nachfolgenden Phasen auf `pending` setzen:
   "nextStep": { "action": "HOTFIX_PHASE_6", "hotfixReason": "...", "returnToPhase": 8 }
 }
 ```
-Nach Hotfix: ALLE Phasen ab Hotfix bis Phase 7 durchlaufen → 7 muss APPROVED → dann PUSH_AND_PR erlaubt.
+Nach Hotfix: ALLE Phasen ab Hotfix bis Phase 7 durchlaufen → 7 muss APPROVED → dann Phase 8 (ab PHASE_8_QUERY_INTO_BRANCH).
 
 ---
 
@@ -522,6 +547,50 @@ Nach Hotfix: ALLE Phasen ab Hotfix bis Phase 7 durchlaufen → 7 muss APPROVED �
 4. **ALLE nachfolgenden Phasen durchlaufen** (keine darf übersprungen werden!)
 5. WIP-Commit nach jeder Phase
 6. Phase 7 APPROVED → dann weiter zu Phase 8
+
+---
+
+## Phase 8: Push & PR (Detail)
+
+⛔ **Phase 8 hat 6 Sub-Steps. JEDER muss einzeln ausgeführt und im State gespeichert werden!**
+
+### 8.1 PHASE_8_QUERY_INTO_BRANCH
+- User fragen: "In welchen Branch soll der PR gehen? (Default: `<fromBranch>`)"
+- Antwort speichern: `phases["8"].intoBranch = <Antwort>`
+- nextStep → `PHASE_8_GENERATE_PR`
+
+### 8.2 PHASE_8_GENERATE_PR
+- PR-Title generieren: `feat(#<issue>): <Issue-Titel>`
+- PR-Body generieren aus context-Keys (technicalSpec, apiDesign, backendImpl, frontendImpl, testResults)
+- Speichern: `phases["8"].prContent = { title, body, generatedAt }`
+- nextStep → `PHASE_8_SHOW_PR`
+
+### 8.3 PHASE_8_SHOW_PR
+- PR-Inhalt formatiert ausgeben (Title + Body)
+- nextStep → `PHASE_8_AWAIT_APPROVAL`
+
+### 8.4 PHASE_8_AWAIT_APPROVAL
+- "Soll ich pushen und PR erstellen?"
+- Bei "Ja": `phases["8"].approved = true`, nextStep → `PHASE_8_EXECUTE_PUSH`
+- Bei "Nein"/Feedback: Zurück zu 8.2 (`PHASE_8_GENERATE_PR`)
+
+### 8.5 PHASE_8_EXECUTE_PUSH
+- ⛔ Prüfe: `phases["8"].approved === true` (PFLICHT!)
+- `git push -u origin <branch>`
+- `gh pr create --base <intoBranch> --title <title> --body <body>`
+- PR-URL speichern: `phases["8"].prUrl = <URL>`
+- nextStep → `PHASE_8_COMPLETE`
+
+### 8.6 PHASE_8_COMPLETE
+- Duration berechnen: `now() - startedAt` (aus workflow-state.json Root-Feld)
+- Todos leeren
+- `status → "idle"`
+- Abschlussmeldung ausgeben:
+```
+✅ Full-Stack-Feature #XX abgeschlossen!
+PR: <prUrl>
+Duration: X Stunden Y Minuten
+```
 
 ---
 
