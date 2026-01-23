@@ -1,7 +1,7 @@
 ---
 name: full-stack-feature
 description: Orchestrates full-stack feature development with approval gates and agent delegation.
-version: 2.23.0
+version: 2.24.0
 author: byteagent - Hans Pickelmann
 ---
 
@@ -299,13 +299,46 @@ Bei User Approval Gates (Phase 0, 1, 6, 8) hat der User **drei Möglichkeiten:**
 | ❌ "Nein" / Feedback / Fragen | **An denselben Agent zurückdelegieren!** |
 | ❓ "Abbrechen" | Workflow pausieren |
 
-⛔ **Der Orchestrator darf NIEMALS selbst auf Fragen/Feedback antworten!**
-→ Immer an den zuständigen Agent zurückdelegieren.
+⛔ **Der Orchestrator ist ein ROUTER, kein DENKER!**
+
+**VERBOTEN für den Orchestrator:**
+- ❌ Dateien lesen die zum Agent gehören (HTML, SCSS, Java, TypeScript)
+- ❌ Screenshots analysieren und Probleme identifizieren
+- ❌ Lösungen vordenken und dem Agent vorgeben
+- ❌ Design-, Code- oder Architektur-Entscheidungen treffen
+- ❌ User-Feedback interpretieren oder zusammenfassen
+
+**PFLICHT für den Orchestrator:**
+- ✅ User-Feedback **RAW** an den zuständigen Agent weiterleiten
+- ✅ Nur Workflow-Context mitgeben (welche Phase, welcher Agent, was war der Auftrag)
+- ✅ Screenshots/Dateipfade weitergeben, NICHT selbst analysieren
+- ✅ Den Agent die Analyse, das Denken und die Lösung überlassen
+
+**Beispiel Phase 1 (RICHTIG):**
+```
+User: "Das sieht nicht sauber aus" + Screenshot-Pfad
+→ Orchestrator an byt8:ui-ux-designer:
+  "User-Feedback: 'Das sieht nicht sauber aus'. Screenshot: <pfad>. Bitte analysieren und korrigieren."
+→ ui-ux-designer liest Screenshot, analysiert, liest bestehende Styles, korrigiert
+→ Erneut fragen: "Sind die Wireframes jetzt akzeptiert?"
+```
+
+**Beispiel Phase 1 (FALSCH - VIOLATION!):**
+```
+User: "Das sieht nicht sauber aus" + Screenshot-Pfad
+→ Orchestrator liest Screenshot SELBST
+→ Orchestrator liest SCSS-Dateien SELBST
+→ Orchestrator identifiziert: "border-radius falsch, gap fehlt"
+→ Orchestrator an Agent: "Fix border-radius to 4px and add gap: 12px"
+→ Agent baut nur nach was Orchestrator sagt (kein eigenes Denken!)
+= VIOLATION! Agent wurde zum Copy-Paste-Roboter degradiert!
+```
 
 **Beispiel Phase 0:**
 ```
 User: "Warum habt ihr hier REST statt GraphQL gewählt?"
-→ Orchestrator delegiert die Frage an byt8:architect-planner
+→ Orchestrator an byt8:architect-planner:
+  "User fragt: 'Warum REST statt GraphQL?' Bitte erklären oder Architektur überarbeiten."
 → architect-planner antwortet / überarbeitet
 → Erneut fragen: "Ist die Architektur jetzt akzeptiert?"
 ```
@@ -364,8 +397,16 @@ gh pr create --base <intoBranch> --title "..." --body "..."
 | Tests (.spec.ts) | `byt8:test-engineer` |
 | DB (.sql) | `byt8:postgresql-architect` |
 
-**Claude darf:** Git, Workflow-State, Agents starten, Approvals zeigen
-**Claude darf NICHT:** Code schreiben (auch keine "kleinen Fixes")
+**Claude (Orchestrator) darf:**
+- Git-Befehle, Workflow-State lesen/schreiben
+- Agents starten, Approvals zeigen
+- User-Feedback RAW an Agents weiterleiten
+
+**Claude (Orchestrator) darf NICHT:**
+- Code schreiben (auch keine "kleinen Fixes")
+- Dateien lesen die zum Agent gehören (HTML, SCSS, Java, .ts)
+- Screenshots/Designs analysieren (→ Agent!)
+- Lösungen vordenken und Agents nur "ausführen" lassen
 
 ### 6. Context7 + Angular CLI MCP für Best Practices
 **IMMER MCP Tools nutzen** bei Library-Versionen, Framework-Syntax, CLI-Befehlen.
