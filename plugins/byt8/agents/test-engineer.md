@@ -3,7 +3,7 @@ name: test-engineer
 version: 1.4.0
 last_updated: 2026-01-16
 description: Write tests, improve coverage, E2E tests, debug failing tests. TRIGGER "write tests", "unit test", "E2E test", "test coverage", "JUnit", "Playwright". NOT FOR code review, implementation, security testing.
-tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
+tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "mcp__plugin_byt8_context7__resolve-library-id", "mcp__plugin_byt8_context7__query-docs", "mcp__plugin_byt8_angular-cli__list_projects", "mcp__plugin_byt8_angular-cli__get_best_practices", "mcp__plugin_byt8_angular-cli__find_examples", "mcp__plugin_byt8_angular-cli__search_documentation"]
 model: inherit
 color: orange
 ---
