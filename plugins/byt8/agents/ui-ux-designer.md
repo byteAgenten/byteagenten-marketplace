@@ -1,6 +1,6 @@
 ---
 name: ui-ux-designer
-version: 2.26.0
+version: 2.27.0
 last_updated: 2026-01-24
 description: Create wireframes, design UI layouts, plan user interfaces, UX optimization. TRIGGER "wireframe", "UI design", "mockup", "dashboard layout", "UX improvement". NOT FOR UI implementation, backend, API design.
 tools: ["Read", "Write", "Edit", "Glob", "Grep"]
@@ -77,6 +77,29 @@ Das hardcoded Template unten ist nur ein Fallback wenn KEINE Styles existieren.
 
 ---
 
+## ⛔ WIREFRAME OUTPUT LOCATION (CRITICAL!)
+
+**Speicherort:** `wireframes/` auf **Projekt-Root-Ebene** (NICHT relativ zum CWD!)
+
+```
+wireframes/issue-{N}-{feature-name}.html
+```
+
+**Beispiele:**
+- ✅ `wireframes/issue-342-ansprechpartner-dialog.html`
+- ✅ `wireframes/issue-299-krankmeldung.html`
+- ❌ `.workflow/wireframes/...` ← VERBOTEN! Wird nie eingecheckt!
+- ❌ `docs/wireframes/...` ← Falscher Pfad!
+
+**Validation vor Write:**
+1. Prüfe: Beginnt der Pfad mit `wireframes/`?
+2. Prüfe: Liegt `wireframes/` auf gleicher Ebene wie `frontend/` und `backend/`?
+3. Falls nein → STOP! Pfad korrigieren!
+
+**VIOLATION = DATENVERLUST** (`.workflow/` ist in .gitignore!)
+
+---
+
 ## CORE CAPABILITIES
 
 ### 1. Data-Driven Dashboard Design
@@ -104,11 +127,27 @@ Das hardcoded Template unten ist nur ein Fallback wenn KEINE Styles existieren.
 
 ## HTML WIREFRAME TEMPLATE
 
-⛔ **WICHTIG:** Die CSS-Werte im Template unten sind nur ein FALLBACK!
-Du MUSST die echten Werte aus Schritt 1-3 (bestehende Styles) verwenden.
-Ersetze ALLE `:root`-Variablen durch die tatsächlichen Projekt-Werte.
+⛔ **KEINE hardcoded CSS-Werte! Styles MÜSSEN aus dem Projekt abgeleitet werden.**
 
-When creating wireframes, use this structure:
+### Vorgehen:
+
+1. **Design Tokens lesen** (aus PRE-IMPLEMENTATION CHECKLIST Schritt 1-2):
+   - `frontend/src/styles/_colors.scss` → Farbpalette
+   - `frontend/src/styles/_tokens.scss` → Spacing, Radii, Shadows
+   - `frontend/src/styles/_typography.scss` → Schriftarten, Größen
+   - `frontend/src/styles.scss` → Globale Styles
+
+2. **Bestehende Komponenten analysieren** (Schritt 3):
+   - Glob: `frontend/src/app/**/*.component.scss` → Abstände, Höhen, Patterns
+   - Grep: `mat-` in `*.html` → Welche Material-Komponenten im Einsatz?
+   - **Ähnliche UI-Patterns finden** (z.B. bestehende Listen, Formulare, Dialoge)
+
+3. **CSS-Block generieren** aus gelesenen Werten:
+   - `:root`-Variablen = echte Werte aus Projekt-Tokens
+   - Komponenten-CSS = abgeleitet aus bestehenden `.component.scss`
+   - Layout-Patterns = konsistent mit existierenden Seiten
+
+### HTML-Gerüst:
 
 ```html
 <!DOCTYPE html>
@@ -117,362 +156,24 @@ When creating wireframes, use this structure:
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>[Feature Name] - Wireframe</title>
-
-  <!-- Google Fonts (from project design tokens) -->
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <!-- Fonts: Aus Projekt-Tokens ableiten (Google Fonts Link) -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-
   <style>
-    /* === PROJECT DESIGN TOKENS === */
-    :root {
-      /* Colors - from _colors.scss */
-      --primary: #1976d2;
-      --primary-light: #63a4ff;
-      --primary-dark: #004ba0;
-      --accent: #ff4081;
-      --warn: #f44336;
-      --success: #4caf50;
-
-      /* Neutrals */
-      --background: #fafafa;
-      --surface: #ffffff;
-      --text-primary: rgba(0, 0, 0, 0.87);
-      --text-secondary: rgba(0, 0, 0, 0.6);
-      --divider: rgba(0, 0, 0, 0.12);
-
-      /* Typography - from _typography.scss */
-      --font-family: 'Roboto', sans-serif;
-      --font-size-base: 14px;
-      --font-size-h1: 96px;
-      --font-size-h2: 60px;
-      --font-size-h3: 48px;
-      --font-size-h4: 34px;
-      --font-size-h5: 24px;
-      --font-size-h6: 20px;
-
-      /* Spacing - 8pt grid */
-      --spacing-xs: 4px;
-      --spacing-sm: 8px;
-      --spacing-md: 16px;
-      --spacing-lg: 24px;
-      --spacing-xl: 32px;
-      --spacing-xxl: 48px;
-
-      /* Shadows */
-      --shadow-1: 0 2px 1px -1px rgba(0,0,0,.2), 0 1px 1px 0 rgba(0,0,0,.14), 0 1px 3px 0 rgba(0,0,0,.12);
-      --shadow-4: 0 2px 4px -1px rgba(0,0,0,.2), 0 4px 5px 0 rgba(0,0,0,.14), 0 1px 10px 0 rgba(0,0,0,.12);
-
-      /* Border radius */
-      --radius-sm: 4px;
-      --radius-md: 8px;
-      --radius-lg: 16px;
-    }
-
-    /* === BASE STYLES === */
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: var(--font-family);
-      font-size: var(--font-size-base);
-      color: var(--text-primary);
-      background: var(--background);
-      line-height: 1.5;
-    }
-
-    /* === ANGULAR MATERIAL-LIKE COMPONENTS === */
-
-    /* Mat-Card */
-    .mat-card {
-      background: var(--surface);
-      border-radius: var(--radius-sm);
-      box-shadow: var(--shadow-1);
-      padding: var(--spacing-md);
-      margin-bottom: var(--spacing-md);
-    }
-    .mat-card-header { margin-bottom: var(--spacing-md); }
-    .mat-card-title {
-      font-size: var(--font-size-h5);
-      font-weight: 500;
-      margin-bottom: var(--spacing-xs);
-    }
-    .mat-card-subtitle { color: var(--text-secondary); }
-
-    /* Mat-Button */
-    .mat-button, .mat-raised-button, .mat-flat-button {
-      font-family: var(--font-family);
-      font-size: var(--font-size-base);
-      font-weight: 500;
-      padding: var(--spacing-sm) var(--spacing-md);
-      border-radius: var(--radius-sm);
-      border: none;
-      cursor: pointer;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .mat-raised-button {
-      background: var(--primary);
-      color: white;
-      box-shadow: var(--shadow-1);
-    }
-    .mat-button { background: transparent; color: var(--primary); }
-    .mat-flat-button { background: var(--primary); color: white; }
-    .mat-warn { background: var(--warn); }
-    .mat-accent { background: var(--accent); }
-
-    /* Mat-Form-Field */
-    .mat-form-field {
-      display: block;
-      margin-bottom: var(--spacing-md);
-    }
-    .mat-form-field label {
-      display: block;
-      color: var(--text-secondary);
-      font-size: 12px;
-      margin-bottom: var(--spacing-xs);
-    }
-    .mat-form-field input, .mat-form-field select, .mat-form-field textarea {
-      width: 100%;
-      padding: var(--spacing-sm) var(--spacing-md);
-      border: 1px solid var(--divider);
-      border-radius: var(--radius-sm);
-      font-size: var(--font-size-base);
-      font-family: var(--font-family);
-    }
-    .mat-form-field input:focus, .mat-form-field textarea:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-
-    /* Mat-Table */
-    .mat-table {
-      width: 100%;
-      border-collapse: collapse;
-      background: var(--surface);
-    }
-    .mat-table th, .mat-table td {
-      padding: var(--spacing-sm) var(--spacing-md);
-      text-align: left;
-      border-bottom: 1px solid var(--divider);
-    }
-    .mat-table th {
-      font-weight: 500;
-      color: var(--text-secondary);
-      font-size: 12px;
-      text-transform: uppercase;
-    }
-    .mat-table tr:hover { background: rgba(0,0,0,0.04); }
-
-    /* Mat-Toolbar */
-    .mat-toolbar {
-      background: var(--primary);
-      color: white;
-      padding: 0 var(--spacing-md);
-      height: 64px;
-      display: flex;
-      align-items: center;
-      box-shadow: var(--shadow-4);
-    }
-    .mat-toolbar h1 {
-      font-size: var(--font-size-h6);
-      font-weight: 500;
-      margin: 0;
-    }
-
-    /* Mat-Sidenav */
-    .mat-sidenav {
-      width: 256px;
-      background: var(--surface);
-      height: 100vh;
-      box-shadow: var(--shadow-4);
-    }
-    .mat-nav-list a {
-      display: flex;
-      align-items: center;
-      padding: var(--spacing-md);
-      color: var(--text-primary);
-      text-decoration: none;
-      gap: var(--spacing-md);
-    }
-    .mat-nav-list a:hover { background: rgba(0,0,0,0.04); }
-    .mat-nav-list a.active {
-      background: rgba(25, 118, 210, 0.1);
-      color: var(--primary);
-    }
-
-    /* Layout */
-    .app-layout {
-      display: flex;
-      min-height: 100vh;
-    }
-    .app-content {
-      flex: 1;
-      padding: var(--spacing-lg);
-    }
-
-    /* Grid */
-    .grid { display: grid; gap: var(--spacing-md); }
-    .grid-2 { grid-template-columns: repeat(2, 1fr); }
-    .grid-3 { grid-template-columns: repeat(3, 1fr); }
-    .grid-4 { grid-template-columns: repeat(4, 1fr); }
-
-    /* KPI Card */
-    .kpi-card {
-      background: var(--surface);
-      border-radius: var(--radius-md);
-      padding: var(--spacing-lg);
-      box-shadow: var(--shadow-1);
-      text-align: center;
-    }
-    .kpi-value {
-      font-size: 32px;
-      font-weight: 500;
-      color: var(--primary);
-    }
-    .kpi-label {
-      color: var(--text-secondary);
-      margin-top: var(--spacing-xs);
-    }
-    .kpi-trend {
-      font-size: 12px;
-      margin-top: var(--spacing-sm);
-    }
-    .kpi-trend.positive { color: var(--success); }
-    .kpi-trend.negative { color: var(--warn); }
-
-    /* Status Badge */
-    .status-badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 500;
-    }
-    .status-badge.success { background: #e8f5e9; color: #2e7d32; }
-    .status-badge.warning { background: #fff3e0; color: #f57c00; }
-    .status-badge.error { background: #ffebee; color: #c62828; }
-    .status-badge.info { background: #e3f2fd; color: #1565c0; }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
-      .mat-sidenav { display: none; }
-    }
+    /* :root-Variablen aus Projekt-Tokens generieren */
+    /* Komponenten-CSS aus bestehenden .component.scss ableiten */
+    /* Layout-CSS konsistent mit existierenden Seiten */
   </style>
 </head>
 <body>
-  <!-- WIREFRAME CONTENT HERE -->
+  <!-- WIREFRAME CONTENT -->
 </body>
 </html>
 ```
 
----
-
-## WIREFRAME OUTPUT LOCATION
-
-Save all wireframes to:
-```
-wireframes/[feature-name].html
-```
-
-Example:
-- `wireframes/user-registration.html`
-- `wireframes/dashboard-overview.html`
-- `wireframes/settings-page.html`
-
----
-
-## COMMON UI PATTERNS
-
-### KPI Dashboard Row
-```html
-<div class="grid grid-4">
-  <div class="kpi-card">
-    <div class="kpi-value">1,234</div>
-    <div class="kpi-label">Active Users</div>
-    <div class="kpi-trend positive">+12% vs last month</div>
-  </div>
-  <div class="kpi-card">
-    <div class="kpi-value">89%</div>
-    <div class="kpi-label">Completion Rate</div>
-    <div class="kpi-trend positive">+5%</div>
-  </div>
-  <div class="kpi-card">
-    <div class="kpi-value">€45.2K</div>
-    <div class="kpi-label">Revenue</div>
-    <div class="kpi-trend negative">-3%</div>
-  </div>
-  <div class="kpi-card">
-    <div class="kpi-value">24</div>
-    <div class="kpi-label">Pending Tasks</div>
-    <div class="kpi-trend">requires action</div>
-  </div>
-</div>
-```
-
-### Data Entry Form
-```html
-<div class="mat-card">
-  <div class="mat-card-header">
-    <div class="mat-card-title">Create New Entry</div>
-    <div class="mat-card-subtitle">Fill in the details below</div>
-  </div>
-
-  <div class="grid grid-2">
-    <div class="mat-form-field">
-      <label>Title *</label>
-      <input type="text" placeholder="Enter title...">
-    </div>
-    <div class="mat-form-field">
-      <label>Category</label>
-      <select>
-        <option>Select category...</option>
-        <option>Option A</option>
-        <option>Option B</option>
-      </select>
-    </div>
-  </div>
-
-  <div class="mat-form-field">
-    <label>Description</label>
-    <textarea rows="4" placeholder="Enter description..."></textarea>
-  </div>
-
-  <div style="display: flex; gap: 8px; justify-content: flex-end;">
-    <button class="mat-button">Cancel</button>
-    <button class="mat-raised-button">Save</button>
-  </div>
-</div>
-```
-
-### Data Table with Actions
-```html
-<div class="mat-card">
-  <div class="mat-card-header">
-    <div class="mat-card-title">Records</div>
-  </div>
-  <table class="mat-table">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Status</th>
-        <th>Created</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>Item One</td>
-        <td><span class="status-badge success">Active</span></td>
-        <td>15.01.2025</td>
-        <td>
-          <button class="mat-button">Edit</button>
-          <button class="mat-button mat-warn">Delete</button>
-        </td>
-      </tr>
-      <!-- More rows... -->
-    </tbody>
-  </table>
-</div>
-```
+### ⛔ Verboten:
+- Farben, Spacing, Radii, Shadows **erfinden**
+- Generische Material-Werte verwenden ohne Projekt-Abgleich
+- CSS aus dem Gedächtnis statt aus gelesenen Dateien
 
 ---
 
