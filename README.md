@@ -110,9 +110,8 @@ Falls du eine feste Version verwenden möchtest:
 | Command | Description |
 |---------|-------------|
 | `/byt8:full-stack-feature` | 9-phase workflow for full-stack feature development |
-| `/byt8:project-setup` | One-time design system initialization |
+| `/byt8:ui-theming` | One-time design system initialization (theme, tokens, typography) |
 | `/byt8:theme-factory` | Apply themes to artifacts (slides, docs, etc.) |
-| `/byt8:ui-design-system` | UI design system toolkit |
 | `/byt8:ux-research` | UX research and design methodology |
 | `/byt8:python-expert` | Python development support |
 

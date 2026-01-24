@@ -72,9 +72,8 @@ export CONTEXT7_API_KEY=ctx7sk-dein-key-hier
 | Command | Beschreibung |
 |---------|--------------|
 | `/byt8:full-stack-feature` | 9-Phasen Feature Development Workflow |
-| `/byt8:project-setup` | Einmalige Design System Initialisierung |
+| `/byt8:ui-theming` | Einmalige Design System Initialisierung |
 | `/byt8:theme-factory` | Theme-Auswahl und -Generierung |
-| `/byt8:ui-design-system` | UI Design System Toolkit |
 | `/byt8:ux-research` | UX Research und Design Workflow |
 | `/byt8:python-expert` | Python Development Support |
 
@@ -105,15 +104,15 @@ Der `full-stack-feature` Command orchestriert diese Phasen:
 | Phase | Agent | Aufgabe |
 |-------|-------|---------|
 | 0 | architect-planner | Technical Specification erstellen |
-| 1 | ui-ux-designer | Wireframes erstellen |
-| 2 | api-architect | API Design (OpenAPI 3.1) |
+| 1 | ui-designer | Wireframes erstellen |
+| 2 | api-architect | API Design (OpenAPI 3.1) |    
 | 3 | postgresql-architect | Database Migrations (Flyway) |
 | 4 | spring-boot-developer | Backend Implementation + Tests |
 | 5 | angular-frontend-developer | Frontend Implementation + Tests |
 | 6 | test-engineer | E2E Tests (Playwright) |
 | 6b | security-auditor | Security Audit |
 | 7 | code-reviewer | Code Review |
-| 8-10 | - | PR erstellen, Merge, Cleanup |
+| 8 | - (Orchestrator) | Push & PR erstellen |
 
 ### Approval Gates
 
@@ -136,7 +135,7 @@ Der Workflow pausiert an kritischen Punkten für User-Approval:
 | `spring-boot-developer` | Spring Boot 4, Java 21, JPA |
 | `postgresql-architect` | Schema Design, Flyway Migrations |
 | `test-engineer` | JUnit 5, Jasmine, Playwright |
-| `ui-ux-designer` | Wireframes, Design Tokens |
+| `ui-designer` | Wireframes, Design Tokens |
 | `security-auditor` | OWASP Top 10, Security Best Practices |
 | `code-reviewer` | Code Quality, Architecture Review |
 | `architect-reviewer` | Architecture Decisions |
@@ -148,9 +147,8 @@ Der Workflow pausiert an kritischen Punkten für User-Approval:
 | Skill | Beschreibung |
 |-------|--------------|
 | `full-stack-feature` | 9-Phasen Workflow mit State Management |
-| `project-setup` | Design System Initialisierung |
+| `ui-theming` | Design System Initialisierung |
 | `theme-factory` | 10 vordefinierte Themes + Custom Generation |
-| `ui-design-system` | Design Tokens, Typography, Spacing |
 | `ux-research` | Personas, Journey Maps, Usability |
 | `python-expert` | Async, Typing, Testing Patterns |
 
@@ -169,7 +167,7 @@ byt8/
 │   └── ...
 ├── commands/
 │   ├── full-stack-feature.md
-│   ├── project-setup.md
+│   ├── ui-theming.md
 │   └── ...
 ├── skills/
 │   ├── full-stack-feature/

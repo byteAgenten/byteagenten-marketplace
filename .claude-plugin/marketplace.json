@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "byteAgenten Claude Code Plugin Marketplace",
-    "version": "2.27.0"
+    "version": "3.0.0"
   },
   "plugins": [
     {
@@ -15,9 +15,8 @@
       "source": "./plugins/byt8",
       "commands": [
         "./commands/full-stack-feature.md",
-        "./commands/project-setup.md",
+        "./commands/ui-theming.md",
         "./commands/theme-factory.md",
-        "./commands/ui-design-system.md",
         "./commands/ux-research.md",
         "./commands/python-expert.md"
       ],
@@ -28,16 +27,16 @@
         "./agents/spring-boot-developer.md",
         "./agents/postgresql-architect.md",
         "./agents/test-engineer.md",
-        "./agents/ui-ux-designer.md",
+        "./agents/ui-designer.md",
         "./agents/security-auditor.md",
         "./agents/code-reviewer.md",
         "./agents/architect-reviewer.md"
       ],
       "skills": [
         "./skills/full-stack-feature",
-        "./skills/project-setup",
+        "./skills/ui-theming",
         "./skills/theme-factory",
-        "./skills/ui-design-system",
+        "./skills/ui-design",
         "./skills/ux-research",
         "./skills/python-expert"
       ]

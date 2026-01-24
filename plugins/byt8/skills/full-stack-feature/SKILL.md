@@ -219,11 +219,11 @@ START → Issue erkennen → Branch erstellen
 │ ⛔ STOP: "Ist die Architektur akzeptiert?"          │
 │ Bei Fragen/Feedback → zurück an architect-planner   │
 ├─────────────────────────────────────────────────────┤
-│ PHASE 1: UI/UX → byt8:ui-ux-designer                │
+│ PHASE 1: UI Design → byt8:ui-designer             │
 │ Output: wireframes/*.html                           │
 ├─────────────────────────────────────────────────────┤
 │ ⛔ STOP: "Sind die Wireframes akzeptiert?"          │
-│ Bei Fragen/Feedback → zurück an ui-ux-designer      │
+│ Bei Fragen/Feedback → zurück an ui-designer      │
 │ ✅ Bei "Ja": WIP-Commit                             │
 ├─────────────────────────────────────────────────────┤
 │ PHASE 2: API Design → byt8:api-architect            │
@@ -317,9 +317,9 @@ Bei User Approval Gates (Phase 0, 1, 6, 8) hat der User **drei Möglichkeiten:**
 **Beispiel Phase 1 (RICHTIG):**
 ```
 User: "Das sieht nicht sauber aus" + Screenshot-Pfad
-→ Orchestrator an byt8:ui-ux-designer:
+→ Orchestrator an byt8:ui-designer:
   "User-Feedback: 'Das sieht nicht sauber aus'. Screenshot: <pfad>. Bitte analysieren und korrigieren."
-→ ui-ux-designer liest Screenshot, analysiert, liest bestehende Styles, korrigiert
+→ ui-designer liest Screenshot, analysiert, liest bestehende Styles, korrigiert
 → Erneut fragen: "Sind die Wireframes jetzt akzeptiert?"
 ```
 
@@ -429,7 +429,7 @@ E2E-Tests starten eigene Infrastruktur via Testcontainers (eigene Ports). Kein m
 | Phase | Agent | Aufgabe |
 |-------|-------|---------|
 | 0 | `byt8:architect-planner` | Technical Spec |
-| 1 | `byt8:ui-ux-designer` | Wireframes |
+| 1 | `byt8:ui-designer` | Wireframes |
 | 2 | `byt8:api-architect` | API-Skizze |
 | 3 | `byt8:postgresql-architect` | Migrations |
 | 4 | `byt8:spring-boot-developer` | Java + Tests |
@@ -478,7 +478,7 @@ E2E-Tests starten eigene Infrastruktur via Testcontainers (eigene Ports). Kein m
 | Phase | Key | Agent |
 |-------|-----|-------|
 | 0 | `technicalSpec` | architect-planner |
-| 1 | `wireframes` | ui-ux-designer |
+| 1 | `wireframes` | ui-designer |
 | 2 | `apiDesign` | api-architect |
 | 3 | `migrations` | postgresql-architect |
 | 4 | `backendImpl` | spring-boot-developer |
