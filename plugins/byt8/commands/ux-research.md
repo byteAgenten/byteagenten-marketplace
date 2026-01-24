@@ -1,9 +1,0 @@
----
-description: UX research and design toolkit for Senior UX Designer/Researcher including data-driven persona generation, journey mapping, usability testing frameworks, and research synthesis.
----
-
-Führe UX Research oder Design durch.
-
-Lies zuerst den Skill unter `${CLAUDE_PLUGIN_ROOT}/skills/ux-research/SKILL.md` und folge dem dort definierten Workflow exakt.
-
-Aufgabe: $ARGUMENTS

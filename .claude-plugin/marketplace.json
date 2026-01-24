@@ -17,7 +17,7 @@
         "./commands/full-stack-feature.md",
         "./commands/ui-theming.md",
         "./commands/theme-factory.md",
-        "./commands/ux-research.md",
+        "./commands/ux-review.md",
         "./commands/python-expert.md"
       ],
       "agents": [
@@ -37,7 +37,7 @@
         "./skills/ui-theming",
         "./skills/theme-factory",
         "./skills/ui-design",
-        "./skills/ux-research",
+        "./skills/ux-review",
         "./skills/python-expert"
       ]
     }

@@ -281,10 +281,11 @@ Read: ${CLAUDE_PLUGIN_ROOT}/skills/ui-theming/SKILL.md
 Read: ${CLAUDE_PLUGIN_ROOT}/skills/theme-factory/themes/[selected].md
 ```
 
-### UX Research (Persona-driven Design)
+### UX Heuristics Review (nach Wireframe)
 ```
-Invoke /byt8:ux-research
+Invoke /byt8:ux-review
 ```
+Prüft Wireframe gegen Nielsen's 10 Usability-Heuristiken.
 
 ---
 
