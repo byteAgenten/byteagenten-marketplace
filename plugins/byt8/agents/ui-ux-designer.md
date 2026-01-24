@@ -1,7 +1,7 @@
 ---
 name: ui-ux-designer
-version: 2.2.0
-last_updated: 2026-01-23
+version: 2.26.0
+last_updated: 2026-01-24
 description: Create wireframes, design UI layouts, plan user interfaces, UX optimization. TRIGGER "wireframe", "UI design", "mockup", "dashboard layout", "UX improvement". NOT FOR UI implementation, backend, API design.
 tools: ["Read", "Write", "Edit", "Glob", "Grep"]
 model: sonnet
