@@ -448,7 +448,7 @@ cd frontend && npm run build
 
 ### Step 7: Generate Theme Preview
 
-Create `frontend/src/theme-preview.html` - a standalone HTML file for instant visual feedback:
+Create `wireframes/theme-preview.html` - a standalone HTML file for instant visual feedback:
 
 ```html
 <!DOCTYPE html>
@@ -769,7 +769,7 @@ Create `frontend/src/theme-preview.html` - a standalone HTML file for instant vi
 THEME PREVIEW ERSTELLT
 
 Öffnen Sie die Vorschau im Browser:
-  open frontend/src/theme-preview.html
+  open wireframes/theme-preview.html
 
 Features:
 - [X] Farbpalette mit allen Brand & Semantic Colors
@@ -802,7 +802,7 @@ Files Created:
 - [X] frontend/src/styles/tokens/_breakpoints.scss
 - [X] frontend/src/styles/tokens/_index.scss
 - [X] frontend/src/styles.scss (updated)
-- [X] frontend/src/theme-preview.html (Preview)
+- [X] wireframes/theme-preview.html (Preview)
 
 Architecture:
 - CSS Custom Properties (runtime theming)
@@ -813,7 +813,7 @@ Architecture:
 - Responsive breakpoint mixins
 
 Preview:
-  open frontend/src/theme-preview.html
+  open wireframes/theme-preview.html
 
 Next Steps:
 1. Preview öffnen und Theme prüfen (Light + Dark Mode)
