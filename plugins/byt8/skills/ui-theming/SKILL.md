@@ -473,7 +473,57 @@ Welches Theme möchten Sie in der Preview sehen?
 Theme-Nummer eingeben:
 ```
 
-#### 7.2: Theme-Datei lesen (nur bei Option 3)
+#### 7.2: Projekt-Komponenten analysieren
+
+Scanne das Projekt nach verwendeten Angular Material Komponenten:
+
+```bash
+# Zähle Material-Komponenten in allen HTML-Templates
+grep -roh "mat-[a-z-]*" frontend/src/app --include="*.html" | sort | uniq -c | sort -rn
+```
+
+**Beispiel-Output:**
+```
+  45 mat-button
+  34 mat-form-field
+  15 mat-select
+  12 mat-table
+   8 mat-card
+   6 mat-icon
+   3 mat-dialog
+   2 mat-chip
+   1 mat-progress-bar
+```
+
+**Komponenten-Mapping für Preview:**
+
+| Material Component | Preview-Sektion | Mindestanzahl |
+|-------------------|-----------------|---------------|
+| `mat-table`, `mat-row`, `mat-cell` | Datentabelle | 1x |
+| `mat-form-field`, `mat-input` | Formular | 1x |
+| `mat-select`, `mat-option` | Formular (Select) | 1x |
+| `mat-button`, `mat-raised-button` | Buttons | 1x |
+| `mat-card` | Card-Layout | 1x |
+| `mat-dialog` | Dialog-Beispiel | 1x |
+| `mat-chip` | Chips/Tags | 1x |
+| `mat-progress-bar`, `mat-spinner` | Loading States | 1x |
+| `mat-tab`, `mat-tab-group` | Tabs | 1x |
+| `mat-menu` | Dropdown Menu | 1x |
+| `mat-snack-bar` | Notifications | 1x |
+| `mat-tooltip` | Tooltips | 1x |
+
+**Ergebnis speichern:**
+```
+Gefundene Komponenten für Preview:
+- [X] Buttons (45x verwendet)
+- [X] Formular mit Inputs (34x)
+- [X] Tabelle (12x)
+- [X] Cards (8x)
+- [ ] Chips (nicht verwendet - wird ausgelassen)
+- [ ] Progress Bar (nicht verwendet - wird ausgelassen)
+```
+
+#### 7.3: Theme-Datei lesen (nur bei Option 3)
 
 ```
 Read: ${CLAUDE_PLUGIN_ROOT}/skills/ui-theming/themes/[selected-theme].md
@@ -481,7 +531,7 @@ Read: ${CLAUDE_PLUGIN_ROOT}/skills/ui-theming/themes/[selected-theme].md
 
 Extrahiere Primary und Accent Color, berechne Light/Dark-Varianten (wie in Step 3).
 
-#### 7.3: Preview HTML erstellen
+#### 7.4: Preview HTML erstellen (nur gefundene Komponenten)
 
 Create `wireframes/theme-preview.html` - a standalone HTML file for instant visual feedback:
 
@@ -656,7 +706,9 @@ Create `wireframes/theme-preview.html` - a standalone HTML file for instant visu
   <div class="container">
     <h1>Theme Preview: [Theme Name]</h1>
 
-    <!-- COLOR PALETTE -->
+    <!-- ========== IMMER INKLUDIERT ========== -->
+
+    <!-- COLOR PALETTE (immer) -->
     <h2>Farbpalette</h2>
     <div class="swatches">
       <div class="swatch" style="background: var(--color-primary);">
@@ -693,7 +745,7 @@ Create `wireframes/theme-preview.html` - a standalone HTML file for instant visu
       </div>
     </div>
 
-    <!-- TYPOGRAPHY -->
+    <!-- TYPOGRAPHY (immer) -->
     <h2>Typografie</h2>
     <div class="card">
       <h1 style="margin-bottom: 0.5rem;">Heading 1 - Light 2.25rem</h1>
@@ -703,8 +755,10 @@ Create `wireframes/theme-preview.html` - a standalone HTML file for instant visu
       <p style="font-size: 0.875rem; color: var(--color-text-secondary); margin-top: 0.5rem;">Secondary Text - Kleinere Schrift für weniger wichtige Informationen.</p>
     </div>
 
+    <!-- ========== BEDINGT: NUR WENN KOMPONENTE GEFUNDEN ========== -->
+
     <div class="grid-2">
-      <!-- MINI TABLE -->
+      <!-- MINI TABLE (nur wenn mat-table gefunden) -->
       <div>
         <h2>Datentabelle</h2>
         <div class="card" style="padding: 0; overflow: hidden;">
@@ -746,7 +800,7 @@ Create `wireframes/theme-preview.html` - a standalone HTML file for instant visu
         </div>
       </div>
 
-      <!-- MINI FORM -->
+      <!-- MINI FORM (nur wenn mat-form-field gefunden) -->
       <div>
         <h2>Formular</h2>
         <div class="card">
@@ -785,7 +839,7 @@ Create `wireframes/theme-preview.html` - a standalone HTML file for instant visu
       </div>
     </div>
 
-    <!-- BUTTONS -->
+    <!-- BUTTONS (nur wenn mat-button gefunden) -->
     <h2>Buttons</h2>
     <div class="card" style="display: flex; gap: var(--spacing-4); flex-wrap: wrap; align-items: center;">
       <button class="btn btn-primary"><span class="material-icons">add</span> Primary</button>
@@ -807,11 +861,14 @@ THEME PREVIEW ERSTELLT: [Theme Name]
   open wireframes/theme-preview.html
 
 Features:
-- [X] Farbpalette mit allen Brand & Semantic Colors
-- [X] Typografie-Beispiele (H1-H3, Body, Secondary)
-- [X] Mini-Tabelle mit Edit/Delete Buttons und Status-Chips
-- [X] Mini-Formular mit Inputs, Select, Buttons
-- [X] Dark Mode Toggle (Button oben rechts)
+- [X] Farbpalette mit allen Brand & Semantic Colors (immer)
+- [X] Typografie-Beispiele (immer)
+- [X] Dark Mode Toggle (immer)
+- Projekt-spezifische Komponenten (nur wenn im Projekt verwendet):
+  - [ ] Datentabelle (wenn mat-table gefunden)
+  - [ ] Formular (wenn mat-form-field gefunden)
+  - [ ] Buttons (wenn mat-button gefunden)
+  - [ ] Cards, Chips, Dialogs, etc.
 
 Nächste Schritte:
 - Anderes Theme testen? → /byt8:ui-theming (Option 3)
