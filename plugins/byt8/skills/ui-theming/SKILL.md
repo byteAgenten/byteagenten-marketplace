@@ -473,54 +473,78 @@ Welches Theme möchten Sie in der Preview sehen?
 Theme-Nummer eingeben:
 ```
 
-#### 7.2: Projekt-Komponenten analysieren
+#### 7.2: Projekt-Elemente analysieren
 
-Scanne das Projekt nach verwendeten Angular Material Komponenten:
+Scanne das Projekt nach verwendeten UI-Elementen (Material UND native HTML):
 
 ```bash
-# Zähle Material-Komponenten in allen HTML-Templates
+# 1. Angular Material Komponenten
 grep -roh "mat-[a-z-]*" frontend/src/app --include="*.html" | sort | uniq -c | sort -rn
+
+# 2. Native HTML Elemente
+grep -roE "<(table|form|input|select|textarea|button|ul|ol|nav|header|footer|aside|dialog|details|summary)[^>]*>" frontend/src/app --include="*.html" | sort | uniq -c | sort -rn
+
+# 3. Custom Components (app-*)
+grep -roh "app-[a-z-]*" frontend/src/app --include="*.html" | sort | uniq -c | sort -rn
 ```
 
 **Beispiel-Output:**
 ```
+=== Angular Material ===
   45 mat-button
   34 mat-form-field
-  15 mat-select
   12 mat-table
-   8 mat-card
-   6 mat-icon
-   3 mat-dialog
-   2 mat-chip
-   1 mat-progress-bar
+
+=== Native HTML ===
+  28 <table
+  56 <input
+  23 <select
+  15 <button
+  12 <ul
+   8 <nav
+   4 <dialog
+
+=== Custom Components ===
+  18 app-user-card
+   9 app-status-badge
+   5 app-data-grid
 ```
 
-**Komponenten-Mapping für Preview:**
+**Element-Mapping für Preview:**
 
-| Material Component | Preview-Sektion | Mindestanzahl |
-|-------------------|-----------------|---------------|
-| `mat-table`, `mat-row`, `mat-cell` | Datentabelle | 1x |
-| `mat-form-field`, `mat-input` | Formular | 1x |
-| `mat-select`, `mat-option` | Formular (Select) | 1x |
-| `mat-button`, `mat-raised-button` | Buttons | 1x |
-| `mat-card` | Card-Layout | 1x |
-| `mat-dialog` | Dialog-Beispiel | 1x |
-| `mat-chip` | Chips/Tags | 1x |
-| `mat-progress-bar`, `mat-spinner` | Loading States | 1x |
-| `mat-tab`, `mat-tab-group` | Tabs | 1x |
-| `mat-menu` | Dropdown Menu | 1x |
-| `mat-snack-bar` | Notifications | 1x |
-| `mat-tooltip` | Tooltips | 1x |
+| Element (Material ODER Native) | Preview-Sektion |
+|-------------------------------|-----------------|
+| `mat-table` ODER `<table>` | Datentabelle |
+| `mat-form-field` ODER `<input>/<select>` | Formular |
+| `mat-button` ODER `<button>` | Buttons |
+| `mat-card` ODER `<article>/<section>` | Cards |
+| `mat-chip` ODER `.badge`/`.tag` | Chips/Tags |
+| `mat-tab` ODER Custom Tabs | Tabs |
+| `<ul>/<ol>` | Listen |
+| `<nav>` | Navigation |
+| `<dialog>` ODER `mat-dialog` | Dialoge |
+| `mat-progress-bar` ODER `<progress>` | Loading States |
+| `<details>/<summary>` | Accordions |
 
 **Ergebnis speichern:**
 ```
-Gefundene Komponenten für Preview:
-- [X] Buttons (45x verwendet)
-- [X] Formular mit Inputs (34x)
-- [X] Tabelle (12x)
-- [X] Cards (8x)
-- [ ] Chips (nicht verwendet - wird ausgelassen)
-- [ ] Progress Bar (nicht verwendet - wird ausgelassen)
+Gefundene UI-Elemente für Preview:
+
+Material Components:
+- [X] mat-button (45x)
+- [X] mat-form-field (34x)
+- [X] mat-table (12x)
+
+Native HTML:
+- [X] <table> (28x)
+- [X] <input> (56x)
+- [X] <ul> Listen (12x)
+- [X] <nav> Navigation (8x)
+- [ ] <dialog> (nicht verwendet)
+
+Custom Components:
+- [X] app-user-card (18x) → Card-Variante
+- [X] app-status-badge (9x) → Chip/Badge-Variante
 ```
 
 #### 7.3: Theme-Datei lesen (nur bei Option 3)
@@ -758,7 +782,7 @@ Create `wireframes/theme-preview.html` - a standalone HTML file for instant visu
     <!-- ========== BEDINGT: NUR WENN KOMPONENTE GEFUNDEN ========== -->
 
     <div class="grid-2">
-      <!-- MINI TABLE (nur wenn mat-table gefunden) -->
+      <!-- MINI TABLE (wenn mat-table ODER <table> gefunden) -->
       <div>
         <h2>Datentabelle</h2>
         <div class="card" style="padding: 0; overflow: hidden;">
@@ -800,7 +824,7 @@ Create `wireframes/theme-preview.html` - a standalone HTML file for instant visu
         </div>
       </div>
 
-      <!-- MINI FORM (nur wenn mat-form-field gefunden) -->
+      <!-- MINI FORM (wenn mat-form-field ODER <input>/<select> gefunden) -->
       <div>
         <h2>Formular</h2>
         <div class="card">
@@ -839,7 +863,7 @@ Create `wireframes/theme-preview.html` - a standalone HTML file for instant visu
       </div>
     </div>
 
-    <!-- BUTTONS (nur wenn mat-button gefunden) -->
+    <!-- BUTTONS (wenn mat-button ODER <button> gefunden) -->
     <h2>Buttons</h2>
     <div class="card" style="display: flex; gap: var(--spacing-4); flex-wrap: wrap; align-items: center;">
       <button class="btn btn-primary"><span class="material-icons">add</span> Primary</button>
@@ -864,10 +888,12 @@ Features:
 - [X] Farbpalette mit allen Brand & Semantic Colors (immer)
 - [X] Typografie-Beispiele (immer)
 - [X] Dark Mode Toggle (immer)
-- Projekt-spezifische Komponenten (nur wenn im Projekt verwendet):
-  - [ ] Datentabelle (wenn mat-table gefunden)
-  - [ ] Formular (wenn mat-form-field gefunden)
-  - [ ] Buttons (wenn mat-button gefunden)
+- Projekt-spezifische Elemente (nur wenn im Projekt gefunden):
+  - [ ] Datentabelle (mat-table ODER <table>)
+  - [ ] Formular (mat-form-field ODER <input>/<select>)
+  - [ ] Buttons (mat-button ODER <button>)
+  - [ ] Listen (<ul>/<ol>)
+  - [ ] Navigation (<nav>)
   - [ ] Cards, Chips, Dialogs, etc.
 
 Nächste Schritte:
