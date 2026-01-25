@@ -73,7 +73,6 @@ State is persisted in `.workflow/workflow-state.json` with:
 | `/byt8:full-stack-feature` | 9-phase workflow for full-stack feature development |
 | `/byt8:ui-theming` | Design system initialization (theme, tokens, typography) |
 | `/byt8:theme-factory` | Theme generation (10 predefined themes) |
-| `/byt8:ux-review` | UX Heuristics Review (Nielsen's 10) |
 | `/byt8:python-expert` | Python development support |
 
 ## Development

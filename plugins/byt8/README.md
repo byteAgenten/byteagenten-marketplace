@@ -74,7 +74,6 @@ export CONTEXT7_API_KEY=ctx7sk-dein-key-hier
 | `/byt8:full-stack-feature` | 9-Phasen Feature Development Workflow |
 | `/byt8:ui-theming` | Einmalige Design System Initialisierung |
 | `/byt8:theme-factory` | Theme-Auswahl und -Generierung |
-| `/byt8:ux-review` | UX Heuristics Review (Nielsen's 10) |
 | `/byt8:python-expert` | Python Development Support |
 
 ### Beispiele
@@ -149,7 +148,6 @@ Der Workflow pausiert an kritischen Punkten für User-Approval:
 | `full-stack-feature` | 9-Phasen Workflow mit State Management |
 | `ui-theming` | Design System Initialisierung |
 | `theme-factory` | 10 vordefinierte Themes + Custom Generation |
-| `ux-review` | UX Heuristics Review (Nielsen's 10) |
 | `python-expert` | Async, Typing, Testing Patterns |
 
 ---
