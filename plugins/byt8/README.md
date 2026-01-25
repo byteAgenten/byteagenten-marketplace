@@ -73,7 +73,6 @@ export CONTEXT7_API_KEY=ctx7sk-dein-key-hier
 |---------|--------------|
 | `/byt8:full-stack-feature` | 9-Phasen Feature Development Workflow |
 | `/byt8:ui-theming` | Einmalige Design System Initialisierung |
-| `/byt8:theme-factory` | Theme-Auswahl und -Generierung |
 | `/byt8:python-expert` | Python Development Support |
 
 ### Beispiele
