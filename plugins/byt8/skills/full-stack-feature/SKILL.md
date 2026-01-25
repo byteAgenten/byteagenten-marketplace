@@ -1,13 +1,41 @@
 ---
 name: full-stack-feature
 description: Orchestrates full-stack feature development with approval gates and agent delegation.
-version: 2.26.0
+version: 3.3.0
 author: byteagent - Hans Pickelmann
 ---
 
 # Full-Stack Feature Development Skill
 
 **When to use:** GitHub Issues, neue Features, Bugfixes die mehrere Layer betreffen (DB → Backend → Frontend).
+
+---
+
+## ⛔⛔⛔ CONTEXT OVERFLOW RECOVERY (LIES DAS ZUERST!) ⛔⛔⛔
+
+**Kommst du aus einem Context Overflow / Session Resume?**
+
+```
+STOP! Bevor du weitermachst:
+
+1. Lies DIESE SKILL.md KOMPLETT durch (nicht nur den State!)
+2. Prüfe workflow-state.json → currentPhase + nextStep
+3. Finde die Phase-Definition HIER in diesem Dokument
+4. Führe NUR den definierten nextStep aus
+5. NIEMALS aus dem Summary improvisieren!
+```
+
+**Warum?** Nach Context Overflow hast du nur ein Summary. Das Summary enthält NICHT die exakten Workflow-Regeln. Diese stehen NUR HIER in dieser SKILL.md.
+
+**Typische Fehler nach Context Overflow:**
+- ❌ "Ich frage mal nach Phase 1 und 2" → FALSCH (Phasen haben Approval Gates)
+- ❌ "Ich mache einfach weiter wo wir waren" → FALSCH (nextStep validieren!)
+- ❌ "Das stand so im Summary" → FALSCH (Summary ist unvollständig)
+
+**Korrekt:**
+1. `cat .workflow/workflow-state.json` → Phase + nextStep lesen
+2. In DIESER SKILL.md die Phase finden → Regeln lesen
+3. Exakt nach Regeln fortfahren
 
 ---
 
