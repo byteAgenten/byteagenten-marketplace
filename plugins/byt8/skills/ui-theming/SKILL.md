@@ -557,7 +557,7 @@ Extrahiere Primary und Accent Color, berechne Light/Dark-Varianten (wie in Step 
 
 #### 7.4: Preview HTML erstellen (nur gefundene Komponenten)
 
-Create `wireframes/theme-preview.html` - a standalone HTML file for instant visual feedback:
+Create `wireframes/theme-preview-[theme-name].html` - a standalone HTML file for instant visual feedback:
 
 ```html
 <!DOCTYPE html>
@@ -882,7 +882,7 @@ Create `wireframes/theme-preview.html` - a standalone HTML file for instant visu
 THEME PREVIEW ERSTELLT: [Theme Name]
 
 Öffnen Sie die Vorschau im Browser:
-  open wireframes/theme-preview.html
+  open wireframes/theme-preview-[theme-name].html
 
 Features:
 - [X] Farbpalette mit allen Brand & Semantic Colors (immer)
@@ -921,7 +921,7 @@ Files Created:
 - [X] frontend/src/styles/tokens/_breakpoints.scss
 - [X] frontend/src/styles/tokens/_index.scss
 - [X] frontend/src/styles.scss (updated)
-- [X] wireframes/theme-preview.html (Preview)
+- [X] wireframes/theme-preview-[theme-name].html (Preview)
 
 Architecture:
 - CSS Custom Properties (runtime theming)
@@ -932,7 +932,7 @@ Architecture:
 - Responsive breakpoint mixins
 
 Preview:
-  open wireframes/theme-preview.html
+  open wireframes/theme-preview-[theme-name].html
 
 Next Steps:
 1. Preview öffnen und Theme prüfen (Light + Dark Mode)
