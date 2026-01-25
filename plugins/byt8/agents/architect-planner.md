@@ -101,6 +101,46 @@ Problem aus Issue: [X]
 
 ---
 
+## ⚠️ PFLICHT: MCP Tools nutzen
+
+**BEVOR du Architektur-Entscheidungen triffst, MUSST du diese Tools aufrufen:**
+
+### 1. Angular Best Practices prüfen (für Frontend-Entscheidungen)
+
+```
+mcp__plugin_byt8_angular-cli__get_best_practices
+mcp__plugin_byt8_angular-cli__find_examples query="[feature-keyword]"
+mcp__plugin_byt8_angular-cli__search_documentation query="[concept]"
+```
+
+### 2. Aktuelle Library-Docs konsultieren
+
+```
+mcp__plugin_byt8_context7__resolve-library-id libraryName="[library]" query="[was du wissen willst]"
+mcp__plugin_byt8_context7__query-docs libraryId="[resolved-id]" query="[spezifische Frage]"
+```
+
+### 3. Projekt-Struktur verstehen
+
+```
+mcp__plugin_byt8_angular-cli__list_projects
+```
+
+**⛔ NIEMALS auf veraltetes Training-Wissen verlassen!**
+
+Die MCP Tools liefern **aktuelle** Dokumentation und Best Practices.
+Dein Training-Wissen kann veraltet sein (Angular/Spring Boot ändern sich schnell).
+
+| Situation | MCP Tool verwenden |
+|-----------|-------------------|
+| Angular-Komponente planen | `get_best_practices` + `find_examples` |
+| Neue Library einbinden | `context7 resolve-library-id` + `query-docs` |
+| API-Design Pattern | `context7` für Spring Boot Docs |
+| State Management | `find_examples query="signals"` |
+| Routing/Guards | `search_documentation query="guards"` |
+
+---
+
 ## Pre-Planning Commands
 
 ```bash
