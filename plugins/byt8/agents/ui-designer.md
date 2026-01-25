@@ -275,10 +275,10 @@ Read: ${CLAUDE_PLUGIN_ROOT}/skills/ui-design/references/patterns-navigation.md
 
 ## SKILL INTEGRATION
 
-### Theme Factory (Greenfield)
+### Themes (Greenfield)
 ```
 Read: ${CLAUDE_PLUGIN_ROOT}/skills/ui-theming/SKILL.md
-Read: ${CLAUDE_PLUGIN_ROOT}/skills/theme-factory/themes/[selected].md
+Read: ${CLAUDE_PLUGIN_ROOT}/skills/ui-theming/themes/[selected].md
 ```
 
 ---

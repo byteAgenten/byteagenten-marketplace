@@ -145,8 +145,7 @@ Der Workflow pausiert an kritischen Punkten für User-Approval:
 | Skill | Beschreibung |
 |-------|--------------|
 | `full-stack-feature` | 9-Phasen Workflow mit State Management |
-| `ui-theming` | Design System Initialisierung |
-| `theme-factory` | 10 vordefinierte Themes + Custom Generation |
+| `ui-theming` | Design System Initialisierung (inkl. 10 vordefinierte Themes) |
 | `python-expert` | Async, Typing, Testing Patterns |
 
 ---
@@ -169,7 +168,7 @@ byt8/
 ├── skills/
 │   ├── full-stack-feature/
 │   │   └── SKILL.md
-│   ├── theme-factory/
+│   ├── ui-theming/
 │   │   ├── SKILL.md
 │   │   └── themes/
 │   └── ...

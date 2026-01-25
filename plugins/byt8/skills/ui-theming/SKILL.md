@@ -21,7 +21,7 @@ Initialize the design system. This skill should be run **ONCE** at project start
 
 ### Step 1: Theme Selection
 
-Present the available themes from `/theme-factory`:
+Present the available themes:
 
 ```
 Available Themes:
@@ -45,7 +45,7 @@ Which theme would you like for your project?
 After user selects a theme, read the theme file:
 
 ```
-Read: ${CLAUDE_PLUGIN_ROOT}/skills/theme-factory/themes/[selected-theme].md
+Read: ${CLAUDE_PLUGIN_ROOT}/skills/ui-theming/themes/[selected-theme].md
 ```
 
 Extract:
@@ -454,4 +454,3 @@ Next Steps:
 ## Prerequisites
 
 - Frontend project initialized (`npm install` complete)
-- Theme Factory skill available

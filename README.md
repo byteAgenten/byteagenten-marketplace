@@ -111,7 +111,6 @@ Falls du eine feste Version verwenden möchtest:
 |---------|-------------|
 | `/byt8:full-stack-feature` | 9-phase workflow for full-stack feature development |
 | `/byt8:ui-theming` | One-time design system initialization (theme, tokens, typography) |
-| `/byt8:theme-factory` | Apply themes to artifacts (slides, docs, etc.) |
 | `/byt8:python-expert` | Python development support |
 
 → Details und Beispiele siehe [byt8 README](./plugins/byt8/README.md)
