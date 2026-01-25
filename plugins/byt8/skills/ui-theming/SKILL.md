@@ -19,6 +19,40 @@ Initialize the design system. This skill should be run **ONCE** at project start
 
 ## Workflow
 
+### Step 0: Check Existing Design System
+
+Before creating files, check if a design system already exists:
+
+```bash
+ls frontend/src/styles/tokens/ 2>/dev/null
+```
+
+**If directory exists with files, show:**
+
+```
+⚠️ Design System bereits vorhanden!
+
+Gefundene Dateien:
+- _colors.scss
+- _typography.scss
+- [weitere Dateien...]
+
+Optionen:
+1. Abbrechen (bestehende Dateien behalten)
+2. Überschreiben (Theme neu generieren)
+3. Nur Theme-Preview generieren (keine Änderungen)
+
+Wie möchten Sie fortfahren?
+```
+
+- **Option 1:** Exit skill, no changes
+- **Option 2:** Continue with Step 1 (files will be overwritten)
+- **Option 3:** Skip to Step 7 (only generate preview HTML)
+
+**If directory does not exist:** Continue with Step 1.
+
+---
+
 ### Step 1: Theme Selection
 
 Present the available themes:
@@ -412,6 +446,344 @@ ls -la frontend/src/styles/tokens/
 cd frontend && npm run build
 ```
 
+### Step 7: Generate Theme Preview
+
+Create `frontend/src/theme-preview.html` - a standalone HTML file for instant visual feedback:
+
+```html
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Theme Preview - [Theme Name]</title>
+  <link href="https://fonts.googleapis.com/css2?family=[theme-font]:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    /* ========== GENERATED TOKENS (from _colors.scss) ========== */
+    :root {
+      /* Brand Colors */
+      --color-primary: [primary-hex];
+      --color-primary-light: [primary-light-hex];
+      --color-primary-dark: [primary-dark-hex];
+      --color-accent: [accent-hex];
+
+      /* Semantic */
+      --color-success: #4caf50;
+      --color-warning: #ff9800;
+      --color-error: #f44336;
+      --color-info: #2196f3;
+
+      /* Neutrals */
+      --color-gray-100: #f5f5f5;
+      --color-gray-200: #eeeeee;
+      --color-gray-300: #e0e0e0;
+      --color-gray-600: #757575;
+      --color-gray-800: #424242;
+      --color-gray-900: #212121;
+
+      /* Surface */
+      --color-background: #fafafa;
+      --color-surface: #ffffff;
+      --color-text-primary: rgba(0,0,0,0.87);
+      --color-text-secondary: rgba(0,0,0,0.6);
+      --color-divider: rgba(0,0,0,0.12);
+
+      /* Typography */
+      --font-family-base: '[theme-font]', sans-serif;
+
+      /* Spacing */
+      --spacing-2: 0.5rem;
+      --spacing-3: 0.75rem;
+      --spacing-4: 1rem;
+      --spacing-6: 1.5rem;
+      --radius-md: 0.25rem;
+
+      /* Elevation */
+      --elevation-1: 0 2px 1px -1px rgba(0,0,0,.2), 0 1px 1px 0 rgba(0,0,0,.14), 0 1px 3px 0 rgba(0,0,0,.12);
+      --elevation-2: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
+    }
+
+    .dark-theme {
+      --color-primary: [primary-light-hex];
+      --color-background: #121212;
+      --color-surface: #1e1e1e;
+      --color-text-primary: rgba(255,255,255,0.87);
+      --color-text-secondary: rgba(255,255,255,0.6);
+      --color-divider: rgba(255,255,255,0.12);
+      --color-gray-100: #303030;
+      --color-gray-200: #424242;
+      --color-gray-300: #616161;
+    }
+
+    /* ========== BASE STYLES ========== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-family-base);
+      background: var(--color-background);
+      color: var(--color-text-primary);
+      padding: var(--spacing-6);
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .container { max-width: 1200px; margin: 0 auto; }
+
+    h1 { font-size: 2.25rem; font-weight: 300; margin-bottom: var(--spacing-6); }
+    h2 { font-size: 1.5rem; font-weight: 400; margin: var(--spacing-6) 0 var(--spacing-4); color: var(--color-text-secondary); }
+    h3 { font-size: 1.25rem; font-weight: 500; margin-bottom: var(--spacing-3); }
+
+    /* ========== THEME TOGGLE ========== */
+    .theme-toggle {
+      position: fixed; top: 1rem; right: 1rem;
+      background: var(--color-surface); border: 1px solid var(--color-divider);
+      padding: var(--spacing-2) var(--spacing-4); border-radius: var(--radius-md);
+      cursor: pointer; box-shadow: var(--elevation-1);
+    }
+
+    /* ========== COLOR SWATCHES ========== */
+    .swatches { display: flex; flex-wrap: wrap; gap: var(--spacing-3); }
+    .swatch {
+      width: 100px; height: 80px; border-radius: var(--radius-md);
+      display: flex; flex-direction: column; justify-content: flex-end;
+      padding: var(--spacing-2); font-size: 0.75rem; color: white;
+      box-shadow: var(--elevation-1);
+    }
+    .swatch-label { font-weight: 500; }
+    .swatch-hex { opacity: 0.8; }
+
+    /* ========== CARD ========== */
+    .card {
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      box-shadow: var(--elevation-1);
+      padding: var(--spacing-4);
+      margin-bottom: var(--spacing-4);
+    }
+
+    /* ========== BUTTONS ========== */
+    .btn {
+      display: inline-flex; align-items: center; gap: var(--spacing-2);
+      padding: var(--spacing-2) var(--spacing-4);
+      border: none; border-radius: var(--radius-md);
+      font-family: inherit; font-size: 0.875rem; font-weight: 500;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-primary { background: var(--color-primary); color: white; }
+    .btn-primary:hover { filter: brightness(1.1); }
+    .btn-secondary { background: transparent; color: var(--color-primary); border: 1px solid var(--color-divider); }
+    .btn-danger { background: var(--color-error); color: white; }
+    .btn-icon { padding: var(--spacing-2); min-width: auto; }
+
+    /* ========== TABLE ========== */
+    .table { width: 100%; border-collapse: collapse; }
+    .table th, .table td {
+      padding: var(--spacing-3) var(--spacing-4);
+      text-align: left; border-bottom: 1px solid var(--color-divider);
+    }
+    .table th { font-weight: 500; color: var(--color-text-secondary); font-size: 0.75rem; text-transform: uppercase; }
+    .table tr:hover { background: var(--color-gray-100); }
+    .table-actions { display: flex; gap: var(--spacing-2); }
+
+    /* ========== FORM ========== */
+    .form-group { margin-bottom: var(--spacing-4); }
+    .form-label { display: block; font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: var(--spacing-2); }
+    .form-input {
+      width: 100%; padding: var(--spacing-3) var(--spacing-4);
+      border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+      font-family: inherit; font-size: 1rem;
+      background: var(--color-surface); color: var(--color-text-primary);
+    }
+    .form-input:focus { outline: 2px solid var(--color-primary); border-color: transparent; }
+    .form-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23757575' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 1rem center; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-4); }
+    .form-actions { display: flex; gap: var(--spacing-3); justify-content: flex-end; margin-top: var(--spacing-6); }
+
+    /* ========== CHIPS ========== */
+    .chip {
+      display: inline-flex; align-items: center; gap: var(--spacing-2);
+      padding: var(--spacing-1, 0.25rem) var(--spacing-3);
+      border-radius: 9999px; font-size: 0.75rem; font-weight: 500;
+    }
+    .chip-success { background: #e8f5e9; color: #2e7d32; }
+    .chip-warning { background: #fff3e0; color: #e65100; }
+    .chip-error { background: #ffebee; color: #c62828; }
+
+    /* ========== GRID LAYOUT ========== */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-6); }
+    @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" onclick="document.body.classList.toggle('dark-theme')">
+    <span class="material-icons" style="vertical-align: middle;">dark_mode</span> Toggle Dark Mode
+  </button>
+
+  <div class="container">
+    <h1>Theme Preview: [Theme Name]</h1>
+
+    <!-- COLOR PALETTE -->
+    <h2>Farbpalette</h2>
+    <div class="swatches">
+      <div class="swatch" style="background: var(--color-primary);">
+        <span class="swatch-label">Primary</span>
+        <span class="swatch-hex">[primary-hex]</span>
+      </div>
+      <div class="swatch" style="background: var(--color-primary-light);">
+        <span class="swatch-label">Primary Light</span>
+        <span class="swatch-hex">[primary-light-hex]</span>
+      </div>
+      <div class="swatch" style="background: var(--color-primary-dark);">
+        <span class="swatch-label">Primary Dark</span>
+        <span class="swatch-hex">[primary-dark-hex]</span>
+      </div>
+      <div class="swatch" style="background: var(--color-accent);">
+        <span class="swatch-label">Accent</span>
+        <span class="swatch-hex">[accent-hex]</span>
+      </div>
+      <div class="swatch" style="background: var(--color-success);">
+        <span class="swatch-label">Success</span>
+        <span class="swatch-hex">#4caf50</span>
+      </div>
+      <div class="swatch" style="background: var(--color-warning);">
+        <span class="swatch-label">Warning</span>
+        <span class="swatch-hex">#ff9800</span>
+      </div>
+      <div class="swatch" style="background: var(--color-error);">
+        <span class="swatch-label">Error</span>
+        <span class="swatch-hex">#f44336</span>
+      </div>
+      <div class="swatch" style="background: var(--color-info);">
+        <span class="swatch-label">Info</span>
+        <span class="swatch-hex">#2196f3</span>
+      </div>
+    </div>
+
+    <!-- TYPOGRAPHY -->
+    <h2>Typografie</h2>
+    <div class="card">
+      <h1 style="margin-bottom: 0.5rem;">Heading 1 - Light 2.25rem</h1>
+      <h2 style="margin: 0.5rem 0;">Heading 2 - Regular 1.5rem</h2>
+      <h3 style="margin: 0.5rem 0;">Heading 3 - Medium 1.25rem</h3>
+      <p style="margin-top: 1rem;">Body Text - Dies ist ein Beispieltext in der Standardschriftgröße. Die Schriftfamilie ist <strong>[theme-font]</strong>.</p>
+      <p style="font-size: 0.875rem; color: var(--color-text-secondary); margin-top: 0.5rem;">Secondary Text - Kleinere Schrift für weniger wichtige Informationen.</p>
+    </div>
+
+    <div class="grid-2">
+      <!-- MINI TABLE -->
+      <div>
+        <h2>Datentabelle</h2>
+        <div class="card" style="padding: 0; overflow: hidden;">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Aktionen</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Max Mustermann</td>
+                <td><span class="chip chip-success">Aktiv</span></td>
+                <td class="table-actions">
+                  <button class="btn btn-icon btn-secondary"><span class="material-icons">edit</span></button>
+                  <button class="btn btn-icon btn-danger"><span class="material-icons">delete</span></button>
+                </td>
+              </tr>
+              <tr>
+                <td>Erika Musterfrau</td>
+                <td><span class="chip chip-warning">Ausstehend</span></td>
+                <td class="table-actions">
+                  <button class="btn btn-icon btn-secondary"><span class="material-icons">edit</span></button>
+                  <button class="btn btn-icon btn-danger"><span class="material-icons">delete</span></button>
+                </td>
+              </tr>
+              <tr>
+                <td>John Doe</td>
+                <td><span class="chip chip-error">Inaktiv</span></td>
+                <td class="table-actions">
+                  <button class="btn btn-icon btn-secondary"><span class="material-icons">edit</span></button>
+                  <button class="btn btn-icon btn-danger"><span class="material-icons">delete</span></button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MINI FORM -->
+      <div>
+        <h2>Formular</h2>
+        <div class="card">
+          <h3>Benutzer bearbeiten</h3>
+          <form style="margin-top: var(--spacing-4);">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Vorname</label>
+                <input type="text" class="form-input" value="Max" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Nachname</label>
+                <input type="text" class="form-input" value="Mustermann" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">E-Mail</label>
+              <input type="email" class="form-input" value="max@example.com" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Rolle</label>
+              <select class="form-input form-select">
+                <option>Administrator</option>
+                <option selected>Benutzer</option>
+                <option>Gast</option>
+              </select>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary">Abbrechen</button>
+              <button type="submit" class="btn btn-primary">
+                <span class="material-icons">save</span> Speichern
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- BUTTONS -->
+    <h2>Buttons</h2>
+    <div class="card" style="display: flex; gap: var(--spacing-4); flex-wrap: wrap; align-items: center;">
+      <button class="btn btn-primary"><span class="material-icons">add</span> Primary</button>
+      <button class="btn btn-secondary">Secondary</button>
+      <button class="btn btn-danger"><span class="material-icons">delete</span> Danger</button>
+      <button class="btn btn-primary" disabled style="opacity: 0.5; cursor: not-allowed;">Disabled</button>
+    </div>
+  </div>
+</body>
+</html>
+```
+
+**Nach Erstellung:**
+
+```
+THEME PREVIEW ERSTELLT
+
+Öffnen Sie die Vorschau im Browser:
+  open frontend/src/theme-preview.html
+
+Features:
+- [X] Farbpalette mit allen Brand & Semantic Colors
+- [X] Typografie-Beispiele (H1-H3, Body, Secondary)
+- [X] Mini-Tabelle mit Edit/Delete Buttons und Status-Chips
+- [X] Mini-Formular mit Inputs, Select, Buttons
+- [X] Dark Mode Toggle (Button oben rechts)
+
+Gefällt das Theme nicht? Einfach erneut ausführen:
+  /byt8:ui-theming
+```
+
+---
+
 ## Output
 
 ```
@@ -430,6 +802,7 @@ Files Created:
 - [X] frontend/src/styles/tokens/_breakpoints.scss
 - [X] frontend/src/styles/tokens/_index.scss
 - [X] frontend/src/styles.scss (updated)
+- [X] frontend/src/theme-preview.html (Preview)
 
 Architecture:
 - CSS Custom Properties (runtime theming)
@@ -439,10 +812,14 @@ Architecture:
 - Material Design elevations
 - Responsive breakpoint mixins
 
+Preview:
+  open frontend/src/theme-preview.html
+
 Next Steps:
-1. Run /full-stack-feature to implement features
-2. Use var(--token-name) in all components
-3. Import breakpoint mixins: @use 'styles/tokens' as tokens;
+1. Preview öffnen und Theme prüfen (Light + Dark Mode)
+2. Falls Theme nicht passt: /byt8:ui-theming erneut ausführen
+3. Falls Theme passt: /byt8:full-stack-feature starten
+4. In Components: var(--token-name) verwenden
 ```
 
 ## When to Run
