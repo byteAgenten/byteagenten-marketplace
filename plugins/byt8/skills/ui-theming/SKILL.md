@@ -47,7 +47,7 @@ Wie möchten Sie fortfahren?
 
 - **Option 1:** Exit skill, no changes
 - **Option 2:** Continue with Step 1 (files will be overwritten)
-- **Option 3:** Skip to Step 7 (only generate preview HTML)
+- **Option 3:** Skip to Step 7 (Theme-Auswahl + Preview generieren, keine SCSS-Änderungen)
 
 **If directory does not exist:** Continue with Step 1.
 
@@ -448,6 +448,37 @@ cd frontend && npm run build
 
 ### Step 7: Generate Theme Preview
 
+**Dieser Step kann auch unabhängig ausgeführt werden (Option 3 in Step 0).**
+
+#### 7.1: Theme für Preview auswählen
+
+```
+Welches Theme möchten Sie in der Preview sehen?
+
+1. Ocean Depths     - Professional maritime (Blue/Teal)
+2. Sunset Boulevard - Warm vibrant (Orange/Pink)
+3. Forest Canopy    - Natural earth tones (Green/Brown)
+4. Modern Minimalist - Clean grayscale (Gray/Black)
+5. Golden Hour      - Rich autumnal (Gold/Orange)
+6. Arctic Frost     - Cool crisp winter (Light Blue/White)
+7. Desert Rose      - Soft sophisticated (Pink/Beige)
+8. Tech Innovation  - Bold modern tech (Blue/Purple)
+9. Botanical Garden - Fresh organic (Green/Cream)
+10. Midnight Galaxy - Dramatic cosmic (Dark Purple/Blue)
+
+Theme-Nummer eingeben:
+```
+
+#### 7.2: Theme-Datei lesen
+
+```
+Read: ${CLAUDE_PLUGIN_ROOT}/skills/ui-theming/themes/[selected-theme].md
+```
+
+Extrahiere Primary und Accent Color, berechne Light/Dark-Varianten (wie in Step 3).
+
+#### 7.3: Preview HTML erstellen
+
 Create `wireframes/theme-preview.html` - a standalone HTML file for instant visual feedback:
 
 ```html
@@ -766,7 +797,7 @@ Create `wireframes/theme-preview.html` - a standalone HTML file for instant visu
 **Nach Erstellung:**
 
 ```
-THEME PREVIEW ERSTELLT
+THEME PREVIEW ERSTELLT: [Theme Name]
 
 Öffnen Sie die Vorschau im Browser:
   open wireframes/theme-preview.html
@@ -778,8 +809,9 @@ Features:
 - [X] Mini-Formular mit Inputs, Select, Buttons
 - [X] Dark Mode Toggle (Button oben rechts)
 
-Gefällt das Theme nicht? Einfach erneut ausführen:
-  /byt8:ui-theming
+Nächste Schritte:
+- Anderes Theme testen? → /byt8:ui-theming (Option 3)
+- Dieses Theme übernehmen? → /byt8:ui-theming (Option 2 mit gleichem Theme)
 ```
 
 ---
