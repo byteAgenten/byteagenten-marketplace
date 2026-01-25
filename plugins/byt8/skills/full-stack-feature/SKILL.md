@@ -1,7 +1,7 @@
 ---
 name: full-stack-feature
 description: Orchestrates full-stack feature development with approval gates and agent delegation.
-version: 3.3.0
+version: 3.4.0
 author: byteagent - Hans Pickelmann
 ---
 
@@ -11,31 +11,10 @@ author: byteagent - Hans Pickelmann
 
 ---
 
-## ⛔⛔⛔ CONTEXT OVERFLOW RECOVERY (LIES DAS ZUERST!) ⛔⛔⛔
+## ⛔ CONTEXT OVERFLOW RECOVERY
 
-**Kommst du aus einem Context Overflow / Session Resume?**
-
-```
-STOP! Bevor du weitermachst:
-
-1. Lies DIESE SKILL.md KOMPLETT durch (nicht nur den State!)
-2. Prüfe workflow-state.json → currentPhase + nextStep
-3. Finde die Phase-Definition HIER in diesem Dokument
-4. Führe NUR den definierten nextStep aus
-5. NIEMALS aus dem Summary improvisieren!
-```
-
-**Warum?** Nach Context Overflow hast du nur ein Summary. Das Summary enthält NICHT die exakten Workflow-Regeln. Diese stehen NUR HIER in dieser SKILL.md.
-
-**Typische Fehler nach Context Overflow:**
-- ❌ "Ich frage mal nach Phase 1 und 2" → FALSCH (Phasen haben Approval Gates)
-- ❌ "Ich mache einfach weiter wo wir waren" → FALSCH (nextStep validieren!)
-- ❌ "Das stand so im Summary" → FALSCH (Summary ist unvollständig)
-
-**Korrekt:**
-1. `cat .workflow/workflow-state.json` → Phase + nextStep lesen
-2. In DIESER SKILL.md die Phase finden → Regeln lesen
-3. Exakt nach Regeln fortfahren
+Nach Context Overflow: SOFORT die Startup-Schritte unten ausführen!
+NICHT aus dem Summary improvisieren.
 
 ---
 
@@ -50,22 +29,30 @@ cat CLAUDE.md 2>/dev/null | head -20 || echo "NICHT VORHANDEN"
 Falls nicht vorhanden → User fragen: "Keine CLAUDE.md gefunden. Soll ich /init ausführen?"
 
 **2. Recovery-Sektion in CLAUDE.md sicherstellen:**
-Prüfe ob `## byt8 Workflow Recovery` existiert. Falls nicht → am ANFANG hinzufügen:
+
+Prüfe: `grep -q "WORKFLOW RECOVERY" CLAUDE.md`
+
+Falls nicht vorhanden → am Anfang (nach `# CLAUDE.md` Header) hinzufügen:
 ```markdown
-## byt8 Workflow Recovery
+# ⛔⛔⛔ WORKFLOW RECOVERY - LIES DAS ZUERST! ⛔⛔⛔
 
-Bei Session-Start oder Context-Overflow IMMER prüfen:
+**Kommst du aus einem Context Overflow / Session Resume?**
 
-\`\`\`bash
-cat .workflow/workflow-state.json 2>/dev/null || echo "KEIN WORKFLOW"
-\`\`\`
+Dein Summary ist UNVOLLSTÄNDIG! Es fehlen die Workflow-Regeln.
 
-Falls `"status": "active"`:
-1. `currentPhase` + `nextStep` notieren
-2. ⛔ Skill neu laden: `/byt8:full-stack-feature`
-3. ⛔ SKILL.md wird KOMPLETT gelesen (PFLICHT!)
-4. `nextStep` VALIDIEREN bevor fortgesetzt wird
-5. NIEMALS improvisieren - nur definierte Schritte!
+**DU MUSST JETZT:**
+
+1. ⛔ SOFORT `/byt8:full-stack-feature` aufrufen!
+2. Der Skill prüft den State und lädt ALLE Regeln
+3. NICHT selbst den State lesen oder interpretieren!
+
+**WENN DU DAS IGNORIERST:**
+- Du wirst falsche Entscheidungen treffen
+- Du wirst Phasen überspringen
+- Du wirst Approval Gates vergessen
+- Der User wird frustriert sein
+
+**KEIN WEITERMACHEN AUS DEM SUMMARY!**
 
 ---
 ```

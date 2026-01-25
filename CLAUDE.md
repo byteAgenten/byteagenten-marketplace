@@ -2,17 +2,25 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## byt8 Workflow Recovery
+## ⛔⛔⛔ WORKFLOW RECOVERY - LIES DAS ZUERST! ⛔⛔⛔
 
-Bei Session-Start oder Context-Overflow IMMER prüfen:
+**Kommst du aus einem Context Overflow / Session Resume?**
 
-```bash
-cat .workflow/workflow-state.json 2>/dev/null || echo "KEIN WORKFLOW"
-```
+Dein Summary ist UNVOLLSTÄNDIG! Es fehlen die Workflow-Regeln.
 
-Falls `"status": "active"`:
-→ Skill neu laden: `/byt8:full-stack-feature`
-→ Workflow wird automatisch fortgesetzt
+**DU MUSST JETZT:**
+
+1. ⛔ SOFORT `/byt8:full-stack-feature` aufrufen!
+2. Der Skill prüft den State und lädt ALLE Regeln
+3. NICHT selbst den State lesen oder interpretieren!
+
+**WENN DU DAS IGNORIERST:**
+- Du wirst falsche Entscheidungen treffen
+- Du wirst Phasen überspringen
+- Du wirst Approval Gates vergessen
+- Der User wird frustriert sein
+
+**KEIN WEITERMACHEN AUS DEM SUMMARY!**
 
 ---
 

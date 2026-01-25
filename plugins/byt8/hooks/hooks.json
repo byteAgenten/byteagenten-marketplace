@@ -1,0 +1,15 @@
+{
+  "description": "byt8 Workflow Recovery Hook - Warnt bei aktivem Workflow nach Context Overflow",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/workflow-recovery.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
