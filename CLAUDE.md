@@ -91,6 +91,14 @@ Clear the plugin cache after changes:
 rm -rf ~/.claude/plugins/cache/byteagenten-marketplace/
 ```
 
+### Plugin Hooks
+
+Hooks werden in `plugins/byt8/hooks/hooks.json` definiert. Verfügbare Events:
+- `SessionStart` - Bei Session-Start/Resume (für Workflow-Recovery)
+- `PreCompact` - Vor Context-Komprimierung
+
+Scripts in `plugins/byt8/scripts/` können via `${CLAUDE_PLUGIN_ROOT}` referenziert werden.
+
 ### Adding a New Agent
 
 1. Create `plugins/byt8/agents/[name].md` with frontmatter (name, description, version)
