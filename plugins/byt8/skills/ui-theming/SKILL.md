@@ -448,9 +448,13 @@ cd frontend && npm run build
 
 ### Step 7: Generate Theme Preview
 
-**Dieser Step kann auch unabhängig ausgeführt werden (Option 3 in Step 0).**
+#### 7.1: Theme bestimmen
 
-#### 7.1: Theme für Preview auswählen
+**Wenn aus Step 6 kommend (voller Workflow):**
+→ Das in Step 1 gewählte Theme verwenden, keine erneute Abfrage.
+
+**Wenn direkt zu Step 7 gesprungen (Option 3 aus Step 0):**
+→ Theme-Auswahl anzeigen:
 
 ```
 Welches Theme möchten Sie in der Preview sehen?
@@ -469,7 +473,7 @@ Welches Theme möchten Sie in der Preview sehen?
 Theme-Nummer eingeben:
 ```
 
-#### 7.2: Theme-Datei lesen
+#### 7.2: Theme-Datei lesen (nur bei Option 3)
 
 ```
 Read: ${CLAUDE_PLUGIN_ROOT}/skills/ui-theming/themes/[selected-theme].md
