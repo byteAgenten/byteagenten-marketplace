@@ -4,8 +4,8 @@
   "hooks": {
     "SessionStart": [
       {
-        "description": "Context Recovery nach Context Overflow",
-        "matcher": {},
+        "description": "Context Recovery after Context Overflow",
+        "matcher": "*",
         "hooks": [
           {
             "type": "command",
@@ -17,9 +17,7 @@
     "Stop": [
       {
         "description": "Workflow Engine - Phase Validation & Auto-Commit",
-        "matcher": {
-          "toolName": "TodoWrite"
-        },
+        "matcher": "*",
         "hooks": [
           {
             "type": "command",
@@ -31,7 +29,7 @@
     "SubagentStop": [
       {
         "description": "Subagent Output Validation",
-        "matcher": {},
+        "matcher": "*",
         "hooks": [
           {
             "type": "command",
