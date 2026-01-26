@@ -17,79 +17,10 @@ mkdir -p "$LOG_DIR" 2>/dev/null || true
 echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] SessionStart Hook fired" >> "$LOG_DIR/hooks.log" 2>/dev/null || true
 
 # ═══════════════════════════════════════════════════════════════════════════
-# AUTO-SETUP PROJECT HOOKS (if not already configured)
+# NOTE: Hooks werden über die Plugin-hooks.json definiert (${CLAUDE_PLUGIN_ROOT}).
+# KEIN Auto-Setup mehr in Project-Settings um doppeltes Feuern zu vermeiden.
+# Manuelle Hook-Einrichtung via /byt8:setup-hooks falls nötig.
 # ═══════════════════════════════════════════════════════════════════════════
-# NOTE: We use ${CLAUDE_PLUGIN_ROOT} as a LITERAL STRING in the JSON.
-# Claude Code resolves this variable at hook execution time, ensuring
-# hooks always point to the current plugin version.
-# ═══════════════════════════════════════════════════════════════════════════
-SETTINGS_FILE=".claude/settings.json"
-
-# These are literal strings - NOT bash variables to expand
-WF_ENGINE_CMD='${CLAUDE_PLUGIN_ROOT}/scripts/wf_engine.sh'
-SUBAGENT_DONE_CMD='${CLAUDE_PLUGIN_ROOT}/scripts/subagent_done.sh'
-
-setup_project_hooks() {
-    mkdir -p .claude 2>/dev/null || true
-
-    # Check if hooks already configured with ${CLAUDE_PLUGIN_ROOT}
-    if [ -f "$SETTINGS_FILE" ]; then
-        if grep -q 'CLAUDE_PLUGIN_ROOT' "$SETTINGS_FILE" 2>/dev/null; then
-            # Already configured with dynamic paths
-            return 0
-        fi
-
-        # Add/update hooks to existing settings using ${CLAUDE_PLUGIN_ROOT}
-        if command -v jq &> /dev/null; then
-            jq --arg wf "$WF_ENGINE_CMD" \
-               --arg sa "$SUBAGENT_DONE_CMD" \
-               '.hooks.Stop = [{
-                    "hooks": [{
-                        "type": "command",
-                        "command": $wf
-                    }]
-                }] | .hooks.SubagentStop = [{
-                    "hooks": [{
-                        "type": "command",
-                        "command": $sa
-                    }]
-                }]' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp" 2>/dev/null && mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
-            echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Auto-configured project hooks with \${CLAUDE_PLUGIN_ROOT}" >> "$LOG_DIR/hooks.log" 2>/dev/null || true
-        fi
-    else
-        # Create new settings file with ${CLAUDE_PLUGIN_ROOT}
-        cat > "$SETTINGS_FILE" << 'EOF'
-{
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/wf_engine.sh"
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/subagent_done.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
-EOF
-        echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Created project settings with hooks" >> "$LOG_DIR/hooks.log" 2>/dev/null || true
-    fi
-}
-
-# Run auto-setup (silent, non-blocking)
-setup_project_hooks 2>/dev/null || true
 
 WORKFLOW_DIR=".workflow"
 WORKFLOW_FILE="${WORKFLOW_DIR}/workflow-state.json"

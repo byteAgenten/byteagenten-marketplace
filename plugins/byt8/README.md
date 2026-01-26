@@ -1,6 +1,6 @@
 # byt8 Plugin
 
-**Version 4.4.8** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 9-Phasen Workflow, Approval Gates und **Hook-basierter Automatisierung**.
+**Version 4.4.9** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 9-Phasen Workflow, Approval Gates und **Hook-basierter Automatisierung**.
 
 ## Philosophy
 
@@ -141,19 +141,18 @@ Ab Version 4.0 nutzt byt8 **Workflow Hooks** für zuverlässige Automatisierung.
 
 | Hook | Trigger | Script | Funktion |
 |------|---------|--------|----------|
-| `SessionStart` | Session-Start/Resume | `session_recovery.sh` | Context Recovery, Auto-Setup Hooks |
+| `SessionStart` | Session-Start/Resume | `session_recovery.sh` | Context Recovery nach Overflow |
 | `Stop` | Haupt-Agent fertig | `wf_engine.sh` | Phase Validation, Retry-Management |
 | `SubagentStop` | Subagent beendet | `subagent_done.sh` | **WIP-Commits**, Agent-Info, Output Validation |
 
 ### Setup
 
-Hooks werden automatisch beim ersten Workflow-Start konfiguriert. Manuell:
+Hooks werden automatisch über die Plugin-Konfiguration (`hooks/hooks.json`) geladen - **kein manuelles Setup nötig**.
+
+Falls bereits Project-Hooks in `.claude/settings.json` existieren (aus älteren Versionen), sollten diese entfernt werden um doppeltes Feuern zu vermeiden:
 
 ```bash
-# Hooks einrichten
-/byt8:setup-hooks
-
-# Hooks entfernen
+# Alte Project-Hooks entfernen (falls vorhanden)
 /byt8:remove-hooks
 ```
 
@@ -173,10 +172,8 @@ flowchart TD
         D["Kein aktiver Workflow"]
     end
 
-    subgraph HOOKS_SETUP["Auto Hook-Setup"]
-        E{".claude/settings.json<br/>hat Hooks?"}
-        F["Hooks bereits<br/>konfiguriert"]
-        G["Hooks automatisch<br/>einrichten"]
+    subgraph HOOKS_SETUP["Plugin Hooks"]
+        E["Hooks via Plugin<br/>hooks.json geladen"]
     end
 
     subgraph INIT["Workflow Initialisierung"]
@@ -207,10 +204,7 @@ flowchart TD
     B -->|Nein| D
     C --> E
     D --> E
-    E -->|Ja| F
-    E -->|Nein| G
-    F --> H
-    G --> H
+    E --> H
     H -->|"active"| I
     H -->|"paused"| J
     H -->|Nicht gefunden| K
@@ -234,7 +228,7 @@ flowchart TD
 **Ablauf im Detail:**
 
 1. **SessionStart Hook feuert** bei jedem Session-Start/Resume
-2. **Auto Hook-Setup** prüft ob Projekt-Hooks bereits konfiguriert sind
+2. **Plugin Hooks** werden automatisch via `hooks.json` geladen
 3. **Workflow-Status** bestimmt ob Resume, Pause-Info oder Neustart
 4. **Neuer Workflow** durchläuft vollständige Initialisierung
 5. **Phasen-Loop** wird von Stop/SubagentStop Hooks gesteuert
@@ -245,6 +239,7 @@ flowchart TD
 - Erkennt aktiven Workflow nach Context Overflow
 - Gibt vollständigen Recovery-Prompt mit allem Kontext aus
 - Zeigt Status, abgeschlossene Phasen, nächsten Schritt
+- **Kein Auto-Setup von Project-Hooks** (verhindert Doppel-Ausführung)
 
 **wf_engine.sh** (Stop):
 - Prüft Done-Kriterien für aktuelle Phase (z.B. Tests bestanden?)
