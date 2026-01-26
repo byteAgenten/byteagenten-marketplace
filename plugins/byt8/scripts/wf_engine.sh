@@ -139,14 +139,14 @@ fi
 
 check_done() {
   case $PHASE in
-    0) # Tech Spec existiert?
-       jq -e '.context.technicalSpec.data' "$WORKFLOW_FILE" > /dev/null 2>&1
+    0) # Tech Spec existiert? (prüfe ob context.technicalSpec Felder hat)
+       jq -e '.context.technicalSpec | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1
        ;;
     1) # Wireframes existieren?
        ls wireframes/*.html > /dev/null 2>&1 || ls wireframes/*.svg > /dev/null 2>&1
        ;;
-    2) # API Design existiert?
-       jq -e '.context.apiDesign.data' "$WORKFLOW_FILE" > /dev/null 2>&1
+    2) # API Design existiert? (prüfe ob context.apiDesign Felder hat)
+       jq -e '.context.apiDesign | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1
        ;;
     3) # Migrations existieren?
        ls backend/src/main/resources/db/migration/V*.sql > /dev/null 2>&1
@@ -175,8 +175,8 @@ check_done() {
          return 0
        fi
        ;;
-    7) # Review APPROVED?
-       jq -e '.context.reviewFeedback.data.status == "APPROVED"' "$WORKFLOW_FILE" > /dev/null 2>&1
+    7) # Review APPROVED? (prüfe status Feld direkt)
+       jq -e '.context.reviewFeedback.status == "APPROVED"' "$WORKFLOW_FILE" > /dev/null 2>&1
        ;;
     8) # PR erstellt?
        jq -e '.phases["8"].prUrl' "$WORKFLOW_FILE" > /dev/null 2>&1
