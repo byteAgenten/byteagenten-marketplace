@@ -1,6 +1,6 @@
 ---
 name: postgresql-architect
-version: 4.4.6
+version: 4.4.7
 last_updated: 2026-01-24
 description: Design database schemas, Flyway migrations, query optimization. TRIGGER "database schema", "migration", "PostgreSQL", "SQL", "create table", "optimize query". NOT FOR backend implementation, API design, frontend.
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "mcp__plugin_byt8_context7__resolve-library-id", "mcp__plugin_byt8_context7__query-docs"]

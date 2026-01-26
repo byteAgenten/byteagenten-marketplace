@@ -1,7 +1,7 @@
 ---
 name: full-stack-feature
 description: Orchestrates full-stack feature development with hook-based automation.
-version: 4.4.6
+version: 4.4.7
 author: byteagent - Hans Pickelmann
 ---
 

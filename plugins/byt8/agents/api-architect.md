@@ -1,6 +1,6 @@
 ---
 name: api-architect
-version: 4.4.6
+version: 4.4.7
 last_updated: 2026-01-24
 description: Design REST APIs, OpenAPI specs, API contracts. TRIGGER "design API", "API endpoints", "REST API", "OpenAPI spec". NOT FOR API implementation, frontend, database schema.
 tools: ["Read", "Write", "Edit", "Glob", "Grep", "mcp__plugin_byt8_context7__resolve-library-id", "mcp__plugin_byt8_context7__query-docs"]

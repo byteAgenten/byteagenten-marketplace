@@ -4,45 +4,25 @@
 # ═══════════════════════════════════════════════════════════════════════════
 # Configures Stop and SubagentStop hooks in project settings.
 # Run via: /byt8:setup-hooks
+#
+# IMPORTANT: Uses ${CLAUDE_PLUGIN_ROOT} which is resolved by Claude Code at
+# runtime. This ensures hooks always point to the current plugin version.
 # ═══════════════════════════════════════════════════════════════════════════
 
 set -e
 
 SETTINGS_FILE=".claude/settings.json"
-PLUGIN_CACHE="$HOME/.claude/plugins/cache/byteagenten-marketplace/byt8"
+
+# Script paths using Claude Code's runtime variable
+# These are literal strings that Claude Code resolves at hook execution time
+WF_ENGINE_CMD='${CLAUDE_PLUGIN_ROOT}/scripts/wf_engine.sh'
+SUBAGENT_DONE_CMD='${CLAUDE_PLUGIN_ROOT}/scripts/subagent_done.sh'
 
 echo "═══════════════════════════════════════════════════════════════════════════"
 echo "  byt8 Workflow Hooks Setup"
 echo "═══════════════════════════════════════════════════════════════════════════"
 echo ""
-
-# Find the latest plugin version
-PLUGIN_VERSION=$(ls -1 "$PLUGIN_CACHE" 2>/dev/null | sort -V | tail -1)
-
-if [ -z "$PLUGIN_VERSION" ]; then
-    echo "❌ ERROR: byt8 plugin not found in cache."
-    echo "   Expected: $PLUGIN_CACHE/<version>/"
-    echo ""
-    echo "   Please install the plugin first:"
-    echo "   /plugin install byteagenten-marketplace"
-    exit 1
-fi
-
-PLUGIN_ROOT="$PLUGIN_CACHE/$PLUGIN_VERSION"
-echo "✓ Found plugin: $PLUGIN_ROOT"
-
-# Verify scripts exist
-if [ ! -f "$PLUGIN_ROOT/scripts/wf_engine.sh" ]; then
-    echo "❌ ERROR: wf_engine.sh not found"
-    exit 1
-fi
-
-if [ ! -f "$PLUGIN_ROOT/scripts/subagent_done.sh" ]; then
-    echo "❌ ERROR: subagent_done.sh not found"
-    exit 1
-fi
-
-echo "✓ Scripts verified"
+echo "✓ Using \${CLAUDE_PLUGIN_ROOT} for version-independent paths"
 
 # Create .claude directory if needed
 mkdir -p .claude
@@ -50,11 +30,11 @@ mkdir -p .claude
 # Check if settings.json exists
 if [ -f "$SETTINGS_FILE" ]; then
     echo "✓ Found existing $SETTINGS_FILE"
-    
+
     # Backup existing
     cp "$SETTINGS_FILE" "${SETTINGS_FILE}.backup"
     echo "✓ Backup created: ${SETTINGS_FILE}.backup"
-    
+
     # Check if hooks already configured
     if jq -e '.hooks.Stop' "$SETTINGS_FILE" > /dev/null 2>&1; then
         echo ""
@@ -65,10 +45,11 @@ if [ -f "$SETTINGS_FILE" ]; then
             exit 0
         fi
     fi
-    
+
     # Merge hooks into existing settings (preserve other settings)
-    jq --arg wf "$PLUGIN_ROOT/scripts/wf_engine.sh" \
-       --arg sa "$PLUGIN_ROOT/scripts/subagent_done.sh" \
+    # Note: Using literal ${CLAUDE_PLUGIN_ROOT} which Claude Code resolves at runtime
+    jq --arg wf "$WF_ENGINE_CMD" \
+       --arg sa "$SUBAGENT_DONE_CMD" \
        '.hooks.Stop = [{
             "hooks": [{
                 "type": "command",
@@ -82,9 +63,9 @@ if [ -f "$SETTINGS_FILE" ]; then
         }]' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp" && mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
 else
     echo "✓ Creating new $SETTINGS_FILE"
-    
-    # Create new settings file
-    cat > "$SETTINGS_FILE" << EOF
+
+    # Create new settings file with ${CLAUDE_PLUGIN_ROOT} (literal string)
+    cat > "$SETTINGS_FILE" << 'EOF'
 {
   "hooks": {
     "Stop": [
@@ -92,7 +73,7 @@ else
         "hooks": [
           {
             "type": "command",
-            "command": "$PLUGIN_ROOT/scripts/wf_engine.sh"
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/wf_engine.sh"
           }
         ]
       }
@@ -102,7 +83,7 @@ else
         "hooks": [
           {
             "type": "command",
-            "command": "$PLUGIN_ROOT/scripts/subagent_done.sh"
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/subagent_done.sh"
           }
         ]
       }
@@ -117,12 +98,14 @@ echo "════════════════════════�
 echo "  ✅ Hooks configured successfully!"
 echo "═══════════════════════════════════════════════════════════════════════════"
 echo ""
-echo "  Active hooks:"
+echo "  Active hooks (using \${CLAUDE_PLUGIN_ROOT} for version independence):"
 echo "  ┌─────────────────┬─────────────────────────────────────────────────────┐"
 echo "  │ SessionStart    │ session_recovery.sh (context recovery) - from plugin│"
 echo "  │ Stop            │ wf_engine.sh (phase validation, auto-commits)       │"
 echo "  │ SubagentStop    │ subagent_done.sh (agent output validation)          │"
 echo "  └─────────────────┴─────────────────────────────────────────────────────┘"
+echo ""
+echo "  Paths resolve to current plugin version at runtime."
 echo ""
 echo "  Config file: $SETTINGS_FILE"
 echo ""

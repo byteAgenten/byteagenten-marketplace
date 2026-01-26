@@ -1,6 +1,6 @@
 # byt8 Plugin
 
-**Version 4.4.6** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 9-Phasen Workflow, Approval Gates und **Hook-basierter Automatisierung**.
+**Version 4.4.7** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 9-Phasen Workflow, Approval Gates und **Hook-basierter Automatisierung**.
 
 ## Philosophy
 
@@ -132,7 +132,7 @@ Ab Version 4.0 nutzt byt8 **Workflow Hooks** für zuverlässige Automatisierung.
 | Problem (früher) | Lösung (mit Hooks) |
 |------------------|-------------------|
 | Context Overflow → Workflow-Zustand verloren | **SessionStart Hook** stellt automatisch den kompletten Kontext wieder her |
-| Agent vergisst WIP-Commit | **SubagentStop Hook** erstellt automatisch Commits nach jeder Phase |
+| Agent vergisst WIP-Commit | **Stop Hook** erstellt automatisch WIP-Commits nach erfolgreichen Phasen |
 | Tests fehlgeschlagen aber weitergemacht | **Stop Hook** validiert Done-Kriterien und blockiert bei Fehler |
 | Retry-Chaos nach Testfehlern | Automatisches **Retry-Management** mit Max 3 Versuchen |
 | Approval Gate übersprungen | Hooks erzwingen **Approval Gates** an kritischen Punkten |
@@ -142,8 +142,8 @@ Ab Version 4.0 nutzt byt8 **Workflow Hooks** für zuverlässige Automatisierung.
 | Hook | Trigger | Script | Funktion |
 |------|---------|--------|----------|
 | `SessionStart` | Session-Start/Resume | `session_recovery.sh` | Context Recovery nach Overflow |
-| `Stop` | Nach jedem Tool-Call | `wf_engine.sh` | Phase Validation, Auto-Commits, Retry-Management |
-| `SubagentStop` | Subagent beendet | `subagent_done.sh` | WIP-Commits, Output Validation |
+| `Stop` | Nach jedem Tool-Call | `wf_engine.sh` | Phase Validation, WIP-Commits, Retry-Management |
+| `SubagentStop` | Subagent beendet | `subagent_done.sh` | Agent-Info, Output Validation |
 
 ### Setup
 
@@ -254,9 +254,10 @@ flowchart TD
 - Erzwingt Approval Gates
 
 **subagent_done.sh** (SubagentStop):
+- Zeigt sichtbare Ausgabe welcher Agent fertig ist
 - Validiert Agent-Output (z.B. Dateien vorhanden?)
-- Erstellt WIP-Commits nach abgeschlossenen Phasen
 - Loggt alle Agent-Aktivitäten
+- NOTE: WIP-Commits werden vom Stop Hook erstellt (nicht hier!)
 
 ### Workflow-State
 

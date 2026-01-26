@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-version: 4.4.6
+version: 4.4.7
 last_updated: 2026-01-24
 description: Code review, quality checks before commits. TRIGGER "review code", "code review", "check my code", "before commit", "PR review". NOT FOR architecture review, security audit, writing tests.
 tools: ["Bash", "Glob", "Grep", "Read", "WebFetch", "TodoWrite", "WebSearch", "mcp__plugin_byt8_context7__resolve-library-id", "mcp__plugin_byt8_context7__query-docs", "mcp__plugin_byt8_angular-cli__list_projects", "mcp__plugin_byt8_angular-cli__get_best_practices", "mcp__plugin_byt8_angular-cli__find_examples", "mcp__plugin_byt8_angular-cli__search_documentation"]

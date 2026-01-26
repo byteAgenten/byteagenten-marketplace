@@ -212,8 +212,24 @@ if check_done; then
   if [[ "$PHASE" =~ ^(1|3|4|5|6)$ ]]; then
     ISSUE=$(jq -r '.issue.number // "0"' "$WORKFLOW_FILE")
     TITLE=$(jq -r '.issue.title // "Feature"' "$WORKFLOW_FILE")
-    git add -A 2>/dev/null || true
-    git commit -m "wip(#${ISSUE}/phase-${PHASE}): ${PHASE_DISPLAY[$PHASE]} done - ${TITLE:0:50}" 2>/dev/null || true
+
+    # Prüfen ob es Änderungen gibt (staged oder unstaged)
+    if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+      COMMIT_MSG="wip(#${ISSUE}/phase-${PHASE}): ${PHASE_DISPLAY[$PHASE]} done - ${TITLE:0:50}"
+      git add -A 2>/dev/null || true
+      if git commit -m "$COMMIT_MSG" 2>/dev/null; then
+        echo ""
+        echo "┌─────────────────────────────────────────────────────────────────────┐"
+        echo "│ 📦 WIP-COMMIT ERSTELLT                                              │"
+        echo "├─────────────────────────────────────────────────────────────────────┤"
+        echo "│ $COMMIT_MSG"
+        echo "└─────────────────────────────────────────────────────────────────────┘"
+        echo ""
+        echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] WIP-Commit: $COMMIT_MSG" >> "$LOGS_DIR/hooks.log"
+      fi
+    else
+      echo "│ ℹ️  Phase $PHASE: Keine Änderungen zum Committen"
+    fi
   fi
   
   # Nächste Phase
