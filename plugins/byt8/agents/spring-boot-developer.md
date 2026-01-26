@@ -1,6 +1,6 @@
 ---
 name: spring-boot-developer
-version: 4.1.0
+version: 4.3.0
 last_updated: 2026-01-24
 description: Implement Spring Boot backend, REST controllers, JPA entities, services. TRIGGER "Spring Boot", "backend", "REST controller", "Java", "endpoint". NOT FOR frontend, database schema, API design only.
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "mcp__plugin_byt8_context7__resolve-library-id", "mcp__plugin_byt8_context7__query-docs"]

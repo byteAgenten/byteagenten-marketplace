@@ -4,6 +4,7 @@
 # ═══════════════════════════════════════════════════════════════════════════
 # Feuert bei SessionStart nach Context Overflow.
 # Wenn aktiver Workflow existiert → Vollständigen Recovery-Prompt ausgeben.
+# Auch: Auto-Setup der Project Hooks falls nicht vorhanden.
 # ═══════════════════════════════════════════════════════════════════════════
 
 set -e
@@ -12,8 +13,81 @@ set -e
 # LOGGING
 # ═══════════════════════════════════════════════════════════════════════════
 LOG_DIR=".workflow/logs"
-mkdir -p "$LOG_DIR"
-echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] SessionStart Hook fired" >> "$LOG_DIR/hooks.log"
+mkdir -p "$LOG_DIR" 2>/dev/null || true
+echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] SessionStart Hook fired" >> "$LOG_DIR/hooks.log" 2>/dev/null || true
+
+# ═══════════════════════════════════════════════════════════════════════════
+# AUTO-SETUP PROJECT HOOKS (if not already configured)
+# ═══════════════════════════════════════════════════════════════════════════
+SETTINGS_FILE=".claude/settings.json"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+setup_project_hooks() {
+    # Only setup if we can find our scripts
+    if [ ! -f "$SCRIPT_DIR/wf_engine.sh" ]; then
+        return 0
+    fi
+    
+    mkdir -p .claude 2>/dev/null || true
+    
+    # Check if hooks already configured
+    if [ -f "$SETTINGS_FILE" ]; then
+        if grep -q "wf_engine.sh" "$SETTINGS_FILE" 2>/dev/null; then
+            # Already configured
+            return 0
+        fi
+        
+        # Add hooks to existing settings
+        if command -v jq &> /dev/null; then
+            jq --arg wf "$SCRIPT_DIR/wf_engine.sh" \
+               --arg sa "$SCRIPT_DIR/subagent_done.sh" \
+               '.hooks.Stop = [{
+                    "hooks": [{
+                        "type": "command",
+                        "command": $wf
+                    }]
+                }] | .hooks.SubagentStop = [{
+                    "hooks": [{
+                        "type": "command",
+                        "command": $sa
+                    }]
+                }]' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp" 2>/dev/null && mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
+            echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Auto-configured project hooks" >> "$LOG_DIR/hooks.log" 2>/dev/null || true
+        fi
+    else
+        # Create new settings file
+        cat > "$SETTINGS_FILE" << EOF
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$SCRIPT_DIR/wf_engine.sh"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$SCRIPT_DIR/subagent_done.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+EOF
+        echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Created project settings with hooks" >> "$LOG_DIR/hooks.log" 2>/dev/null || true
+    fi
+}
+
+# Run auto-setup (silent, non-blocking)
+setup_project_hooks 2>/dev/null || true
 
 WORKFLOW_DIR=".workflow"
 WORKFLOW_FILE="${WORKFLOW_DIR}/workflow-state.json"
