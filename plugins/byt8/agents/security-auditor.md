@@ -1,6 +1,6 @@
 ---
 name: security-auditor
-version: 4.3.0
+version: 4.4.5
 last_updated: 2026-01-24
 description: Security audit, vulnerability checks, OWASP compliance. TRIGGER "security audit", "vulnerability", "OWASP", "XSS", "CSRF", "authentication security". NOT FOR code review, architecture review, general testing.
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "mcp__plugin_byt8_context7__resolve-library-id", "mcp__plugin_byt8_context7__query-docs"]
