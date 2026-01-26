@@ -1,12 +1,28 @@
 # byt8 Plugin
 
-**Version 4.5.3** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 9-Phasen Workflow, Approval Gates und **Hook-basierter Automatisierung**.
+**Version 5.0.0** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 9-Phasen Workflow, Approval Gates und **Hook-basierter Automatisierung**.
 
 ## Philosophy
 
 > "Qualität durch Struktur: Jede Phase wird abgeschlossen, bevor die nächste beginnt."
 
-Dieses Plugin orchestriert spezialisierte Agents durch einen strukturierten Entwicklungs-Workflow mit Quality Gates und User Approvals. Ab Version 4.0 nutzt das Plugin **Workflow Hooks** für automatische Validierung, Commits und Context Recovery.
+Dieses Plugin orchestriert spezialisierte Agents durch einen strukturierten Entwicklungs-Workflow mit Quality Gates und User Approvals.
+
+### Ralph Wiggum Pattern (v5.0+)
+
+Ab Version 5.0 folgt das Plugin dem **Ralph Wiggum Pattern** für deterministische Workflow-Kontrolle:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. User ruft /byt8:full-stack-feature auf                  │
+│  2. SKILL führt EINE Phase aus und stoppt                   │
+│  3. Stop-Hook validiert und gibt Anweisungen                │
+│  4. User gibt Approval oder Feedback                        │
+│  5. Nächster Aufruf → nächste Phase                         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Kernprinzip:** EINE Phase pro Aufruf. Der Stop-Hook kontrolliert den Workflow, nicht Claude.
 
 ---
 
