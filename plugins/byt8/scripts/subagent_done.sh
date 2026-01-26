@@ -71,11 +71,53 @@ echo ""
 # Commitbare Phasen: 1 (Wireframes), 3 (Migrations), 4 (Backend), 5 (Frontend), 6 (E2E)
 # Nicht commitbar: 0 (nur Doku), 2 (nur Doku), 7 (Review), 8 (finaler Commit)
 #
-# Wir prüfen NICHT auf phase.status == "completed", weil das erst später gesetzt wird.
-# Stattdessen: Wenn wir in einer commitbaren Phase sind UND Änderungen vorhanden → commit
+# WICHTIG: Für Approval-Gate Phasen (1, 6) nur committen NACH Approval!
+# Problem: SubagentStop feuert BEVOR Claude nach Approval fragt.
+# Lösung: Approval-Gate Phasen committen wenn wir sie VERLASSEN haben.
+#         D.h. wenn currentPhase > ApprovalPhase → die ApprovalPhase wurde approved.
+#
+# - Phase 3, 4, 5: Kein Approval Gate → sofort committen
 
-if [[ "$CURRENT_PHASE" =~ ^(1|3|4|5|6)$ ]]; then
-  # Prüfen ob es Änderungen gibt (staged oder unstaged)
+# Tracking-Datei für letzte committete Phase
+LAST_WIP_FILE="${WORKFLOW_DIR}/.last-wip-phase"
+LAST_WIP_PHASE=-1
+if [ -f "$LAST_WIP_FILE" ]; then
+  LAST_WIP_PHASE=$(cat "$LAST_WIP_FILE" 2>/dev/null || echo "-1")
+fi
+
+# ───────────────────────────────────────────────────────────────────────────
+# TEIL 1: Approval-Gate Phasen committen die wir VERLASSEN haben
+# ───────────────────────────────────────────────────────────────────────────
+# Wenn wir Phase 2+ sind und Phase 1 noch nicht committed → jetzt committen
+# Wenn wir Phase 7+ sind und Phase 6 noch nicht committed → jetzt committen
+
+for APPROVAL_PHASE in 1 6; do
+  if [ "$CURRENT_PHASE" -gt "$APPROVAL_PHASE" ] && [ "$LAST_WIP_PHASE" -lt "$APPROVAL_PHASE" ]; then
+    # Wir haben diese Approval-Phase verlassen (= approved) aber noch nicht committed
+    if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+      COMMIT_MSG="wip(#${ISSUE_NUMBER}/phase-${APPROVAL_PHASE}): ${PHASE_NAMES[$APPROVAL_PHASE]} approved - ${ISSUE_TITLE:0:50}"
+
+      git add -A 2>/dev/null || true
+      if git commit -m "$COMMIT_MSG" 2>/dev/null; then
+        echo "┌─────────────────────────────────────────────────────────────────────┐"
+        echo "│ 📦 WIP-COMMIT ERSTELLT (Phase $APPROVAL_PHASE nach Approval)                     │"
+        echo "├─────────────────────────────────────────────────────────────────────┤"
+        echo "│ $COMMIT_MSG"
+        echo "└─────────────────────────────────────────────────────────────────────┘"
+        echo ""
+        echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] WIP-Commit (approved): $COMMIT_MSG" >> "$LOG_DIR/hooks.log"
+        echo "$APPROVAL_PHASE" > "$LAST_WIP_FILE"
+        LAST_WIP_PHASE=$APPROVAL_PHASE
+      fi
+    fi
+  fi
+done
+
+# ───────────────────────────────────────────────────────────────────────────
+# TEIL 2: Aktuelle Phase committen (nur nicht-Approval Phasen: 3, 4, 5)
+# ───────────────────────────────────────────────────────────────────────────
+
+if [[ "$CURRENT_PHASE" =~ ^(3|4|5)$ ]]; then
   if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
     COMMIT_MSG="wip(#${ISSUE_NUMBER}/phase-${CURRENT_PHASE}): ${PHASE_NAMES[$CURRENT_PHASE]} done - ${ISSUE_TITLE:0:50}"
 
@@ -88,11 +130,16 @@ if [[ "$CURRENT_PHASE" =~ ^(1|3|4|5|6)$ ]]; then
       echo "└─────────────────────────────────────────────────────────────────────┘"
       echo ""
       echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] WIP-Commit: $COMMIT_MSG" >> "$LOG_DIR/hooks.log"
+      echo "$CURRENT_PHASE" > "$LAST_WIP_FILE"
     fi
   else
     echo "│ ℹ️  Phase $CURRENT_PHASE: Keine Änderungen zum Committen"
     echo ""
   fi
+elif [[ "$CURRENT_PHASE" =~ ^(1|6)$ ]]; then
+  # Approval-Gate Phase: Info ausgeben, KEIN Commit
+  echo "│ ⏳ Phase $CURRENT_PHASE (${PHASE_NAMES[$CURRENT_PHASE]}): Warte auf Approval"
+  echo ""
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
