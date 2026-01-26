@@ -1,5 +1,6 @@
 ---
 name: python-expert
+version: 4.4.5
 description: Use for Python development requiring async programming, type system expertise, testing patterns, or performance optimization.
 ---
 
