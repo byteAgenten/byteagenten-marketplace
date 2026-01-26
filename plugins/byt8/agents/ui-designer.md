@@ -1,6 +1,6 @@
 ---
 name: ui-designer
-version: 3.0.0
+version: 4.1.0
 last_updated: 2026-01-24
 description: Create wireframes, design UI layouts, plan user interfaces. TRIGGER "wireframe", "UI design", "mockup", "dashboard layout". DELEGATES to ui-theming on Greenfield. All templates include data-testid for Playwright. NOT FOR UI implementation, backend, API design.
 tools: ["Read", "Write", "Edit", "Glob", "Grep", "mcp__plugin_byt8_angular-cli__get_best_practices", "mcp__plugin_byt8_angular-cli__find_examples", "mcp__plugin_byt8_angular-cli__search_documentation"]

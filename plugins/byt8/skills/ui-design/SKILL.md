@@ -1,6 +1,6 @@
 ---
 name: ui-design
-version: 1.2.0
+version: 4.1.0
 description: UI Design Fachwissen für Wireframes. Enthält Greenfield-Fragen, Default-Tokens, UI-Patterns (Listen, Formulare, Navigation), Angular Material Snippets. Alle Templates haben data-testid für Playwright E2E-Tests.
 ---
 

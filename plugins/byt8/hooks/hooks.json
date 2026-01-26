@@ -1,12 +1,41 @@
 {
-  "description": "byt8 Workflow Recovery Hook - Warnt bei aktivem Workflow nach Context Overflow",
+  "description": "byt8 Workflow Engine - Hook-based Orchestration with Context Recovery",
+  "version": "2.0.0",
   "hooks": {
     "SessionStart": [
       {
+        "description": "Context Recovery nach Context Overflow",
+        "matcher": {},
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/workflow-recovery.sh"
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/session_recovery.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "description": "Workflow Engine - Phase Validation & Auto-Commit",
+        "matcher": {
+          "toolName": "TodoWrite"
+        },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/wf_engine.sh"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "description": "Subagent Output Validation",
+        "matcher": {},
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/subagent_done.sh"
           }
         ]
       }
