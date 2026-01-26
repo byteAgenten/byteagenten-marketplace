@@ -1,6 +1,6 @@
 ---
 name: architect-planner
-version: 4.4.7
+version: 4.4.8
 last_updated: 2026-01-24
 description: Plan features, technical specs, architecture. TRIGGER "plan feature", "technical spec", "how should we implement", "design the architecture". NOT FOR bug fixes, code reviews, immediate implementation.
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "mcp__plugin_byt8_context7__resolve-library-id", "mcp__plugin_byt8_context7__query-docs", "mcp__plugin_byt8_angular-cli__list_projects", "mcp__plugin_byt8_angular-cli__get_best_practices", "mcp__plugin_byt8_angular-cli__find_examples", "mcp__plugin_byt8_angular-cli__search_documentation"]

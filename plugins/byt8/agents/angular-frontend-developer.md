@@ -1,6 +1,6 @@
 ---
 name: angular-frontend-developer
-version: 4.4.7
+version: 4.4.8
 last_updated: 2026-01-24
 description: Implement Angular components, services, frontend features. TRIGGER "Angular component", "frontend", "TypeScript", "UI implementation", "fix the frontend". NOT FOR backend, database, architecture planning.
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "mcp__plugin_byt8_context7__resolve-library-id", "mcp__plugin_byt8_context7__query-docs", "mcp__plugin_byt8_angular-cli__list_projects", "mcp__plugin_byt8_angular-cli__get_best_practices", "mcp__plugin_byt8_angular-cli__find_examples", "mcp__plugin_byt8_angular-cli__search_documentation"]

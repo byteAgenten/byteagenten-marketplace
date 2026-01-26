@@ -4,11 +4,11 @@
 # ═══════════════════════════════════════════════════════════════════════════
 # Feuert wenn ein Subagent fertig ist.
 # - Zeigt sichtbare Ausgabe welcher Agent fertig ist
+# - Erstellt WIP-Commits für commitbare Phasen (1, 3, 4, 5, 6)
 # - Validiert die Outputs je nach Agent-Typ
 #
-# NOTE: WIP-Commits werden vom Stop Hook (wf_engine.sh) erstellt, nicht hier!
-#       Der Stop Hook feuert NACH SubagentStop und hat Zugriff auf den
-#       aktualisierten Phase-Status.
+# NOTE: WIP-Commits werden hier erstellt, weil der Stop Hook nur feuert wenn
+#       der HAUPT-Agent fertig ist - nicht zwischen Subagent-Phasen!
 # ═══════════════════════════════════════════════════════════════════════════
 
 set -e
@@ -65,8 +65,35 @@ echo "│ Issue: #$ISSUE_NUMBER - ${ISSUE_TITLE:0:45}"
 echo "└─────────────────────────────────────────────────────────────────────┘"
 echo ""
 
-# NOTE: WIP-Commits werden vom Stop Hook (wf_engine.sh) erstellt!
-# Der Stop Hook feuert NACH SubagentStop und hat den aktualisierten Phase-Status.
+# ═══════════════════════════════════════════════════════════════════════════
+# WIP-COMMIT LOGIK
+# ═══════════════════════════════════════════════════════════════════════════
+# Commitbare Phasen: 1 (Wireframes), 3 (Migrations), 4 (Backend), 5 (Frontend), 6 (E2E)
+# Nicht commitbar: 0 (nur Doku), 2 (nur Doku), 7 (Review), 8 (finaler Commit)
+#
+# Wir prüfen NICHT auf phase.status == "completed", weil das erst später gesetzt wird.
+# Stattdessen: Wenn wir in einer commitbaren Phase sind UND Änderungen vorhanden → commit
+
+if [[ "$CURRENT_PHASE" =~ ^(1|3|4|5|6)$ ]]; then
+  # Prüfen ob es Änderungen gibt (staged oder unstaged)
+  if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+    COMMIT_MSG="wip(#${ISSUE_NUMBER}/phase-${CURRENT_PHASE}): ${PHASE_NAMES[$CURRENT_PHASE]} done - ${ISSUE_TITLE:0:50}"
+
+    git add -A 2>/dev/null || true
+    if git commit -m "$COMMIT_MSG" 2>/dev/null; then
+      echo "┌─────────────────────────────────────────────────────────────────────┐"
+      echo "│ 📦 WIP-COMMIT ERSTELLT                                              │"
+      echo "├─────────────────────────────────────────────────────────────────────┤"
+      echo "│ $COMMIT_MSG"
+      echo "└─────────────────────────────────────────────────────────────────────┘"
+      echo ""
+      echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] WIP-Commit: $COMMIT_MSG" >> "$LOG_DIR/hooks.log"
+    fi
+  else
+    echo "│ ℹ️  Phase $CURRENT_PHASE: Keine Änderungen zum Committen"
+    echo ""
+  fi
+fi
 
 # ═══════════════════════════════════════════════════════════════════════════
 # AGENT-SPEZIFISCHE VALIDIERUNG

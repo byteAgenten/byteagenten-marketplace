@@ -1,6 +1,6 @@
 # byt8 Plugin
 
-**Version 4.4.7** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 9-Phasen Workflow, Approval Gates und **Hook-basierter Automatisierung**.
+**Version 4.4.8** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 9-Phasen Workflow, Approval Gates und **Hook-basierter Automatisierung**.
 
 ## Philosophy
 
@@ -132,7 +132,7 @@ Ab Version 4.0 nutzt byt8 **Workflow Hooks** für zuverlässige Automatisierung.
 | Problem (früher) | Lösung (mit Hooks) |
 |------------------|-------------------|
 | Context Overflow → Workflow-Zustand verloren | **SessionStart Hook** stellt automatisch den kompletten Kontext wieder her |
-| Agent vergisst WIP-Commit | **Stop Hook** erstellt automatisch WIP-Commits nach erfolgreichen Phasen |
+| Agent vergisst WIP-Commit | **SubagentStop Hook** erstellt automatisch WIP-Commits nach jeder Phase |
 | Tests fehlgeschlagen aber weitergemacht | **Stop Hook** validiert Done-Kriterien und blockiert bei Fehler |
 | Retry-Chaos nach Testfehlern | Automatisches **Retry-Management** mit Max 3 Versuchen |
 | Approval Gate übersprungen | Hooks erzwingen **Approval Gates** an kritischen Punkten |
@@ -141,9 +141,9 @@ Ab Version 4.0 nutzt byt8 **Workflow Hooks** für zuverlässige Automatisierung.
 
 | Hook | Trigger | Script | Funktion |
 |------|---------|--------|----------|
-| `SessionStart` | Session-Start/Resume | `session_recovery.sh` | Context Recovery nach Overflow |
-| `Stop` | Nach jedem Tool-Call | `wf_engine.sh` | Phase Validation, WIP-Commits, Retry-Management |
-| `SubagentStop` | Subagent beendet | `subagent_done.sh` | Agent-Info, Output Validation |
+| `SessionStart` | Session-Start/Resume | `session_recovery.sh` | Context Recovery, Auto-Setup Hooks |
+| `Stop` | Haupt-Agent fertig | `wf_engine.sh` | Phase Validation, Retry-Management |
+| `SubagentStop` | Subagent beendet | `subagent_done.sh` | **WIP-Commits**, Agent-Info, Output Validation |
 
 ### Setup
 
@@ -254,10 +254,10 @@ flowchart TD
 - Erzwingt Approval Gates
 
 **subagent_done.sh** (SubagentStop):
+- **Erstellt WIP-Commits** für commitbare Phasen (1, 3, 4, 5, 6)
 - Zeigt sichtbare Ausgabe welcher Agent fertig ist
 - Validiert Agent-Output (z.B. Dateien vorhanden?)
 - Loggt alle Agent-Aktivitäten
-- NOTE: WIP-Commits werden vom Stop Hook erstellt (nicht hier!)
 
 ### Workflow-State
 
