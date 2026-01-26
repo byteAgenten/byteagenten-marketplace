@@ -71,61 +71,29 @@ echo ""
 # Commitbare Phasen: 1 (Wireframes), 3 (Migrations), 4 (Backend), 5 (Frontend), 6 (E2E)
 # Nicht commitbar: 0 (nur Doku), 2 (nur Doku), 7 (Review), 8 (finaler Commit)
 #
-# WICHTIG: Pfad-basierte Commits um Phasen-Dateien zu trennen!
-# Jede Phase committed nur IHRE Dateien, nicht alle Änderungen.
+# STRATEGIE: Nicht WAS committed wird kontrollieren, sondern WANN!
+# - Approval-Gate Phasen (1, 6): Erst committen wenn Phase verlassen wurde
+# - Andere Phasen (3, 4, 5): Sofort committen mit ALLEN Änderungen (git add -A)
 #
-# Phase-Pfade:
-#   1 (Wireframes): wireframes/
-#   3 (Migrations): **/db/migration/
-#   4 (Backend):    backend/ (ohne migrations)
-#   5 (Frontend):   frontend/
-#   6 (E2E):        e2e/, playwright/, tests/
+# Das erlaubt paralleles Arbeiten (z.B. README editieren während Workflow läuft)
 
-# Tracking welche Phasen schon committed wurden
-COMMITTED_PHASES_FILE="${WORKFLOW_DIR}/.committed-phases"
-touch "$COMMITTED_PHASES_FILE" 2>/dev/null || true
-
-phase_committed() {
-  grep -q "^$1$" "$COMMITTED_PHASES_FILE" 2>/dev/null
-}
-
-mark_phase_committed() {
-  echo "$1" >> "$COMMITTED_PHASES_FILE"
-}
-
-# Funktion: Commit nur bestimmte Pfade für eine Phase
-commit_phase_files() {
+# Hilfsfunktion: WIP-Commit erstellen
+create_wip_commit() {
   local PHASE=$1
-  local PHASE_NAME=$2
-  shift 2
-  local PATHS=("$@")
+  local LABEL=$2
 
-  # Prüfen ob es Änderungen in diesen Pfaden gibt
-  local HAS_CHANGES=false
-  for P in "${PATHS[@]}"; do
-    if git status --porcelain "$P" 2>/dev/null | grep -q .; then
-      HAS_CHANGES=true
-      break
-    fi
-  done
+  if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+    COMMIT_MSG="wip(#${ISSUE_NUMBER}/phase-${PHASE}): ${LABEL} - ${ISSUE_TITLE:0:50}"
 
-  if [ "$HAS_CHANGES" = true ]; then
-    COMMIT_MSG="wip(#${ISSUE_NUMBER}/phase-${PHASE}): ${PHASE_NAME} - ${ISSUE_TITLE:0:50}"
-
-    # Nur die Phase-spezifischen Pfade stagen
-    for P in "${PATHS[@]}"; do
-      git add "$P" 2>/dev/null || true
-    done
-
+    git add -A 2>/dev/null || true
     if git commit -m "$COMMIT_MSG" 2>/dev/null; then
       echo "┌─────────────────────────────────────────────────────────────────────┐"
-      echo "│ 📦 WIP-COMMIT ERSTELLT (Phase $PHASE)                                        │"
+      echo "│ 📦 WIP-COMMIT ERSTELLT                                              │"
       echo "├─────────────────────────────────────────────────────────────────────┤"
       echo "│ $COMMIT_MSG"
       echo "└─────────────────────────────────────────────────────────────────────┘"
       echo ""
       echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] WIP-Commit: $COMMIT_MSG" >> "$LOG_DIR/hooks.log"
-      mark_phase_committed "$PHASE"
       return 0
     fi
   fi
@@ -133,76 +101,35 @@ commit_phase_files() {
 }
 
 # ───────────────────────────────────────────────────────────────────────────
-# SCHRITT 1: Aktuelle Phase committen (nur nicht-Approval Phasen: 3, 4, 5)
+# Nicht-Approval Phasen (3, 4, 5): SOFORT committen
 # ───────────────────────────────────────────────────────────────────────────
 
-case "$CURRENT_PHASE" in
-  3)
-    # Migrations - spezifischer Pfad
-    if ! phase_committed 3; then
-      commit_phase_files 3 "Migrations done" \
-        "backend/src/main/resources/db/migration" \
-        "**/db/migration"
-    fi
-    ;;
-  4)
-    # Backend - ohne migrations
-    if ! phase_committed 4; then
-      # Erst Migrations committen falls noch offen (von Phase 3)
-      if ! phase_committed 3; then
-        commit_phase_files 3 "Migrations done" \
-          "backend/src/main/resources/db/migration" \
-          "**/db/migration"
-      fi
-      # Dann Backend (alles außer migrations)
-      # git add backend, dann unstage migrations
-      if git status --porcelain backend/ 2>/dev/null | grep -v "db/migration" | grep -q .; then
-        COMMIT_MSG="wip(#${ISSUE_NUMBER}/phase-4): Backend done - ${ISSUE_TITLE:0:50}"
-        git add backend/ 2>/dev/null || true
-        git reset HEAD backend/src/main/resources/db/migration 2>/dev/null || true
-        if git commit -m "$COMMIT_MSG" 2>/dev/null; then
-          echo "┌─────────────────────────────────────────────────────────────────────┐"
-          echo "│ 📦 WIP-COMMIT ERSTELLT (Phase 4)                                        │"
-          echo "├─────────────────────────────────────────────────────────────────────┤"
-          echo "│ $COMMIT_MSG"
-          echo "└─────────────────────────────────────────────────────────────────────┘"
-          echo ""
-          echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] WIP-Commit: $COMMIT_MSG" >> "$LOG_DIR/hooks.log"
-          mark_phase_committed 4
-        fi
-      fi
-    fi
-    ;;
-  5)
-    # Frontend
-    if ! phase_committed 5; then
-      commit_phase_files 5 "Frontend done" "frontend/"
-    fi
-    ;;
-  1)
-    # Wireframes - Approval-Gate, nur Info
-    echo "│ ⏳ Phase 1 (Wireframes): Warte auf Approval"
-    echo ""
-    ;;
-  6)
-    # E2E Tests - Approval-Gate, nur Info
-    echo "│ ⏳ Phase 6 (E2E-Tests): Warte auf Approval"
-    echo ""
-    ;;
-esac
+if [[ "$CURRENT_PHASE" =~ ^(3|4|5)$ ]]; then
+  create_wip_commit "$CURRENT_PHASE" "${PHASE_NAMES[$CURRENT_PHASE]} done"
 
 # ───────────────────────────────────────────────────────────────────────────
-# SCHRITT 2: Approval-Gate Phasen committen die wir VERLASSEN haben
+# Approval-Gate Phasen (1, 6): NUR INFO, kein Commit
 # ───────────────────────────────────────────────────────────────────────────
 
-# Phase 1 (Wireframes): Commit wenn wir in Phase 2+ sind
-if [ "$CURRENT_PHASE" -ge 2 ] && ! phase_committed 1; then
-  commit_phase_files 1 "Wireframes approved" "wireframes/"
+elif [[ "$CURRENT_PHASE" =~ ^(1|6)$ ]]; then
+  echo "│ ⏳ Phase $CURRENT_PHASE (${PHASE_NAMES[$CURRENT_PHASE]}): Warte auf Approval"
+  echo "│    Commit erfolgt automatisch nach Approval."
+  echo ""
+
+# ───────────────────────────────────────────────────────────────────────────
+# Wenn wir Phase 2+ sind: Phase 1 wurde approved → jetzt committen
+# Wenn wir Phase 7+ sind: Phase 6 wurde approved → jetzt committen
+# ───────────────────────────────────────────────────────────────────────────
+
+elif [[ "$CURRENT_PHASE" -ge 2 ]]; then
+  # Wir sind in Phase 2+ → Phase 1 (Wireframes) wurde approved
+  # Commit mit allen Änderungen (inkl. paralleler Arbeit)
+  create_wip_commit 1 "Wireframes approved"
 fi
 
-# Phase 6 (E2E): Commit wenn wir in Phase 7+ sind
-if [ "$CURRENT_PHASE" -ge 7 ] && ! phase_committed 6; then
-  commit_phase_files 6 "E2E-Tests approved" "e2e/" "playwright/" "tests/"
+# Phase 6 Approval-Check (separat, da wir auch in Phase 7 sein könnten)
+if [[ "$CURRENT_PHASE" -ge 7 ]]; then
+  create_wip_commit 6 "E2E-Tests approved"
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
