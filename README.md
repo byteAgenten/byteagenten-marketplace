@@ -6,7 +6,7 @@ Private Claude Code Plugins for byteAgenten team members.
 
 | Plugin | Description | Version |
 |--------|-------------|---------|
-| [byt8](./plugins/byt8) | Full-stack development toolkit for Angular 21 + Spring Boot 4 | 2.26.0 |
+| [byt8](./plugins/byt8) | Full-stack development toolkit for Angular 21 + Spring Boot 4 | 4.1.0 |
 
 ## Prerequisites
 
@@ -18,130 +18,77 @@ Du brauchst Zugriff auf das private Repository `byteAgenten/byteagenten-marketpl
 
 **Option A: GitHub CLI (empfohlen)**
 
-Die [GitHub CLI](https://cli.github.com/) (`gh`) ist ein Kommandozeilen-Tool für GitHub.
-
 ```bash
-# Installation (macOS)
-brew install gh
-
-# Installation (Windows)
-winget install GitHub.cli
-
-# Einmalig anmelden - öffnet Browser zur Authentifizierung
-gh auth login
+brew install gh      # macOS
+gh auth login        # Browser-Auth
 ```
 
 **Option B: Personal Access Token (PAT)**
 
-1. Gehe zu [GitHub Settings → Developer Settings → Personal Access Tokens](https://github.com/settings/tokens)
-2. Klicke "Generate new token (classic)"
-3. Wähle Scope: `repo` (Full control of private repositories)
-4. Token kopieren (beginnt mit `ghp_`)
-5. In Shell exportieren:
+1. [GitHub Settings → Developer Settings → Personal Access Tokens](https://github.com/settings/tokens)
+2. Scope: `repo`
+3. Token exportieren:
 
 ```bash
-# In ~/.bashrc oder ~/.zshrc einfügen:
 export GITHUB_TOKEN=ghp_dein_token_hier
 ```
 
 ## Installation
 
-### Option 1: Via Claude Code (empfohlen)
-
-In Claude Code eingeben:
+### Via Claude Code (empfohlen)
 
 ```bash
-# Marketplace registrieren
 /plugin marketplace add byteAgenten/byteagenten-marketplace
-
-# Plugin installieren
 /plugin install byt8@byteagenten-marketplace
 ```
 
-**Erklärung:**
-- `byteAgenten` = GitHub Organisation (Owner des Repositories)
-- `byteagenten-marketplace` = Name des Repositories auf GitHub
-- `byt8` = Name des Plugins
-- `@byteagenten-marketplace` = aus welchem Marketplace das Plugin kommt
+### Manuelle Konfiguration
 
-### Option 2: Manuelle Konfiguration
-
-Füge in deinem Projekt `.claude/settings.json` hinzu:
+In `.claude/settings.json`:
 
 ```json
 {
   "extraKnownMarketplaces": {
     "byteagenten-marketplace": {
-      "source": {
-        "source": "github",
-        "repo": "byteAgenten/byteagenten-marketplace"
-      }
+      "source": { "source": "github", "repo": "byteAgenten/byteagenten-marketplace" }
     }
   },
-  "enabledPlugins": {
-    "byt8@byteagenten-marketplace": true
-  }
+  "enabledPlugins": { "byt8@byteagenten-marketplace": true }
 }
 ```
 
-### Option 3: Bestimmte Version pinnen
+## Plugin-Dokumentation
 
-Falls du eine feste Version verwenden möchtest:
+Siehe [byt8 README](./plugins/byt8/README.md) für:
 
-```json
-{
-  "extraKnownMarketplaces": {
-    "byteagenten-marketplace": {
-      "source": {
-        "source": "github",
-        "repo": "byteAgenten/byteagenten-marketplace",
-        "ref": "v1.0.0"
-      }
-    }
-  },
-  "enabledPlugins": {
-    "byt8@byteagenten-marketplace": true
-  }
-}
-```
+- Commands (`/byt8:full-stack-feature`, `/wf:status`, etc.)
+- 9-Phasen Workflow mit Approval Gates
+- Hook-basierte Workflow Engine
+- MCP Server (context7, angular-cli)
 
-## Available Commands
-
-| Command | Description |
-|---------|-------------|
-| `/byt8:full-stack-feature` | 9-phase workflow for full-stack feature development |
-| `/byt8:ui-theming` | One-time design system initialization (theme, tokens, typography) |
-| `/byt8:python-expert` | Python development support |
-
-→ Details und Beispiele siehe [byt8 README](./plugins/byt8/README.md)
-
-## Plugin Architecture
-
-Each plugin is independently installable and versioned:
+## Marketplace-Struktur
 
 ```
 byteagenten-marketplace/
 ├── .claude-plugin/
-│   └── marketplace.json       # Plugin registry
+│   └── marketplace.json     # Plugin Registry
 ├── plugins/
-│   ├── byt8/                  # Full-stack development
-│   │   ├── .claude-plugin/
-│   │   │   └── plugin.json
-│   │   ├── agents/            # 10 specialized agents
-│   │   ├── commands/          # 6 slash commands
-│   │   └── skills/            # Workflow implementations
-│   ├── byt8-docs/             # (planned)
-│   └── byt8-design/           # (planned)
+│   └── byt8/                # Full-Stack Development Plugin
+│       ├── agents/          # 10 spezialisierte Agents
+│       ├── commands/        # Slash Commands
+│       ├── hooks/           # Hook-Definitionen
+│       ├── scripts/         # Workflow Scripts
+│       └── skills/          # Workflow Implementations
 └── README.md
 ```
 
 ## Adding New Plugins
 
-1. Create a new folder: `plugins/byt8-[name]/`
-2. Add `.claude-plugin/plugin.json` with unique name
-3. Add commands, agents, and skills
-4. Update `.claude-plugin/marketplace.json`
-5. Create PR for review
+1. Folder erstellen: `plugins/[name]/`
+2. `.claude-plugin/plugin.json` hinzufügen
+3. Commands, Agents, Skills, Hooks hinzufügen
+4. `.claude-plugin/marketplace.json` aktualisieren
+5. PR erstellen
 
 ## License
 
