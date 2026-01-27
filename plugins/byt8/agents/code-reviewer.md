@@ -1,7 +1,7 @@
 ---
 name: code-reviewer
-version: 4.4.8
-last_updated: 2026-01-24
+version: 5.1.0
+last_updated: 2026-01-26
 description: Code review, quality checks before commits. TRIGGER "review code", "code review", "check my code", "before commit", "PR review". NOT FOR architecture review, security audit, writing tests.
 tools: ["Bash", "Glob", "Grep", "Read", "WebFetch", "TodoWrite", "WebSearch", "mcp__plugin_byt8_context7__resolve-library-id", "mcp__plugin_byt8_context7__query-docs", "mcp__plugin_byt8_angular-cli__list_projects", "mcp__plugin_byt8_angular-cli__get_best_practices", "mcp__plugin_byt8_angular-cli__find_examples", "mcp__plugin_byt8_angular-cli__search_documentation"]
 model: inherit
@@ -384,62 +384,71 @@ Issue identified during review
 
 ---
 
-## CONTEXT PROTOCOL
+## CONTEXT PROTOCOL - PFLICHT!
 
-### Input (Retrieve All Context)
+### Input (Vorherige Phasen lesen)
 
-Before code review, the orchestrator provides all implementation context:
-
-```json
-{
-  "action": "retrieve",
-  "keys": ["technicalSpec", "apiDesign", "backendImpl", "frontendImpl", "testResults", "securityAudit"],
-  "rootFields": ["targetCoverage"],
-  "forPhase": 7
-}
+```bash
+# Alle relevanten Context-Keys aus workflow-state.json lesen
+cat .workflow/workflow-state.json | jq '.context.technicalSpec'
+cat .workflow/workflow-state.json | jq '.context.apiDesign'
+cat .workflow/workflow-state.json | jq '.context.backendImpl'
+cat .workflow/workflow-state.json | jq '.context.frontendImpl'
+cat .workflow/workflow-state.json | jq '.context.testResults'
+cat .workflow/workflow-state.json | jq '.context.securityAudit'
+cat .workflow/workflow-state.json | jq '.targetCoverage'
 ```
 
-Use retrieved context to:
-- **technicalSpec**: Verify architecture decisions were followed (from architect-planner)
-- **apiDesign**: Verify implementation matches design
-- **backendImpl**: Check endpoints, coverage, test counts
-- **frontendImpl**: Check components, routes, state management
-- **testResults**: Verify coverage targets met
-- **securityAudit**: Review security findings addressed
-- **targetCoverage**: Verify coverage meets target (50%/70%/85%/95%)
+Nutze den Kontext:
+- **technicalSpec**: Architektur-Entscheidungen prüfen (von architect-planner)
+- **apiDesign**: Implementation vs. Design vergleichen
+- **backendImpl**: Endpoints, Coverage, Test-Counts prüfen
+- **frontendImpl**: Components, Routes, State Management prüfen
+- **testResults**: Coverage-Ziele verifizieren
+- **securityAudit**: Security-Findings addressiert?
+- **targetCoverage**: Coverage-Ziel (50%/70%/85%/95%)
 
-### Output (Store Review Feedback)
+### Output (Review Feedback speichern) - MUSS ausgeführt werden!
 
-After completing the review, you MUST output a context store command in this format:
+**Nach Abschluss des Code Reviews MUSST du den Context speichern:**
 
-```
-CONTEXT STORE REQUEST
-{
-  "action": "store",
-  "phase": 7,
-  "key": "reviewFeedback",
-  "data": {
-    "status": "APPROVED|CHANGES_REQUIRED",
-    "criticalIssues": [],
-    "majorIssues": [
-      {
-        "file": "path/to/file.java",
-        "line": 45,
-        "issue": "Missing ownership check",
-        "recommendation": "Add user ID validation"
-      }
-    ],
-    "minorIssues": [],
-    "fixes": [
-      { "type": "backend", "issue": "Add authorization check" },
-      { "type": "frontend", "issue": "Fix form validation" }
-    ]
-  },
-  "timestamp": "[date -u +%Y-%m-%dT%H:%M:%SZ]"
-}
+```bash
+# Context in workflow-state.json schreiben
+jq '.context.reviewFeedback = {
+  "status": "APPROVED",
+  "criticalIssues": [],
+  "majorIssues": [],
+  "minorIssues": [],
+  "fixes": [],
+  "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+}' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
+mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```
 
-The `fixes` array is used by the orchestrator to determine which phase to return to for hotfixes:
+**Bei CHANGES_REQUIRED:**
+
+```bash
+jq '.context.reviewFeedback = {
+  "status": "CHANGES_REQUESTED",
+  "criticalIssues": [],
+  "majorIssues": [
+    {"file": "path/to/file.java", "line": 45, "issue": "Missing ownership check", "recommendation": "Add user ID validation"}
+  ],
+  "minorIssues": [],
+  "fixes": [
+    {"type": "backend", "issue": "Add authorization check"},
+    {"type": "frontend", "issue": "Fix form validation"}
+  ],
+  "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+}' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
+mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
+```
+
+**⚠️ OHNE diesen Schritt schlägt die Phase-Validierung fehl!**
+
+Der Stop-Hook prüft: `jq -e '.context.reviewFeedback.status'`
+
+Das `fixes` Array bestimmt die Hotfix-Phase:
 - `type: "database"` → Phase 3
 - `type: "backend"` → Phase 4
 - `type: "frontend"` → Phase 5

@@ -1,7 +1,7 @@
 ---
 name: architect-planner
-version: 4.4.8
-last_updated: 2026-01-24
+version: 5.1.0
+last_updated: 2026-01-26
 description: Plan features, technical specs, architecture. TRIGGER "plan feature", "technical spec", "how should we implement", "design the architecture". NOT FOR bug fixes, code reviews, immediate implementation.
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "mcp__plugin_byt8_context7__resolve-library-id", "mcp__plugin_byt8_context7__query-docs", "mcp__plugin_byt8_angular-cli__list_projects", "mcp__plugin_byt8_angular-cli__get_best_practices", "mcp__plugin_byt8_angular-cli__find_examples", "mcp__plugin_byt8_angular-cli__search_documentation"]
 model: inherit
@@ -280,29 +280,30 @@ grep -r "keyword" frontend/src --include="*.ts" | head -10
 
 ---
 
-## Context Protocol
+## Context Protocol - PFLICHT!
 
-**Output after Technical Specification:**
+**Nach Abschluss der Technical Specification MUSST du den Context in workflow-state.json speichern:**
 
-```json
-{
-  "action": "store",
-  "phase": 0,
-  "key": "technicalSpec",
-  "data": {
-    "issueNumber": 42,
-    "affectedLayers": ["database", "backend", "frontend"],
-    "newEntities": ["EntityName"],
-    "reuseServices": ["ServiceA", "ServiceB"],
-    "newEndpoints": ["POST /api/xyz", "GET /api/xyz"],
-    "patternsUsed": ["Factory", "Strategy"],
-    "securityNotes": "...",
-    "uiConstraints": ["..."],
-    "risks": ["..."]
-  },
-  "timestamp": "[date -u +%Y-%m-%dT%H:%M:%SZ]"
-}
+```bash
+# Context in workflow-state.json schreiben
+jq '.context.technicalSpec = {
+  "issueNumber": 42,
+  "affectedLayers": ["database", "backend", "frontend"],
+  "newEntities": ["EntityName"],
+  "reuseServices": ["ServiceA", "ServiceB"],
+  "newEndpoints": ["POST /api/xyz", "GET /api/xyz"],
+  "patternsUsed": ["Factory", "Strategy"],
+  "securityNotes": "...",
+  "uiConstraints": ["..."],
+  "risks": ["..."],
+  "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+}' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
+mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```
+
+**⚠️ OHNE diesen Schritt schlägt die Phase-Validierung fehl!**
+
+Der Stop-Hook prüft: `jq -e '.context.technicalSpec | keys | length > 0'`
 
 ---
 

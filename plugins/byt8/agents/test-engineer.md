@@ -1,7 +1,7 @@
 ---
 name: test-engineer
-version: 4.4.8
-last_updated: 2026-01-24
+version: 5.1.0
+last_updated: 2026-01-26
 description: Write tests, improve coverage, E2E tests, debug failing tests. TRIGGER "write tests", "unit test", "E2E test", "test coverage", "JUnit", "Playwright". NOT FOR code review, implementation, security testing.
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "mcp__plugin_byt8_context7__resolve-library-id", "mcp__plugin_byt8_context7__query-docs", "mcp__plugin_byt8_angular-cli__list_projects", "mcp__plugin_byt8_angular-cli__get_best_practices", "mcp__plugin_byt8_angular-cli__find_examples", "mcp__plugin_byt8_angular-cli__search_documentation"]
 model: inherit
@@ -246,25 +246,42 @@ Ready for code review.
 
 ---
 
-## CONTEXT PROTOCOL (Workflow)
+## CONTEXT PROTOCOL - PFLICHT!
 
-**Input:** Orchestrator liefert `technicalSpec`, `backendImpl`, `frontendImpl`, `targetCoverage`
+### Input (Vorherige Phasen lesen)
 
-**Output:** Nach Abschluss CONTEXT STORE REQUEST ausgeben:
-
-```json
-{
-  "action": "store",
-  "phase": 5,
-  "key": "testResults",
-  "data": {
-    "backend": { "total": 45, "passed": 45, "failed": 0, "coverage": "87%" },
-    "frontend": { "total": 38, "passed": 38, "failed": 0, "coverage": "85%" },
-    "e2e": { "total": 12, "passed": 12, "failed": 0 },
-    "allPassed": true
-  },
-  "timestamp": "2025-12-31T12:00:00Z"
-}
+```bash
+# Context aus workflow-state.json lesen
+cat .workflow/workflow-state.json | jq '.context.technicalSpec'
+cat .workflow/workflow-state.json | jq '.context.backendImpl'
+cat .workflow/workflow-state.json | jq '.context.frontendImpl'
+cat .workflow/workflow-state.json | jq '.targetCoverage'
 ```
+
+Nutze den Kontext:
+- **technicalSpec**: Welche Komponenten getestet werden müssen
+- **backendImpl**: Backend-Dateien für Unit/Integration-Tests
+- **frontendImpl**: Frontend-Dateien für Spec-Tests
+- **targetCoverage**: Coverage-Ziel (50%/70%/85%/95%)
+
+### Output (Test Results speichern) - MUSS ausgeführt werden!
+
+**Nach Abschluss der Tests MUSST du den Context speichern:**
+
+```bash
+# Context in workflow-state.json schreiben
+jq '.context.testResults = {
+  "backend": {"total": 45, "passed": 45, "failed": 0, "coverage": "87%"},
+  "frontend": {"total": 38, "passed": 38, "failed": 0, "coverage": "85%"},
+  "e2e": {"total": 12, "passed": 12, "failed": 0},
+  "allPassed": true,
+  "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+}' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
+mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
+```
+
+**⚠️ OHNE diesen Schritt schlägt die Phase-Validierung fehl!**
+
+Der Stop-Hook führt `mvn test` und `npm test` aus und prüft auf Erfolg.
 
 

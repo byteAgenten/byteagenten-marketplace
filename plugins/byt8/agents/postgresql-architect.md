@@ -1,7 +1,7 @@
 ---
 name: postgresql-architect
-version: 4.4.8
-last_updated: 2026-01-24
+version: 5.1.0
+last_updated: 2026-01-26
 description: Design database schemas, Flyway migrations, query optimization. TRIGGER "database schema", "migration", "PostgreSQL", "SQL", "create table", "optimize query". NOT FOR backend implementation, API design, frontend.
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "mcp__plugin_byt8_context7__resolve-library-id", "mcp__plugin_byt8_context7__query-docs"]
 model: inherit
@@ -525,60 +525,41 @@ Focus on data integrity, performance, and maintainability. Always consider the i
 
 ---
 
-## CONTEXT PROTOCOL
+## CONTEXT PROTOCOL - PFLICHT!
 
-### Input (Retrieve API Design)
+### Input (Vorherige Phasen lesen)
 
-Before creating migrations, the orchestrator provides the API design context:
-
-```json
-{
-  "action": "retrieve",
-  "keys": ["technicalSpec", "apiDesign"],
-  "forPhase": 3
-}
+```bash
+# Technical Spec und API Design lesen
+cat .workflow/workflow-state.json | jq '.context.technicalSpec'
+cat .workflow/workflow-state.json | jq '.context.apiDesign'
 ```
 
-Use retrieved context:
-- **technicalSpec**: Architecture decisions, performance requirements
-- **apiDesign**: Data model for tables, columns, relationships
+Nutze den Kontext:
+- **technicalSpec**: Architektur-Entscheidungen, Performance-Anforderungen
+- **apiDesign**: Data Model für Tables, Columns, Relationships
 
-### Output (Store Migration Context)
+### Output (Migrations speichern) - MUSS ausgeführt werden!
 
-After creating migrations, you MUST output a context store command:
+**Nach Erstellung der Migrations MUSST du den Context speichern:**
 
-```json
-{
-  "action": "store",
-  "phase": 2,
-  "key": "migrations",
-  "data": {
-    "files": ["V15__create_vacation_requests.sql"],
-    "tables": ["vacation_requests"],
-    "columns": ["id", "user_id", "start_date", "end_date", "status"],
-    "indexes": ["idx_vacation_user_dates"],
-    "foreignKeys": ["user_id -> users(id)"],
-    "constraints": ["chk_dates: end_date >= start_date"]
-  },
-  "timestamp": "[Current UTC timestamp from: date -u +%Y-%m-%dT%H:%M:%SZ]"
-}
+```bash
+# Context in workflow-state.json schreiben
+jq '.context.migrations = {
+  "files": ["V15__create_vacation_requests.sql"],
+  "tables": ["vacation_requests"],
+  "columns": ["id", "user_id", "start_date", "end_date", "status"],
+  "indexes": ["idx_vacation_user_dates"],
+  "foreignKeys": ["user_id -> users(id)"],
+  "constraints": ["chk_dates: end_date >= start_date"],
+  "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+}' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
+mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```
 
-This enables the spring-boot-developer (Phase 3) to understand the database schema for entity mapping.
+**⚠️ OHNE diesen Schritt schlägt die Phase-Validierung fehl!**
 
-**Output format after completion:**
-```
-CONTEXT STORE REQUEST
-═══════════════════════════════════════════════════════════════
-{
-  "action": "store",
-  "phase": 2,
-  "key": "migrations",
-  "data": { ... },
-  "timestamp": "2025-12-31T12:00:00Z"
-}
-═══════════════════════════════════════════════════════════════
-```
+Der Stop-Hook prüft: `ls backend/src/main/resources/db/migration/V*.sql`
 
 
 ---

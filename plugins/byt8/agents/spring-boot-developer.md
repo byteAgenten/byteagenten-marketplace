@@ -1,7 +1,7 @@
 ---
 name: spring-boot-developer
-version: 4.4.8
-last_updated: 2026-01-24
+version: 5.1.0
+last_updated: 2026-01-26
 description: Implement Spring Boot backend, REST controllers, JPA entities, services. TRIGGER "Spring Boot", "backend", "REST controller", "Java", "endpoint". NOT FOR frontend, database schema, API design only.
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "mcp__plugin_byt8_context7__resolve-library-id", "mcp__plugin_byt8_context7__query-docs"]
 model: inherit
@@ -235,69 +235,47 @@ Before submitting code for commit, verify:
 
 ---
 
-## CONTEXT PROTOCOL
+## CONTEXT PROTOCOL - PFLICHT!
 
-### Input (Retrieve Previous Context)
+### Input (Vorherige Phasen lesen)
 
-Before implementation, the orchestrator provides context from previous phases:
-
-```json
-{
-  "action": "retrieve",
-  "keys": ["technicalSpec", "apiDesign", "migrations"],
-  "rootFields": ["targetCoverage"],
-  "forPhase": 4
-}
+```bash
+# Technical Spec, API Design und Migrations lesen
+cat .workflow/workflow-state.json | jq '.context.technicalSpec'
+cat .workflow/workflow-state.json | jq '.context.apiDesign'
+cat .workflow/workflow-state.json | jq '.context.migrations'
+cat .workflow/workflow-state.json | jq '.targetCoverage'
 ```
 
-Use retrieved context:
-- **technicalSpec**: Architecture decisions, affected layers, risks
-- **apiDesign**: Endpoints to implement, DTOs to create, business rules
-- **migrations**: Database schema for JPA entity mapping
-- **targetCoverage**: Test coverage target (50%/70%/85%/95%)
+Nutze den Kontext:
+- **technicalSpec**: Architektur-Entscheidungen, betroffene Layer, Risiken
+- **apiDesign**: Endpoints, DTOs, Business Rules
+- **migrations**: DB-Schema für JPA Entity Mapping
+- **targetCoverage**: Test Coverage Ziel (50%/70%/85%/95%)
 
-### Output (Store Backend Context)
+### Output (Backend Implementation speichern) - MUSS ausgeführt werden!
 
-After completing the backend implementation, you MUST output a context store command:
+**Nach Abschluss der Implementation MUSST du den Context speichern:**
 
-```json
-{
-  "action": "store",
-  "phase": 3,
-  "key": "backendImpl",
-  "data": {
-    "controller": "VacationRequestController.java",
-    "service": "VacationRequestService.java",
-    "repository": "VacationRequestRepository.java",
-    "entity": "VacationRequest.java",
-    "dto": ["CreateVacationRequest", "VacationRequestDto", "VacationRequestListResponse"],
-    "endpoints": [
-      "POST /api/vacation-requests",
-      "GET /api/vacation-requests",
-      "GET /api/vacation-requests/{id}",
-      "PUT /api/vacation-requests/{id}",
-      "DELETE /api/vacation-requests/{id}"
-    ],
-    "testCoverage": "87%",
-    "testCount": 45
-  },
-  "timestamp": "[Current UTC timestamp from: date -u +%Y-%m-%dT%H:%M:%SZ]"
-}
+```bash
+# Context in workflow-state.json schreiben
+jq '.context.backendImpl = {
+  "controller": "FeatureController.java",
+  "service": "FeatureService.java",
+  "repository": "FeatureRepository.java",
+  "entity": "Feature.java",
+  "dto": ["CreateFeatureRequest", "FeatureDto"],
+  "endpoints": ["POST /api/features", "GET /api/features"],
+  "testCoverage": "85%",
+  "testCount": 12,
+  "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+}' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
+mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```
 
-This enables angular-frontend-developer (Phase 4) and test-engineer (Phase 5) to understand the backend implementation.
+**⚠️ OHNE diesen Schritt schlägt die Phase-Validierung fehl!**
 
-**Output format after completion:**
-```
-CONTEXT STORE REQUEST
-{
-  "action": "store",
-  "phase": 3,
-  "key": "backendImpl",
-  "data": { ... },
-  "timestamp": "2025-12-31T12:00:00Z"
-}
-```
+Der Stop-Hook führt `mvn test` aus und prüft auf BUILD SUCCESS.
 
 ---
 

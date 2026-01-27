@@ -1,6 +1,6 @@
 # byt8 Plugin
 
-**Version 5.0.0** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 9-Phasen Workflow, Approval Gates und **Hook-basierter Automatisierung**.
+**Version 5.2.0** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 9-Phasen Workflow, Approval Gates und **deterministischer Hook-Steuerung**.
 
 ## Philosophy
 

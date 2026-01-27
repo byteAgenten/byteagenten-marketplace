@@ -1,7 +1,7 @@
 ---
 name: security-auditor
-version: 4.4.8
-last_updated: 2026-01-24
+version: 5.1.0
+last_updated: 2026-01-26
 description: Security audit, vulnerability checks, OWASP compliance. TRIGGER "security audit", "vulnerability", "OWASP", "XSS", "CSRF", "authentication security". NOT FOR code review, architecture review, general testing.
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "mcp__plugin_byt8_context7__resolve-library-id", "mcp__plugin_byt8_context7__query-docs"]
 model: inherit
@@ -497,60 +497,55 @@ Focus on identifying real vulnerabilities, providing clear remediation guidance,
 
 ---
 
-## CONTEXT PROTOCOL OUTPUT
+## CONTEXT PROTOCOL - PFLICHT!
 
-After completing the security audit, you MUST output a context store command:
+### Input (Vorherige Phasen lesen)
 
-```json
-{
-  "action": "store",
-  "phase": 5,
-  "key": "securityAudit",
-  "data": {
-    "severity": {
-      "critical": 0,
-      "high": 0,
-      "medium": 1,
-      "low": 2
-    },
-    "owaspChecklist": {
-      "A01_BrokenAccessControl": "PASSED",
-      "A02_CryptographicFailures": "PASSED",
-      "A03_Injection": "PASSED",
-      "A04_InsecureDesign": "PASSED",
-      "A05_SecurityMisconfiguration": "PASSED",
-      "A06_VulnerableComponents": "REVIEW",
-      "A07_AuthenticationFailures": "PASSED",
-      "A08_IntegrityFailures": "PASSED",
-      "A09_LoggingMonitoring": "PASSED",
-      "A10_SSRF": "N/A"
-    },
-    "recommendations": [
-      "Update dependency X to version Y",
-      "Add rate limiting to login endpoint"
-    ],
-    "hotfixRequired": false,
-    "reportPath": "docs/security/audit-YYYY-MM-DD.md"
+```bash
+# Context aus workflow-state.json lesen
+cat .workflow/workflow-state.json | jq '.context.technicalSpec'
+cat .workflow/workflow-state.json | jq '.context.backendImpl'
+cat .workflow/workflow-state.json | jq '.context.frontendImpl'
+```
+
+Nutze den Kontext:
+- **technicalSpec**: Architektur und Security-relevante Entscheidungen
+- **backendImpl**: Welche Controller/Services geprüft werden müssen
+- **frontendImpl**: Welche Komponenten auf XSS geprüft werden müssen
+
+### Output (Security Audit speichern) - MUSS ausgeführt werden!
+
+**Nach Abschluss des Security Audits MUSST du den Context speichern:**
+
+```bash
+# Context in workflow-state.json schreiben
+jq '.context.securityAudit = {
+  "severity": {"critical": 0, "high": 0, "medium": 1, "low": 2},
+  "owaspChecklist": {
+    "A01_BrokenAccessControl": "PASSED",
+    "A02_CryptographicFailures": "PASSED",
+    "A03_Injection": "PASSED",
+    "A04_InsecureDesign": "PASSED",
+    "A05_SecurityMisconfiguration": "PASSED",
+    "A06_VulnerableComponents": "REVIEW",
+    "A07_AuthenticationFailures": "PASSED",
+    "A08_IntegrityFailures": "PASSED",
+    "A09_LoggingMonitoring": "PASSED",
+    "A10_SSRF": "N/A"
   },
-  "timestamp": "[Current UTC timestamp from: date -u +%Y-%m-%dT%H:%M:%SZ]"
-}
+  "recommendations": ["Update dependency X to version Y", "Add rate limiting to login endpoint"],
+  "hotfixRequired": false,
+  "reportPath": "docs/security/audit-YYYY-MM-DD.md",
+  "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+}' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
+mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```
 
-This enables code-reviewer (Phase 6) to verify security status and trigger hotfix loops if needed.
+**⚠️ OHNE diesen Schritt schlägt die Phase-Validierung fehl!**
 
-**Output format after completion:**
-```
-CONTEXT STORE REQUEST
-═══════════════════════════════════════════════════════════════
-{
-  "action": "store",
-  "phase": 5,
-  "key": "securityAudit",
-  "data": { ... },
-  "timestamp": "2025-12-31T12:00:00Z"
-}
-═══════════════════════════════════════════════════════════════
-```
+Der Stop-Hook prüft: `jq -e '.context.securityAudit.severity'`
+
+Dies ermöglicht dem code-reviewer (Phase 7), den Security-Status zu verifizieren und Hotfix-Loops zu triggern.
 
 
 ---

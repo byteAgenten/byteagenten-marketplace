@@ -1,7 +1,7 @@
 ---
 name: angular-frontend-developer
-version: 4.4.8
-last_updated: 2026-01-24
+version: 5.1.0
+last_updated: 2026-01-26
 description: Implement Angular components, services, frontend features. TRIGGER "Angular component", "frontend", "TypeScript", "UI implementation", "fix the frontend". NOT FOR backend, database, architecture planning.
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "mcp__plugin_byt8_context7__resolve-library-id", "mcp__plugin_byt8_context7__query-docs", "mcp__plugin_byt8_angular-cli__list_projects", "mcp__plugin_byt8_angular-cli__get_best_practices", "mcp__plugin_byt8_angular-cli__find_examples", "mcp__plugin_byt8_angular-cli__search_documentation"]
 model: inherit
@@ -152,32 +152,41 @@ npm run lint && npm test -- --no-watch --browsers=ChromeHeadless && npm run buil
 
 ---
 
-## Context Protocol
+## CONTEXT PROTOCOL - PFLICHT!
 
-**Input (von Orchestrator):**
-```json
-{ "action": "retrieve", "keys": ["technicalSpec", "wireframes", "apiDesign", "backendImpl"], "rootFields": ["targetCoverage"], "forPhase": 5 }
+### Input (Vorherige Phasen lesen)
+
+```bash
+# Wireframes und API Design lesen
+cat .workflow/workflow-state.json | jq '.context.wireframes'
+cat .workflow/workflow-state.json | jq '.context.apiDesign'
+cat .workflow/workflow-state.json | jq '.targetCoverage'
 ```
 
-- **technicalSpec**: Architecture decisions, affected layers
+- **wireframes**: UI-Layouts, Komponenten-Struktur
+- **apiDesign**: Endpoints die aufgerufen werden müssen
 - **targetCoverage**: Test coverage target (50%/70%/85%/95%)
 
-**Output (nach Abschluss):**
-```json
-{
-  "action": "store",
-  "phase": 5,
-  "key": "frontendImpl",
-  "data": {
-    "components": ["..."],
-    "services": ["..."],
-    "routes": ["..."],
-    "testCount": 0,
-    "testCoverage": "0%"
-  },
-  "timestamp": "[date -u +%Y-%m-%dT%H:%M:%SZ]"
-}
+### Output (Frontend Implementation speichern) - MUSS ausgeführt werden!
+
+**Nach Abschluss der Implementation MUSST du den Context speichern:**
+
+```bash
+# Context in workflow-state.json schreiben
+jq '.context.frontendImpl = {
+  "components": ["ComponentA", "ComponentB"],
+  "services": ["ServiceA"],
+  "routes": ["/feature"],
+  "testCount": 5,
+  "testCoverage": "75%",
+  "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+}' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
+mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```
+
+**⚠️ OHNE diesen Schritt schlägt die Phase-Validierung fehl!**
+
+Der Stop-Hook führt `npm test` aus und prüft auf Erfolg.
 
 ---
 

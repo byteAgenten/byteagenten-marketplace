@@ -1,7 +1,7 @@
 ---
 name: api-architect
-version: 4.4.8
-last_updated: 2026-01-24
+version: 5.1.0
+last_updated: 2026-01-26
 description: Design REST APIs, OpenAPI specs, API contracts. TRIGGER "design API", "API endpoints", "REST API", "OpenAPI spec". NOT FOR API implementation, frontend, database schema.
 tools: ["Read", "Write", "Edit", "Glob", "Grep", "mcp__plugin_byt8_context7__resolve-library-id", "mcp__plugin_byt8_context7__query-docs"]
 model: inherit
@@ -213,68 +213,49 @@ Focus on clear, concise API sketches. The spring-boot-developer will implement f
 
 ---
 
-## CONTEXT PROTOCOL
+## CONTEXT PROTOCOL - PFLICHT!
 
-### Input (Retrieve Previous Context)
+### Input (Vorherige Phasen lesen)
 
-Before designing the API, the orchestrator provides context from previous phases:
-
-```json
-{
-  "action": "retrieve",
-  "keys": ["technicalSpec", "wireframes"],
-  "forPhase": 2
-}
+```bash
+# Technical Spec und Wireframes lesen
+cat .workflow/workflow-state.json | jq '.context.technicalSpec'
+cat .workflow/workflow-state.json | jq '.context.wireframes'
 ```
 
-Use retrieved context:
-- **technicalSpec**: Architecture decisions, affected layers, new entities
-- **wireframes**: UI components that need API endpoints
+Nutze den Kontext:
+- **technicalSpec**: Architektur-Entscheidungen, betroffene Layer, neue Entities
+- **wireframes**: UI-Komponenten die API-Endpoints brauchen
 
-### Output (Store API Design)
+### Output (API Design speichern) - MUSS ausgeführt werden!
 
-After creating the API design, you MUST output a context store command for the context-manager:
+**Nach Erstellung des API Designs MUSST du den Context speichern:**
 
-```json
-{
-  "action": "store",
-  "phase": 1,
-  "key": "apiDesign",
-  "data": {
-    "featureName": "[Feature Name]",
-    "overview": "[1-2 sentence overview]",
-    "endpoints": [
-      { "method": "POST", "path": "/resource", "description": "Create" },
-      { "method": "GET", "path": "/resource", "description": "List" }
-    ],
-    "dataModel": {
-      "entity": "[EntityName]",
-      "fields": ["id", "userId", "field1", "field2", "status"]
-    },
-    "businessRules": [
-      "Rule 1 - e.g., Cannot create before entry date",
-      "Rule 2 - e.g., No overlapping ranges"
-    ]
+```bash
+# Context in workflow-state.json schreiben
+jq '.context.apiDesign = {
+  "featureName": "Feature Name",
+  "overview": "1-2 Sätze Übersicht",
+  "endpoints": [
+    { "method": "POST", "path": "/resource", "description": "Create" },
+    { "method": "GET", "path": "/resource", "description": "List" }
+  ],
+  "dataModel": {
+    "entity": "EntityName",
+    "fields": ["id", "userId", "field1", "field2", "status"]
   },
-  "timestamp": "[Current UTC timestamp from: date -u +%Y-%m-%dT%H:%M:%SZ]"
-}
+  "businessRules": [
+    "Rule 1",
+    "Rule 2"
+  ],
+  "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+}' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
+mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```
 
-This enables downstream agents (postgresql-architect, spring-boot-developer, angular-frontend-developer) to retrieve the API design automatically.
+**⚠️ OHNE diesen Schritt schlägt die Phase-Validierung fehl!**
 
-**Output format after completion:**
-```
-CONTEXT STORE REQUEST
-═══════════════════════════════════════════════════════════════
-{
-  "action": "store",
-  "phase": 1,
-  "key": "apiDesign",
-  "data": { ... },
-  "timestamp": "2025-12-31T12:00:00Z"
-}
-═══════════════════════════════════════════════════════════════
-```
+Der Stop-Hook prüft: `jq -e '.context.apiDesign | keys | length > 0'`
 
 
 ---

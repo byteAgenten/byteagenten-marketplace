@@ -1,7 +1,7 @@
 ---
 name: ui-designer
-version: 4.4.8
-last_updated: 2026-01-24
+version: 5.1.0
+last_updated: 2026-01-26
 description: Create wireframes, design UI layouts, plan user interfaces. TRIGGER "wireframe", "UI design", "mockup", "dashboard layout". DELEGATES to ui-theming on Greenfield. All templates include data-testid for Playwright. NOT FOR UI implementation, backend, API design.
 tools: ["Read", "Write", "Edit", "Glob", "Grep", "mcp__plugin_byt8_angular-cli__get_best_practices", "mcp__plugin_byt8_angular-cli__find_examples", "mcp__plugin_byt8_angular-cli__search_documentation"]
 model: sonnet
@@ -320,40 +320,40 @@ When creating wireframes, provide:
 
 ---
 
-## CONTEXT PROTOCOL
+## CONTEXT PROTOCOL - PFLICHT!
 
-### Input (Retrieve Technical Spec)
+### Input (Technical Spec lesen)
 
-```json
-{
-  "action": "retrieve",
-  "keys": ["technicalSpec"],
-  "forPhase": 1
-}
+```bash
+# Technical Spec aus vorheriger Phase lesen
+cat .workflow/workflow-state.json | jq '.context.technicalSpec'
 ```
 
-### Output (Store Wireframes)
+### Output (Wireframes speichern) - MUSS ausgeführt werden!
 
-```json
-{
-  "action": "store",
-  "phase": 1,
-  "key": "wireframes",
-  "data": {
-    "paths": ["wireframes/issue-{N}-[feature-name].html"],
-    "components": ["mat-card", "mat-table", "mat-form-field"],
-    "layout": "grid-3",
-    "responsiveBreakpoints": ["mobile", "tablet", "desktop"],
-    "accessibilityNotes": "WCAG 2.1 AA compliant",
-    "testIdCoverage": true,
-    "designSystem": {
-      "initialized": true,
-      "theme": "[selected-theme]"
-    }
+**Nach Erstellung der Wireframes MUSST du den Context speichern:**
+
+```bash
+# Context in workflow-state.json schreiben
+jq '.context.wireframes = {
+  "paths": ["wireframes/issue-42-feature-name.html"],
+  "components": ["mat-card", "mat-table", "mat-form-field"],
+  "layout": "grid-3",
+  "responsiveBreakpoints": ["mobile", "tablet", "desktop"],
+  "accessibilityNotes": "WCAG 2.1 AA compliant",
+  "testIdCoverage": true,
+  "designSystem": {
+    "initialized": true,
+    "theme": "ocean-blue"
   },
-  "timestamp": "[date -u +%Y-%m-%dT%H:%M:%SZ]"
-}
+  "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+}' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
+mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```
+
+**⚠️ OHNE diesen Schritt schlägt die Phase-Validierung fehl!**
+
+Der Stop-Hook prüft: `ls wireframes/*.html`
 
 ---
 
