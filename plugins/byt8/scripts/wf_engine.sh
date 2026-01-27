@@ -5,6 +5,8 @@
 # Dieser Hook steuert den GESAMTEN Workflow.
 # Claude führt NUR die Anweisungen aus, die dieser Hook ausgibt.
 # ═══════════════════════════════════════════════════════════════════════════
+# BASH 3.x KOMPATIBEL (macOS default)
+# ═══════════════════════════════════════════════════════════════════════════
 
 set -e
 
@@ -18,55 +20,65 @@ RECOVERY_DIR="${WORKFLOW_DIR}/recovery"
 
 MAX_RETRIES=3
 
-# Phase-Definitionen
-declare -A PHASE_NAME=(
-  [0]="Tech Spec"
-  [1]="Wireframes"
-  [2]="API Design"
-  [3]="Migrations"
-  [4]="Backend"
-  [5]="Frontend"
-  [6]="E2E Tests + Security"
-  [7]="Code Review"
-  [8]="Push & PR"
-)
+# ═══════════════════════════════════════════════════════════════════════════
+# PHASE-DEFINITIONEN (Bash 3.x kompatibel via case statements)
+# ═══════════════════════════════════════════════════════════════════════════
 
-declare -A PHASE_AGENT=(
-  [0]="byt8:architect-planner"
-  [1]="byt8:ui-designer"
-  [2]="byt8:api-architect"
-  [3]="byt8:postgresql-architect"
-  [4]="byt8:spring-boot-developer"
-  [5]="byt8:angular-frontend-developer"
-  [6]="byt8:test-engineer"
-  [7]="byt8:code-reviewer"
-  [8]="ORCHESTRATOR"
-)
+get_phase_name() {
+  case $1 in
+    0) echo "Tech Spec" ;;
+    1) echo "Wireframes" ;;
+    2) echo "API Design" ;;
+    3) echo "Migrations" ;;
+    4) echo "Backend" ;;
+    5) echo "Frontend" ;;
+    6) echo "E2E Tests + Security" ;;
+    7) echo "Code Review" ;;
+    8) echo "Push & PR" ;;
+    *) echo "Unknown" ;;
+  esac
+}
+
+get_phase_agent() {
+  case $1 in
+    0) echo "byt8:architect-planner" ;;
+    1) echo "byt8:ui-designer" ;;
+    2) echo "byt8:api-architect" ;;
+    3) echo "byt8:postgresql-architect" ;;
+    4) echo "byt8:spring-boot-developer" ;;
+    5) echo "byt8:angular-frontend-developer" ;;
+    6) echo "byt8:test-engineer" ;;
+    7) echo "byt8:code-reviewer" ;;
+    8) echo "ORCHESTRATOR" ;;
+    *) echo "" ;;
+  esac
+}
 
 # Phasen mit Approval Gate (User muss bestätigen)
-declare -A NEEDS_APPROVAL=(
-  [0]=true
-  [1]=true
-  [6]=true
-  [7]=true
-  [8]=true
-)
+needs_approval() {
+  case $1 in
+    0|1|6|7|8) return 0 ;;  # true
+    *) return 1 ;;          # false
+  esac
+}
 
 # Phasen mit WIP-Commit
-declare -A NEEDS_COMMIT=(
-  [1]=true
-  [3]=true
-  [4]=true
-  [5]=true
-  [6]=true
-)
+needs_commit() {
+  case $1 in
+    1|3|4|5|6) return 0 ;;  # true
+    *) return 1 ;;          # false
+  esac
+}
 
 # Phasen mit Test-Gate
-declare -A HAS_TEST_GATE=(
-  [4]="mvn test"
-  [5]="npm test -- --no-watch --browsers=ChromeHeadless"
-  [6]="npx playwright test"
-)
+get_test_command() {
+  case $1 in
+    4) echo "mvn test" ;;
+    5) echo "npm test -- --no-watch --browsers=ChromeHeadless" ;;
+    6) echo "npx playwright test" ;;
+    *) echo "" ;;
+  esac
+}
 
 # ═══════════════════════════════════════════════════════════════════════════
 # LOGGING
@@ -87,6 +99,13 @@ PHASE=$(jq -r '.currentPhase // 0' "$WORKFLOW_FILE" 2>/dev/null || echo "0")
 ISSUE_NUM=$(jq -r '.issue.number // "?"' "$WORKFLOW_FILE" 2>/dev/null || echo "?")
 ISSUE_TITLE=$(jq -r '.issue.title // "Feature"' "$WORKFLOW_FILE" 2>/dev/null || echo "Feature")
 FROM_BRANCH=$(jq -r '.fromBranch // "main"' "$WORKFLOW_FILE" 2>/dev/null || echo "main")
+
+# Phase-Namen für aktuelle/nächste Phase
+PHASE_NAME_CURRENT=$(get_phase_name $PHASE)
+PHASE_AGENT_CURRENT=$(get_phase_agent $PHASE)
+NEXT_PHASE=$((PHASE + 1))
+PHASE_NAME_NEXT=$(get_phase_name $NEXT_PHASE)
+PHASE_AGENT_NEXT=$(get_phase_agent $NEXT_PHASE)
 
 # ═══════════════════════════════════════════════════════════════════════════
 # HILFSFUNKTIONEN
@@ -127,9 +146,10 @@ reset_retry() {
 
 create_wip_commit() {
   local phase=$1
+  local phase_name=$(get_phase_name $phase)
 
   if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
-    local commit_msg="wip(#${ISSUE_NUM}/phase-${phase}): ${PHASE_NAME[$phase]} - ${ISSUE_TITLE:0:50}"
+    local commit_msg="wip(#${ISSUE_NUM}/phase-${phase}): ${phase_name} - ${ISSUE_TITLE:0:50}"
 
     git add -A 2>/dev/null || true
     if git commit -m "$commit_msg" 2>/dev/null; then
@@ -208,17 +228,13 @@ fi
 # HAUPTLOGIK
 # ═══════════════════════════════════════════════════════════════════════════
 
-NEXT_PHASE=$((PHASE + 1))
-CURRENT_AGENT="${PHASE_AGENT[$PHASE]}"
-NEXT_AGENT="${PHASE_AGENT[$NEXT_PHASE]}"
-
 # ───────────────────────────────────────────────────────────────────────────
 # FALL 1: Warte auf Approval
 # ───────────────────────────────────────────────────────────────────────────
 if [ "$STATUS" == "awaiting_approval" ]; then
   print_instruction
   echo "STATUS: awaiting_approval"
-  echo "PHASE: $PHASE (${PHASE_NAME[$PHASE]})"
+  echo "PHASE: $PHASE ($PHASE_NAME_CURRENT)"
   echo ""
   echo "WARTE AUF USER-INPUT:"
   echo ""
@@ -227,7 +243,7 @@ if [ "$STATUS" == "awaiting_approval" ]; then
   echo "├─────────────────────────────────────────────────────────────────────────────┤"
 
   # WIP-Commit bei Approval?
-  if [ "${NEEDS_COMMIT[$PHASE]}" == "true" ]; then
+  if needs_commit $PHASE; then
     echo "│ 1. WIP-Commit erstellen (git add -A && git commit)                          │"
   fi
 
@@ -238,10 +254,10 @@ if [ "$STATUS" == "awaiting_approval" ]; then
 
   if [ "$NEXT_PHASE" -le 8 ]; then
     echo "│ 3. Nächste Phase starten:                                                    │"
-    if [ "$NEXT_AGENT" == "ORCHESTRATOR" ]; then
+    if [ "$PHASE_AGENT_NEXT" == "ORCHESTRATOR" ]; then
       echo "│    → Phase 8 (Push & PR) direkt ausführen (kein Agent)                      │"
     else
-      echo "│    → Task($NEXT_AGENT)                                                       │"
+      echo "│    → Task($PHASE_AGENT_NEXT)                                                 │"
       echo "│      \"Phase $NEXT_PHASE für Issue #$ISSUE_NUM: $ISSUE_TITLE\"                │"
     fi
   fi
@@ -255,7 +271,7 @@ if [ "$STATUS" == "awaiting_approval" ]; then
   echo "│    jq '.status = \"active\"' .workflow/workflow-state.json > tmp && mv tmp ... │"
   echo "│                                                                              │"
   echo "│ 2. Gleiche Phase mit Feedback wiederholen:                                   │"
-  echo "│    → Task($CURRENT_AGENT)                                                    │"
+  echo "│    → Task($PHASE_AGENT_CURRENT)                                              │"
   echo "│      \"Revise Phase $PHASE based on feedback: {USER_FEEDBACK}\"               │"
   echo "└─────────────────────────────────────────────────────────────────────────────┘"
   print_footer
@@ -275,17 +291,17 @@ if check_done; then
 
   print_instruction
   echo "STATUS: active"
-  echo "PHASE: $PHASE (${PHASE_NAME[$PHASE]}) ✅ DONE"
+  echo "PHASE: $PHASE ($PHASE_NAME_CURRENT) ✅ DONE"
   echo ""
 
   # WIP-Commit?
-  if [ "${NEEDS_COMMIT[$PHASE]}" == "true" ]; then
+  if needs_commit $PHASE; then
     create_wip_commit $PHASE
     echo "│"
   fi
 
   # Approval Gate?
-  if [ "${NEEDS_APPROVAL[$PHASE]}" == "true" ]; then
+  if needs_approval $PHASE; then
     # Status auf awaiting_approval setzen
     jq '.status = "awaiting_approval" | .awaitingApprovalFor = .currentPhase' \
       "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
@@ -293,7 +309,7 @@ if check_done; then
     echo "⏸️  APPROVAL GATE"
     echo ""
     echo "AKTION FÜR CLAUDE:"
-    echo "  Frage den User: \"Phase $PHASE (${PHASE_NAME[$PHASE]}) ist fertig. Zufrieden?\""
+    echo "  Frage den User: \"Phase $PHASE ($PHASE_NAME_CURRENT) ist fertig. Zufrieden?\""
     echo ""
     echo "DANN STOPP - Warte auf User-Antwort."
     echo "Der nächste Hook-Aufruf gibt die Anweisung basierend auf User-Input."
@@ -307,8 +323,8 @@ if check_done; then
     echo "▶️  AUTO-ADVANCE zu Phase $NEXT_PHASE"
     echo ""
     echo "AKTION FÜR CLAUDE:"
-    echo "  → Task($NEXT_AGENT)"
-    echo "    \"Phase $NEXT_PHASE (${PHASE_NAME[$NEXT_PHASE]}) für Issue #$ISSUE_NUM\""
+    echo "  → Task($PHASE_AGENT_NEXT)"
+    echo "    \"Phase $NEXT_PHASE ($PHASE_NAME_NEXT) für Issue #$ISSUE_NUM\""
     echo ""
     echo "Kontext für Agent:"
 
@@ -341,7 +357,7 @@ else
 
   print_instruction
   echo "STATUS: active"
-  echo "PHASE: $PHASE (${PHASE_NAME[$PHASE]}) ❌ NICHT FERTIG"
+  echo "PHASE: $PHASE ($PHASE_NAME_CURRENT) ❌ NICHT FERTIG"
   echo ""
 
   # Phase 7 Spezial: CHANGES_REQUESTED
@@ -406,7 +422,8 @@ else
   fi
 
   # Test-Phasen: Retry bei Fehler
-  if [ -n "${HAS_TEST_GATE[$PHASE]}" ]; then
+  TEST_CMD=$(get_test_command $PHASE)
+  if [ -n "$TEST_CMD" ]; then
     RETRY=$(increment_retry $PHASE)
 
     if [ "$RETRY" -ge "$MAX_RETRIES" ]; then
@@ -420,11 +437,11 @@ else
     else
       echo "⚠️  TESTS FEHLGESCHLAGEN (Versuch $RETRY/$MAX_RETRIES)"
       echo ""
-      echo "Test-Command: ${HAS_TEST_GATE[$PHASE]}"
+      echo "Test-Command: $TEST_CMD"
       echo ""
       echo "AKTION FÜR CLAUDE:"
       echo "  1. Fehler analysieren"
-      echo "  2. Task($CURRENT_AGENT, \"Fix test failures\")"
+      echo "  2. Task($PHASE_AGENT_CURRENT, \"Fix test failures\")"
       echo "  3. Tests werden beim nächsten Hook-Aufruf erneut geprüft"
     fi
 
@@ -450,7 +467,7 @@ else
 
   echo ""
   echo "AKTION FÜR CLAUDE:"
-  echo "  → Task($CURRENT_AGENT, \"Complete Phase $PHASE for Issue #$ISSUE_NUM\")"
+  echo "  → Task($PHASE_AGENT_CURRENT, \"Complete Phase $PHASE for Issue #$ISSUE_NUM\")"
 
   print_footer
 fi
