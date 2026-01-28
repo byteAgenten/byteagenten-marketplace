@@ -2,25 +2,47 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## ⛔⛔⛔ WORKFLOW RECOVERY - LIES DAS ZUERST! ⛔⛔⛔
+## ⛔⛔⛔ REGEL #1: DOKUMENTATION LESEN - KEINE AUSNAHMEN! ⛔⛔⛔
 
-**Kommst du aus einem Context Overflow / Session Resume?**
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   DEIN TRAININGS-WISSEN IST VERALTET UND UNZUVERLÄSSIG!                   │
+│                                                                             │
+│   Du MUSST die offizielle Claude Code Dokumentation via WebFetch lesen,    │
+│   BEVOR du Änderungen an diesem Repository vorschlägst oder durchführst.   │
+│                                                                             │
+│   Das gilt für JEDE Änderung an:                                           │
+│   - Hooks (hooks.json, Frontmatter-Hooks, Scripts)                        │
+│   - Skills (SKILL.md, Frontmatter-Format)                                 │
+│   - Agents (agents/*.md, Frontmatter-Format)                              │
+│   - Plugin-Struktur (plugin.json, marketplace.json)                       │
+│   - Settings (settings.json, Konfiguration)                               │
+│                                                                             │
+│   ABLAUF:                                                                  │
+│   1. Thema identifizieren (z.B. "Hooks ändern")                           │
+│   2. Passende Doku-URL aus der Tabelle unten auswählen                    │
+│   3. WebFetch aufrufen und Doku LESEN                                     │
+│   4. ERST DANN planen und implementieren                                  │
+│                                                                             │
+│   WENN DU DAS IGNORIERST:                                                 │
+│   - Du wirst falsche Annahmen treffen (ist bereits passiert!)             │
+│   - Du wirst nicht-existierende Features nutzen                           │
+│   - Du wirst Bugs einbauen die schwer zu finden sind                      │
+│   - Der User muss dich korrigieren und Zeit verschwenden                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-Dein Summary ist UNVOLLSTÄNDIG! Es fehlen die Workflow-Regeln.
-
-**DU MUSST JETZT:**
-
-1. ⛔ SOFORT `/byt8:full-stack-feature` aufrufen!
-2. Der Skill prüft den State und lädt ALLE Regeln
-3. NICHT selbst den State lesen oder interpretieren!
-
-**WENN DU DAS IGNORIERST:**
-- Du wirst falsche Entscheidungen treffen
-- Du wirst Phasen überspringen
-- Du wirst Approval Gates vergessen
-- Der User wird frustriert sein
-
-**KEIN WEITERMACHEN AUS DEM SUMMARY!**
+| Thema | Doku-URL |
+|-------|----------|
+| Hooks (PreToolUse, Stop, etc.) | https://code.claude.com/docs/en/hooks |
+| Hooks Guide (Beispiele) | https://code.claude.com/docs/en/hooks-guide |
+| Plugins (Struktur, Manifest) | https://code.claude.com/docs/en/plugins |
+| Plugin-Referenz (Details) | https://code.claude.com/docs/en/plugins-reference |
+| Skills (SKILL.md, Frontmatter) | https://code.claude.com/docs/en/skills |
+| Subagents (Task, Agents) | https://code.claude.com/docs/en/sub-agents |
+| Settings (settings.json) | https://code.claude.com/docs/en/settings |
 
 ---
 
@@ -94,24 +116,6 @@ Bei JEDEM Version-Bump von `plugin.json` MÜSSEN diese Dateien synchron aktualis
 3. `README.md` → Versions-Spalte in der Plugin-Tabelle (Zeile 9)
 
 **Niemals nur plugin.json bumpen und die READMEs vergessen!**
-
-## Arbeitsregel: Dokumentation VOR Implementierung
-
-Bevor du Änderungen an Hooks, Skills, Agents, Plugin-Struktur oder Frontmatter vornimmst,
-MUSST du die offizielle Claude Code Dokumentation zum betroffenen Thema nachlesen:
-
-| Thema | Doku-URL |
-|-------|----------|
-| Hooks (PreToolUse, Stop, etc.) | https://code.claude.com/docs/en/hooks |
-| Plugins (Struktur, Manifest) | https://code.claude.com/docs/en/plugins |
-| Plugin-Referenz (Hooks, Skills, Agents) | https://code.claude.com/docs/en/plugins-reference |
-| Skills (SKILL.md, Frontmatter) | https://code.claude.com/docs/en/skills |
-| Subagents (Task, Agents) | https://code.claude.com/docs/en/sub-agents |
-| Settings (settings.json) | https://code.claude.com/docs/en/settings |
-
-**NICHT aus dem Trainings-Wissen arbeiten!** Die Claude Code API ändert sich häufig.
-Dein Trainings-Wissen ist veraltet oder ungenau. Lies die Doku via WebFetch nach,
-bevor du Annahmen triffst oder Änderungen vorschlägst.
 
 ## Development
 
