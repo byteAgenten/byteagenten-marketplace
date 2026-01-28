@@ -95,6 +95,24 @@ Bei JEDEM Version-Bump von `plugin.json` MÜSSEN diese Dateien synchron aktualis
 
 **Niemals nur plugin.json bumpen und die READMEs vergessen!**
 
+## Arbeitsregel: Dokumentation VOR Implementierung
+
+Bevor du Änderungen an Hooks, Skills, Agents, Plugin-Struktur oder Frontmatter vornimmst,
+MUSST du die offizielle Claude Code Dokumentation zum betroffenen Thema nachlesen:
+
+| Thema | Doku-URL |
+|-------|----------|
+| Hooks (PreToolUse, Stop, etc.) | https://code.claude.com/docs/en/hooks |
+| Plugins (Struktur, Manifest) | https://code.claude.com/docs/en/plugins |
+| Plugin-Referenz (Hooks, Skills, Agents) | https://code.claude.com/docs/en/plugins-reference |
+| Skills (SKILL.md, Frontmatter) | https://code.claude.com/docs/en/skills |
+| Subagents (Task, Agents) | https://code.claude.com/docs/en/sub-agents |
+| Settings (settings.json) | https://code.claude.com/docs/en/settings |
+
+**NICHT aus dem Trainings-Wissen arbeiten!** Die Claude Code API ändert sich häufig.
+Dein Trainings-Wissen ist veraltet oder ungenau. Lies die Doku via WebFetch nach,
+bevor du Annahmen triffst oder Änderungen vorschlägst.
+
 ## Development
 
 ### Testing Plugins Locally
