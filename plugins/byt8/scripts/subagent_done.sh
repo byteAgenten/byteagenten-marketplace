@@ -85,12 +85,12 @@ get_phase_name() {
 }
 
 if needs_commit $CURRENT_PHASE; then
-  # Prüfen ob es Änderungen gibt
-  if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+  # Erst stagen, dann prüfen (git diff erkennt keine untracked files!)
+  git add -A 2>/dev/null || true
+  if ! git diff --cached --quiet 2>/dev/null; then
     PHASE_NAME=$(get_phase_name $CURRENT_PHASE)
     COMMIT_MSG="wip(#${ISSUE_NUMBER}/phase-${CURRENT_PHASE}): ${PHASE_NAME} - ${ISSUE_TITLE:0:50}"
 
-    git add -A 2>/dev/null || true
     if git commit -m "$COMMIT_MSG" 2>/dev/null; then
       echo "┌─────────────────────────────────────────────────────────────────────┐"
       echo "│ 📦 WIP-COMMIT ERSTELLT                                              │"
