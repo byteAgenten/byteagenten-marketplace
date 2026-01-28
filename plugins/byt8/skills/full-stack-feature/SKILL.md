@@ -186,7 +186,8 @@ git branch -r | grep -v HEAD | sed 's/origin\///' | head -10
 ### 3. State initialisieren
 
 ```bash
-cat > .workflow/workflow-state.json << 'EOF'
+STARTED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+cat > .workflow/workflow-state.json << EOF
 {
   "workflow": "full-stack-feature",
   "status": "active",
@@ -195,7 +196,7 @@ cat > .workflow/workflow-state.json << 'EOF'
   "fromBranch": "FROM_BRANCH",
   "targetCoverage": COVERAGE,
   "currentPhase": 0,
-  "startedAt": "ISO_TIMESTAMP",
+  "startedAt": "$STARTED_AT",
   "phases": {},
   "context": {}
 }
