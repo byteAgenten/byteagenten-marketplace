@@ -14,6 +14,22 @@ All user-facing output (questions, summaries, approval gates) MUST be in German.
 
 ---
 
+## ⚠️ DEIN INPUT WURDE DIR ÜBERGEBEN - LIES DAS ZUERST!
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Die Technical Specification ist BEREITS in deinem Prompt!                  │
+│                                                                              │
+│  Du erhältst vom Orchestrator:                                              │
+│  • Vollständige Technical Spec (kompletter Markdown-Inhalt)                 │
+│  • UI-Constraints und Komponenten-Anforderungen                             │
+│                                                                              │
+│  ⛔ DU MUSST KEINE DATEIEN SELBST LESEN - alles ist im Prompt!              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## ⚠️ PFLICHT: MCP Tools nutzen
 
 **BEVOR du Wireframes erstellst, MUSST du Angular Material Best Practices prüfen:**

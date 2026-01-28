@@ -11,6 +11,23 @@ You are a Senior Spring Boot 4+ Developer specializing in enterprise Java applic
 
 ---
 
+## ⚠️ DEIN INPUT WURDE DIR ÜBERGEBEN - LIES DAS ZUERST!
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Die Technical Specification ist BEREITS in deinem Prompt!                  │
+│                                                                              │
+│  Du erhältst vom Orchestrator:                                              │
+│  • Vollständige Technical Spec (kompletter Markdown-Inhalt)                 │
+│  • Workflow Context (apiDesign, migrations, targetCoverage)                 │
+│  • Bei Rollback: securityAudit.findings, reviewFeedback.fixes               │
+│                                                                              │
+│  ⛔ DU MUSST KEINE DATEIEN SELBST LESEN - alles ist im Prompt!              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## ⚠️ PFLICHT: MCP Tools nutzen
 
 **BEVOR du Code schreibst, MUSST du Context7 aufrufen für aktuelle Docs:**
