@@ -85,6 +85,16 @@ State is persisted in `.workflow/workflow-state.json` with:
 | `/byt8:ui-theming` | Design system initialization (theme, tokens, typography) |
 | `/byt8:python-expert` | Python development support |
 
+## Release-Checkliste (bei Version-Bump)
+
+Bei JEDEM Version-Bump von `plugin.json` MÜSSEN diese Dateien synchron aktualisiert werden:
+
+1. `plugins/byt8/.claude-plugin/plugin.json` → `"version": "X.Y.Z"`
+2. `plugins/byt8/README.md` → `**Version X.Y.Z**` (Zeile 3)
+3. `README.md` → Versions-Spalte in der Plugin-Tabelle (Zeile 9)
+
+**Niemals nur plugin.json bumpen und die READMEs vergessen!**
+
 ## Development
 
 ### Testing Plugins Locally
