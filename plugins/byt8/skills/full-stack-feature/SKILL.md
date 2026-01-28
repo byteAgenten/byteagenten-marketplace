@@ -187,8 +187,6 @@ Task(byt8:architect-planner, "Create Technical Specification for Issue #N: Title
 
 ## Nach jedem Agent-Aufruf
 
-**⚠️ WICHTIG: DU (Claude) erstellst die WIP-Commits, NICHT der Hook!**
-
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  ENTSCHEIDUNGSLOGIK                                                          │
@@ -198,12 +196,12 @@ Task(byt8:architect-planner, "Create Technical Specification for Issue #N: Title
 │  nächste_phase = aktuelle_phase + 1                                          │
 │                                                                              │
 │  WENN nächste_phase IN (2, 3, 4, 5, 6):                                    │
-│    → DU erstellst WIP-Commit: git add -A && git commit -m "wip(...)"       │
+│    → (SubagentStop Hook erstellt automatisch WIP-Commit)                   │
 │    → State updaten: currentPhase = nächste_phase                            │
 │    → SOFORT nächsten Agent aufrufen                                         │
 │                                                                              │
 │  WENN nächste_phase IN (0, 1, 7, 8, 9) ODER aktuelle_phase IN (7, 8, 9):  │
-│    → DU erstellst WIP-Commit: git add -A && git commit -m "wip(...)"       │
+│    → (SubagentStop Hook erstellt automatisch WIP-Commit)                   │
 │    → State updaten: status = "awaiting_approval"                            │
 │    → User fragen: "Phase X fertig. Zufrieden?"                              │
 │    → STOPP                                                                   │
@@ -213,19 +211,21 @@ Task(byt8:architect-planner, "Create Technical Specification for Issue #N: Title
 
 ---
 
-## WIP-Commits
+## WIP-Commits (Automatisch via SubagentStop Hook)
 
-Erstelle WIP-Commits für Phasen 1, 3, 4, 5, 6:
+Der **SubagentStop Hook** erstellt automatisch WIP-Commits für Phasen 1, 3, 4, 5, 6.
 
-```bash
-git add -A
-git commit -m "wip(#ISSUE_NUM/phase-N): PHASE_NAME - ISSUE_TITLE_KURZ"
+Format:
+```
+wip(#ISSUE_NUM/phase-N): PHASE_NAME - ISSUE_TITLE_KURZ
 ```
 
 Beispiel:
-```bash
-git commit -m "wip(#351/phase-4): Backend - Projektliste erweitern"
 ```
+wip(#351/phase-4): Backend - Projektliste erweitern
+```
+
+**Du musst KEINE Commits manuell erstellen** — der Hook macht das deterministisch nach jedem `Task()` Aufruf.
 
 ---
 
@@ -335,7 +335,7 @@ Wenn User nicht "Ja/OK/Weiter" sagt, sondern Änderungswünsche hat:
 │  APPROVAL GATES: 0, 1, 7, 8, 9  →  STOPP und User fragen                    │
 │  AUTO-ADVANCE:   2, 3, 4, 5, 6  →  SOFORT weitermachen                      │
 │                                                                              │
-│  ⚠️  CLAUDE erstellt WIP-Commits VOR jedem Phase-Wechsel (nicht der Hook!)  │
-│  Der Stop-Hook feuert nur bei STOPP, nicht zwischen Auto-Advance Phasen.    │
+│  SubagentStop Hook erstellt WIP-Commits automatisch (Phasen 1, 3, 4, 5, 6) │
+│  → Deterministisch nach jedem Task() Aufruf                                 │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```

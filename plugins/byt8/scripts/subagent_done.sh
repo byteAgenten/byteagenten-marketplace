@@ -4,8 +4,11 @@
 # ═══════════════════════════════════════════════════════════════════════════
 # Feuert wenn ein Subagent (Task tool) fertig ist.
 #
-# Zweck: Sichtbarkeit - zeigt welcher Agent fertig ist.
-# WIP-Commits werden vom Stop-Hook (wf_engine.sh) erstellt.
+# Zweck:
+# 1. Sichtbarkeit - zeigt welcher Agent fertig ist
+# 2. WIP-Commits - erstellt automatisch Commits für Phasen 1, 3, 4, 5, 6
+#
+# WICHTIG: Dieser Hook ist DETERMINISTISCH - er feuert IMMER nach Task()
 # ═══════════════════════════════════════════════════════════════════════════
 
 set -e
@@ -64,3 +67,36 @@ echo ""
 
 # Log
 echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Agent finished: Phase $CURRENT_PHASE" >> "$LOG_DIR/hooks.log"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# WIP-COMMIT (Deterministisch für Phasen 1, 3, 4, 5, 6)
+# ═══════════════════════════════════════════════════════════════════════════
+needs_commit() {
+  case $1 in
+    1|3|4|5|6) return 0 ;;  # true
+    *) return 1 ;;          # false
+  esac
+}
+
+get_phase_name() {
+  echo "${PHASE_NAMES[$1]:-Phase $1}"
+}
+
+if needs_commit $CURRENT_PHASE; then
+  # Prüfen ob es Änderungen gibt
+  if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+    PHASE_NAME=$(get_phase_name $CURRENT_PHASE)
+    COMMIT_MSG="wip(#${ISSUE_NUMBER}/phase-${CURRENT_PHASE}): ${PHASE_NAME} - ${ISSUE_TITLE:0:50}"
+
+    git add -A 2>/dev/null || true
+    if git commit -m "$COMMIT_MSG" 2>/dev/null; then
+      echo "┌─────────────────────────────────────────────────────────────────────┐"
+      echo "│ 📦 WIP-COMMIT ERSTELLT                                              │"
+      echo "├─────────────────────────────────────────────────────────────────────┤"
+      echo "│ $COMMIT_MSG"
+      echo "└─────────────────────────────────────────────────────────────────────┘"
+      echo ""
+      echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] WIP-Commit: $COMMIT_MSG" >> "$LOG_DIR/hooks.log"
+    fi
+  fi
+fi
