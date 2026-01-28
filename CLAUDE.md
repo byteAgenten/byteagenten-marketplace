@@ -42,6 +42,8 @@ byteagenten-marketplace/
 │       │   └── plugin.json   # Plugin metadata (name, version, description)
 │       ├── agents/           # 10 specialized AI agents
 │       ├── commands/         # Slash command definitions (map to skills)
+│       ├── hooks/            # Plugin hooks (event-driven scripts)
+│       ├── scripts/          # Helper scripts for hooks
 │       └── skills/           # Workflow implementations (SKILL.md files)
 ```
 
