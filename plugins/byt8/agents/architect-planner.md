@@ -91,10 +91,9 @@ Problem aus Issue: [X]
 | 2 | Analyze codebase (see Commands below) |
 | 3 | **⚠️ CRITICAL THINKING PROTOCOL (siehe oben!)** |
 | 4 | Apply Architecture Knowledge (see below) |
-| 5 | Read template: `cat ${CLAUDE_PLUGIN_ROOT}/templates/technical-specification.md` |
-| 6 | Fill out template completely (inkl. 5x Warum Analyse!) |
-| 7 | Store in workflow-state (Context Protocol) |
-| 8 | Present APPROVAL GATE to user |
+| 5 | Write Technical Spec to `.workflow/specs/issue-{N}-{name}.md` |
+| 6 | Store reduced context in workflow-state (siehe Context Protocol unten) |
+| 7 | Present APPROVAL GATE to user |
 
 **Your Technical Specification guides ALL downstream agents!**
 
