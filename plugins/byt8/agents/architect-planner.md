@@ -298,39 +298,21 @@ Die Spec-Datei enthält ALLE Details:
 - Detaillierte Test-Szenarien
 - Risiko-Mitigationen
 
-### 2. Reduzierten Context in workflow-state.json speichern
+### 2. Spec-Pfad in workflow-state.json speichern
 
-**Nach Speichern der Spec-Datei MUSST du den Context speichern:**
+**Nach Speichern der Spec-Datei MUSST du den Pfad im Context speichern:**
 
 ```bash
-# Context in workflow-state.json schreiben
+# Nur den Pfad zur Spec-Datei speichern (Single Source of Truth)
 jq '.context.technicalSpec = {
-  "issueNumber": 42,
-  "specFile": ".workflow/specs/issue-42-feature-name.md",
-  "affectedLayers": ["database", "backend", "frontend"],
-  "newEntities": ["EntityName"],
-  "reuseServices": ["ServiceA", "ServiceB"],
-  "newEndpoints": ["POST /api/xyz", "GET /api/xyz"],
-  "modifiedEndpoints": [],
-  "patternsUsed": ["Factory", "Strategy"],
-  "securityNotes": "...",
-  "uiConstraints": ["..."],
-  "risks": ["..."],
-  "testScenarios": {
-    "unit": ["test1", "test2"],
-    "integration": ["test3"],
-    "e2e": ["test4"]
-  },
-  "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+  "specFile": ".workflow/specs/issue-42-feature-name.md"
 }' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
 mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```
 
-**⚠️ WICHTIG:** Das `specFile`-Feld ist PFLICHT! Alle nachfolgenden Agents lesen die vollständige Spec über diesen Pfad.
+**⚠️ WICHTIG:** Alle Details stehen in der Spec-Datei — NICHT duplizieren!
 
-**⚠️ OHNE diesen Schritt schlägt die Phase-Validierung fehl!**
-
-Der Stop-Hook prüft: `jq -e '.context.technicalSpec | keys | length > 0'`
+Alle nachfolgenden Agents lesen die vollständige Spec über den `specFile`-Pfad.
 
 ---
 
