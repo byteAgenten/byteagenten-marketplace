@@ -215,6 +215,47 @@ if [ "$STATUS" == "paused" ]; then
 fi
 
 if [ "$STATUS" == "idle" ] || [ "$STATUS" == "completed" ]; then
+  # Workflow-Dauer berechnen und protokollieren
+  if [ "$STATUS" == "completed" ]; then
+    STARTED_AT=$(jq -r '.startedAt // ""' "$WORKFLOW_FILE" 2>/dev/null)
+    COMPLETED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+    if [ -n "$STARTED_AT" ] && [ "$STARTED_AT" != "null" ]; then
+      START_EPOCH=$(date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "$STARTED_AT" +%s 2>/dev/null || echo "")
+      END_EPOCH=$(date -u +%s)
+
+      if [ -n "$START_EPOCH" ]; then
+        DURATION_SEC=$((END_EPOCH - START_EPOCH))
+        DURATION_MIN=$((DURATION_SEC / 60))
+        DURATION_REM_SEC=$((DURATION_SEC % 60))
+
+        # In workflow-state.json speichern
+        jq --arg ca "$COMPLETED_AT" --arg dur "${DURATION_MIN}m ${DURATION_REM_SEC}s" \
+          '.completedAt = $ca | .duration = $dur' \
+          "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+
+        # Hooks-Log
+        echo "[${COMPLETED_AT}] Workflow completed: #${ISSUE_NUM} - ${ISSUE_TITLE} (Duration: ${DURATION_MIN}m ${DURATION_REM_SEC}s)" >> "$LOGS_DIR/hooks.log"
+
+        print_instruction
+        echo "STATUS: completed"
+        echo ""
+        echo "┌─────────────────────────────────────────────────────────────────────┐"
+        echo "│ ✅ WORKFLOW ABGESCHLOSSEN                                            │"
+        echo "├─────────────────────────────────────────────────────────────────────┤"
+        echo "│ Issue:    #$ISSUE_NUM - ${ISSUE_TITLE:0:45}"
+        echo "│ Gestartet: $STARTED_AT"
+        echo "│ Beendet:   $COMPLETED_AT"
+        echo "│ Dauer:     ${DURATION_MIN}m ${DURATION_REM_SEC}s"
+        echo "└─────────────────────────────────────────────────────────────────────┘"
+        echo ""
+        echo "AKTION: Workflow abgeschlossen. Kein weiterer Schritt nötig."
+        print_footer
+        exit 0
+      fi
+    fi
+  fi
+
   print_instruction
   echo "STATUS: $STATUS"
   echo ""
