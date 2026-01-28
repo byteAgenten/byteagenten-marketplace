@@ -214,23 +214,18 @@ Focus on clear, concise API sketches. The spring-boot-developer will implement f
 
 ## CONTEXT PROTOCOL - PFLICHT!
 
-### Input (Vorherige Phasen lesen)
+### Input (vom Orchestrator via Prompt)
 
-```bash
-# 1. VOLLSTÄNDIGE Technical Spec lesen (enthält alle Details!)
-SPEC_FILE=$(jq -r '.context.technicalSpec.specFile // empty' .workflow/workflow-state.json)
-if [ -n "$SPEC_FILE" ] && [ -f "$SPEC_FILE" ]; then
-  cat "$SPEC_FILE"
-fi
+**Die Technical Specification wird dir im Task()-Prompt übergeben.**
 
-# 2. Reduzierter Context (für schnelle Referenz)
-cat .workflow/workflow-state.json | jq '.context.technicalSpec'
-cat .workflow/workflow-state.json | jq '.context.wireframes'
-```
+Du erhältst:
+1. **Vollständige Spec**: Der komplette Inhalt der Technical Specification
+2. **Workflow Context**: Relevante Felder (wireframes, etc.)
 
-Nutze den Kontext:
-- **Vollständige Spec**: Code-Snippets, JPQL-Queries, Architektur-Begründungen, Risiko-Mitigationen
-- **technicalSpec**: Schnelle Referenz für betroffene Layer, neue Entities
+**Du musst die Spec NICHT selbst lesen** - sie ist bereits in deinem Prompt.
+
+Nutze den Kontext aus dem Prompt:
+- **Technical Spec**: Code-Snippets, JPQL-Queries, Architektur-Begründungen, Risiko-Mitigationen
 - **wireframes**: UI-Komponenten die API-Endpoints brauchen
 
 ### Output (API Design speichern) - MUSS ausgeführt werden!

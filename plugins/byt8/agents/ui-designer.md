@@ -321,24 +321,20 @@ When creating wireframes, provide:
 
 ## CONTEXT PROTOCOL - PFLICHT!
 
-### Input (Technical Spec lesen)
+### Input (vom Orchestrator via Prompt)
 
-```bash
-# 1. VOLLSTÄNDIGE Technical Spec lesen (enthält alle Details!)
-SPEC_FILE=$(jq -r '.context.technicalSpec.specFile // empty' .workflow/workflow-state.json)
-if [ -n "$SPEC_FILE" ] && [ -f "$SPEC_FILE" ]; then
-  cat "$SPEC_FILE"
-fi
+**Die Technical Specification wird dir im Task()-Prompt übergeben.**
 
-# 2. Reduzierter Context (für schnelle Referenz)
-cat .workflow/workflow-state.json | jq '.context.technicalSpec'
-```
+Du erhältst:
+1. **Vollständige Spec**: Der komplette Inhalt der Technical Specification
+2. **Workflow Context**: Relevante Felder für UI-Design
 
-**WICHTIG:** Die vollständige Spec-Datei enthält Details die im reduzierten Context fehlen:
-- Code-Snippets und konkrete Implementierungsvorschläge
-- Architektur-Begründungen (Warum Option A statt B?)
-- Detaillierte Test-Szenarien mit Beschreibungen
-- Risiko-Mitigationen
+**Du musst die Spec NICHT selbst lesen** - sie ist bereits in deinem Prompt.
+
+Nutze den Kontext aus dem Prompt:
+- **Technical Spec**: UI-Constraints, Komponenten-Anforderungen, User Flows
+- **affectedLayers**: Welche Layer betroffen sind
+- **uiConstraints**: Was die UI anzeigen/unterstützen muss
 
 ### Output (Wireframes speichern) - MUSS ausgeführt werden!
 

@@ -153,27 +153,18 @@ npm run lint && npm test -- --no-watch --browsers=ChromeHeadless && npm run buil
 
 ## CONTEXT PROTOCOL - PFLICHT!
 
-### Input (Vorherige Phasen lesen)
+### Input (vom Orchestrator via Prompt)
 
-```bash
-# 1. VOLLSTÄNDIGE Technical Spec lesen (enthält alle Details!)
-SPEC_FILE=$(jq -r '.context.technicalSpec.specFile // empty' .workflow/workflow-state.json)
-if [ -n "$SPEC_FILE" ] && [ -f "$SPEC_FILE" ]; then
-  cat "$SPEC_FILE"
-fi
+**Die Technical Specification wird dir im Task()-Prompt übergeben.**
 
-# 2. Reduzierter Context (für schnelle Referenz)
-cat .workflow/workflow-state.json | jq '.context.wireframes'
-cat .workflow/workflow-state.json | jq '.context.apiDesign'
-cat .workflow/workflow-state.json | jq '.targetCoverage'
+Du erhältst:
+1. **Vollständige Spec**: Der komplette Inhalt der Technical Specification
+2. **Workflow Context**: wireframes, apiDesign, targetCoverage, securityAudit, reviewFeedback
 
-# 3. Rollback-Context prüfen (Security/Review Findings)
-cat .workflow/workflow-state.json | jq '.context.securityAudit.findings // empty'
-cat .workflow/workflow-state.json | jq '.context.reviewFeedback.fixes // empty'
-```
+**Du musst die Spec NICHT selbst lesen** - sie ist bereits in deinem Prompt.
 
-Nutze den Kontext:
-- **Vollständige Spec**: Business Rules, Validierungs-Logik, UX-Anforderungen
+Nutze den Kontext aus dem Prompt:
+- **Technical Spec**: Business Rules, Validierungs-Logik, UX-Anforderungen
 - **wireframes**: UI-Layouts, Komponenten-Struktur
 - **apiDesign**: Endpoints die aufgerufen werden müssen
 - **targetCoverage**: Test coverage target (50%/70%/85%/95%)

@@ -526,29 +526,20 @@ Focus on data integrity, performance, and maintainability. Always consider the i
 
 ## CONTEXT PROTOCOL - PFLICHT!
 
-### Input (Vorherige Phasen lesen)
+### Input (vom Orchestrator via Prompt)
 
-```bash
-# 1. VOLLSTÄNDIGE Technical Spec lesen (enthält alle Details!)
-SPEC_FILE=$(jq -r '.context.technicalSpec.specFile // empty' .workflow/workflow-state.json)
-if [ -n "$SPEC_FILE" ] && [ -f "$SPEC_FILE" ]; then
-  cat "$SPEC_FILE"
-fi
+**Die Technical Specification wird dir im Task()-Prompt übergeben.**
 
-# 2. Reduzierter Context (für schnelle Referenz)
-cat .workflow/workflow-state.json | jq '.context.technicalSpec'
-cat .workflow/workflow-state.json | jq '.context.apiDesign'
+Du erhältst:
+1. **Vollständige Spec**: Der komplette Inhalt der Technical Specification
+2. **Workflow Context**: Relevante Felder (apiDesign, securityAudit, reviewFeedback)
 
-# 3. Rollback-Context prüfen (Security/Review Findings)
-cat .workflow/workflow-state.json | jq '.context.securityAudit.findings // empty'
-cat .workflow/workflow-state.json | jq '.context.reviewFeedback.fixes // empty'
-```
+**Du musst die Spec NICHT selbst lesen** - sie ist bereits in deinem Prompt.
 
-Nutze den Kontext:
-- **Vollständige Spec**: Schema-Details, Index-Empfehlungen, Performance-Überlegungen
-- **technicalSpec**: Schnelle Referenz für Architektur-Entscheidungen
+Nutze den Kontext aus dem Prompt:
+- **Technical Spec**: Schema-Details, Index-Empfehlungen, Performance-Überlegungen
 - **apiDesign**: Data Model für Tables, Columns, Relationships
-- **securityAudit.findings**: Bei Rollback — Security-Findings die gefixt werden müssen (z.B. SQL Injection)
+- **securityAudit.findings**: Bei Rollback — Security-Findings die gefixt werden müssen
 - **reviewFeedback.fixes**: Bei Rollback — Code-Review-Findings die gefixt werden müssen
 
 ### Output (Migrations speichern) - MUSS ausgeführt werden!

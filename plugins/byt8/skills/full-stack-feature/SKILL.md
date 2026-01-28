@@ -328,6 +328,86 @@ Wenn User nicht "Ja/OK/Weiter" sagt, sondern Änderungswünsche hat:
 
 ---
 
+## ⚠️ SPEC INJECTION PROTOCOL (PFLICHT!)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  VOR JEDEM AGENT-AUFRUF (Phase 1-8):                                        │
+│                                                                              │
+│  1. Spec-Pfad aus workflow-state.json lesen:                                │
+│     Read(.workflow/workflow-state.json) → context.technicalSpec.specFile    │
+│                                                                              │
+│  2. Vollständige Spec-Datei lesen:                                          │
+│     Read(.workflow/specs/issue-N-name.md)                                   │
+│                                                                              │
+│  3. Spec-Inhalt in Task()-Prompt injizieren:                                │
+│     Task(byt8:agent, "...                                                   │
+│       ## TECHNICAL SPECIFICATION                                             │
+│       {SPEC_CONTENT}                                                         │
+│       ## YOUR TASK                                                           │
+│       ...")                                                                  │
+│                                                                              │
+│  ⚠️ AGENTS LESEN DIE SPEC NICHT SELBST - DU MUSST SIE ÜBERGEBEN!           │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Warum?
+
+Agents führen Bash-Commands nicht deterministisch aus.
+Die einzige Garantie ist der **Task()-Prompt selbst**.
+
+### Task()-Prompt Format (Phasen 1-8)
+
+```
+Task(byt8:[agent-name], "
+Phase [N]: [Phase Name] for Issue #[ISSUE_NUM]
+
+## TECHNICAL SPECIFICATION (LIES DAS ZUERST!)
+
+[Hier den VOLLSTÄNDIGEN Inhalt der Spec-Datei einfügen]
+
+## WORKFLOW CONTEXT
+
+- Target Coverage: [targetCoverage]%
+- Previous Phase Output: [relevante context.* Felder]
+
+## YOUR TASK
+
+[Spezifische Anweisungen für diese Phase]
+")
+```
+
+### Beispiel: Phase 4 (Backend) aufrufen
+
+```
+1. Read(.workflow/workflow-state.json)
+   → specFile = ".workflow/specs/issue-365-search-persons.md"
+   → targetCoverage = 85
+   → apiDesign = { endpoints: [...], ... }
+   → migrations = { files: [...], ... }
+
+2. Read(.workflow/specs/issue-365-search-persons.md)
+   → [Vollständiger Spec-Inhalt]
+
+3. Task(byt8:spring-boot-developer, "
+   Phase 4: Backend Implementation for Issue #365
+
+   ## TECHNICAL SPECIFICATION
+   [Vollständiger Spec-Inhalt hier]
+
+   ## WORKFLOW CONTEXT
+   - Target Coverage: 85%
+   - API Design: GET /api/projects (search extended)
+   - Migrations: Keine DB-Änderungen
+
+   ## YOUR TASK
+   Implement the backend changes as specified.
+   Write unit tests to achieve 85% coverage.
+   ")
+```
+
+---
+
 ## Zusammenfassung
 
 ```
@@ -337,5 +417,8 @@ Wenn User nicht "Ja/OK/Weiter" sagt, sondern Änderungswünsche hat:
 │                                                                              │
 │  SubagentStop Hook erstellt WIP-Commits automatisch (Phasen 1, 3, 4, 5, 6) │
 │  → Deterministisch nach jedem Task() Aufruf                                 │
+│                                                                              │
+│  SPEC INJECTION: Orchestrator liest Spec und übergibt im Task()-Prompt     │
+│  → Agents erhalten Spec garantiert - kein selbständiges Lesen nötig         │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```

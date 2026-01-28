@@ -385,33 +385,23 @@ Issue identified during review
 
 ## CONTEXT PROTOCOL - PFLICHT!
 
-### Input (Vorherige Phasen lesen)
+### Input (vom Orchestrator via Prompt)
 
-```bash
-# 1. VOLLSTÄNDIGE Technical Spec lesen (enthält alle Details!)
-SPEC_FILE=$(jq -r '.context.technicalSpec.specFile // empty' .workflow/workflow-state.json)
-if [ -n "$SPEC_FILE" ] && [ -f "$SPEC_FILE" ]; then
-  cat "$SPEC_FILE"
-fi
+**Die Technical Specification wird dir im Task()-Prompt übergeben.**
 
-# 2. Alle relevanten Context-Keys aus workflow-state.json lesen
-cat .workflow/workflow-state.json | jq '.context.technicalSpec'
-cat .workflow/workflow-state.json | jq '.context.apiDesign'
-cat .workflow/workflow-state.json | jq '.context.backendImpl'
-cat .workflow/workflow-state.json | jq '.context.frontendImpl'
-cat .workflow/workflow-state.json | jq '.context.testResults'
-cat .workflow/workflow-state.json | jq '.context.securityAudit'
-cat .workflow/workflow-state.json | jq '.targetCoverage'
-```
+Du erhältst:
+1. **Vollständige Spec**: Der komplette Inhalt der Technical Specification
+2. **Workflow Context**: apiDesign, backendImpl, frontendImpl, testResults, securityAudit, targetCoverage
 
-Nutze den Kontext:
-- **Vollständige Spec**: Implementation vs. Spec-Anforderungen vergleichen, alle Business Rules prüfen
-- **technicalSpec**: Schnelle Referenz für Architektur-Entscheidungen
+**Du musst die Spec NICHT selbst lesen** - sie ist bereits in deinem Prompt.
+
+Nutze den Kontext aus dem Prompt:
+- **Technical Spec**: Implementation vs. Spec-Anforderungen vergleichen, alle Business Rules prüfen
 - **apiDesign**: Implementation vs. Design vergleichen
 - **backendImpl**: Endpoints, Coverage, Test-Counts prüfen
 - **frontendImpl**: Components, Routes, State Management prüfen
 - **testResults**: Coverage-Ziele verifizieren
-- **securityAudit**: Security-Findings addressiert? Prüfe `findings[]` Array mit Location, Impact und Recommendation pro Finding
+- **securityAudit**: Security-Findings addressiert? Prüfe `findings[]` Array
 - **targetCoverage**: Coverage-Ziel (50%/70%/85%/95%)
 
 ### Output (Review Feedback speichern) - MUSS ausgeführt werden!
