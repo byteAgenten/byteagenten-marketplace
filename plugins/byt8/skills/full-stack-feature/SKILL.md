@@ -187,6 +187,8 @@ Task(byt8:architect-planner, "Create Technical Specification for Issue #N: Title
 
 ## Nach jedem Agent-Aufruf
 
+**⚠️ WICHTIG: DU (Claude) erstellst die WIP-Commits, NICHT der Hook!**
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  ENTSCHEIDUNGSLOGIK                                                          │
@@ -196,12 +198,12 @@ Task(byt8:architect-planner, "Create Technical Specification for Issue #N: Title
 │  nächste_phase = aktuelle_phase + 1                                          │
 │                                                                              │
 │  WENN nächste_phase IN (2, 3, 4, 5, 6):                                    │
-│    → WIP-Commit erstellen (falls Änderungen)                                │
+│    → DU erstellst WIP-Commit: git add -A && git commit -m "wip(...)"       │
 │    → State updaten: currentPhase = nächste_phase                            │
 │    → SOFORT nächsten Agent aufrufen                                         │
 │                                                                              │
 │  WENN nächste_phase IN (0, 1, 7, 8, 9) ODER aktuelle_phase IN (7, 8, 9):  │
-│    → WIP-Commit erstellen (falls Änderungen)                                │
+│    → DU erstellst WIP-Commit: git add -A && git commit -m "wip(...)"       │
 │    → State updaten: status = "awaiting_approval"                            │
 │    → User fragen: "Phase X fertig. Zufrieden?"                              │
 │    → STOPP                                                                   │
@@ -333,7 +335,7 @@ Wenn User nicht "Ja/OK/Weiter" sagt, sondern Änderungswünsche hat:
 │  APPROVAL GATES: 0, 1, 7, 8, 9  →  STOPP und User fragen                    │
 │  AUTO-ADVANCE:   2, 3, 4, 5, 6  →  SOFORT weitermachen                      │
 │                                                                              │
-│  Der Stop-Hook validiert im Hintergrund und erstellt WIP-Commits.           │
-│  Claude wartet NICHT auf Hook-Output für Auto-Advance Phasen.               │
+│  ⚠️  CLAUDE erstellt WIP-Commits VOR jedem Phase-Wechsel (nicht der Hook!)  │
+│  Der Stop-Hook feuert nur bei STOPP, nicht zwischen Auto-Advance Phasen.    │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
