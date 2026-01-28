@@ -2,6 +2,12 @@
 name: full-stack-feature
 description: Orchestrates full-stack feature development with hook-based automation.
 author: byteagent - Hans Pickelmann
+hooks:
+  PreToolUse:
+    - matcher: "Edit|Write"
+      hooks:
+        - type: command
+          command: "${CLAUDE_PLUGIN_ROOT}/scripts/block_orchestrator_code_edit.sh"
 ---
 
 # Full-Stack Feature Development Skill
@@ -26,6 +32,30 @@ author: byteagent - Hans Pickelmann
 │     → User fragen: "Phase X fertig. Zufrieden?"                             │
 │     → STOPP - Warte auf User                                                │
 │                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## ⛔ ORCHESTRATOR-GRENZEN - DETERMINISTISCH ERZWUNGEN!
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  DER ORCHESTRATOR SCHREIBT KEINEN CODE!                                      │
+│                                                                              │
+│  Ein PreToolUse-Hook BLOCKIERT jedes Edit/Write auf Code-Dateien.          │
+│  (.java, .ts, .html, .scss, .sql, .xml, .properties, etc.)                │
+│                                                                              │
+│  Du darfst:                                                                 │
+│  ✅ workflow-state.json lesen/schreiben                                     │
+│  ✅ Task() Aufrufe an Agents machen                                        │
+│  ✅ Spec-Dateien (.md) lesen und injizieren                                │
+│  ✅ Git/GitHub Befehle (nur Phase 9: push, PR)                             │
+│                                                                              │
+│  JEDE Code-Änderung → Task(byt8:ZUSTÄNDIGER_AGENT, "...")                  │
+│  Der Hook blockiert dich physisch wenn du es trotzdem versuchst.           │
+│                                                                              │
+│  Wenn ein Fix nötig ist → Siehe "Rückdelegation-Protocol" unten!           │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -241,17 +271,13 @@ Der Security-Auditor zeigt alle Findings im Approval Gate an. Der User entscheid
 
 ### Findings fixen
 ```
-→ User kann granular wählen: "fix alle", "fix critical+high", "fix HIGH-001, MED-003"
-→ Claude filtert Findings nach User-Auswahl
+→ User wählt: "fix alle", "fix critical+high", "fix HIGH-001, MED-003"
+→ Findings nach User-Auswahl filtern
 → securityFixCount incrementieren
-→ Delegation an zuständige Agents basierend auf Finding-Location:
-  - Backend (.java) → byt8:spring-boot-developer
-  - Frontend (.ts/.html) → byt8:angular-frontend-developer
-→ Context für Re-Validierung löschen:
-  - context.securityAudit
-  - context.testResults
-→ Rollback zu Phase 6 (E2E Tests)
-→ Auto-Advance: Phase 6 → Phase 7 (Re-Audit) → Approval Gate
+→ ⚠️ Siehe Rückdelegation-Protocol (Fall 2)!
+→ Findings gruppieren nach Location → Ziel-Phase → Task() an Agent
+→ Context für Re-Validierung löschen: securityAudit, testResults
+→ Auto-Advance ab Ziel-Phase bis Phase 7 (Approval Gate)
 ```
 
 **Max 3 Fix-Iterationen**, danach nur noch "Weiter" oder Pause.
@@ -271,18 +297,11 @@ Der Code-Reviewer kann zwei Ergebnisse liefern:
 ### CHANGES_REQUESTED
 ```
 → Lies context.reviewFeedback.fixes[] (jeder Fix hat type + issue)
-→ Dynamisches Rollback basierend auf frühestem Fix-Typ:
-  - type: "database" → Rollback zu Phase 3 (Migrations)
-  - type: "backend"  → Rollback zu Phase 4 (Backend)
-  - type: "frontend" → Rollback zu Phase 5 (Frontend)
-  - type: "tests"    → Rollback zu Phase 6 (E2E Tests)
+→ ⚠️ Siehe Rückdelegation-Protocol (Fall 2)!
+→ Frühesten Fix-Typ bestimmen → Rollback-Ziel → Task() an Agent
 → Context ab Rollback-Ziel löschen (alle downstream Phasen)
-→ Review-Feedback als Kontext an den Rollback-Agent übergeben
 → Auto-Advance-Kette läuft automatisch bis Phase 8 (Re-Review)
 ```
-
-**Prinzip:** Kein separates Fix-Routing. Rollback zum frühesten betroffenen Punkt,
-die Agents der Folgephasen erkennen selbständig was sich geändert hat.
 
 **Max 3 Review-Iterationen**, danach pausieren.
 
@@ -304,14 +323,86 @@ Phase 9 hat keinen Agent - Claude führt direkt aus:
 
 ---
 
-## Bei User-Feedback an Approval Gates
+## Rückdelegation-Protocol (UNIVERSELL)
 
-Wenn User nicht "Ja/OK/Weiter" sagt, sondern Änderungswünsche hat:
+Wenn an einem Approval Gate (0, 1, 7, 8, 9) eine Änderung nötig wird,
+gelten diese universellen Regeln:
+
+### Fall 1: Revision der aktuellen Phase
+
+User sagt: "Ändere X in der Spec" / "Farbe ändern" / "Anderes Layout"
+→ Betrifft NUR die aktuelle Phase, kein Code-Fix
 
 ```
-1. State: status = "active" (bleibt bei aktueller Phase)
+1. State: status = "active" (bleibt bei currentPhase)
 2. Task(AKTUELLER_AGENT, "Revise based on feedback: USER_FEEDBACK")
 3. Nach Agent: wieder Approval Gate → User fragen
+```
+
+### Fall 2: Code-Fix nötig (Rollback auf frühere Phase)
+
+User sagt: "Fix den Controller" / "Doku aktualisieren" / Audit-Finding fixen
+→ Betrifft Code einer FRÜHEREN Phase
+
+```
+SCHRITT 1 - Ziel-Phase bestimmen:
+┌────────────────────────────────┬──────────────┬─────────────────────────────────┐
+│ Was muss gefixt werden?         │ Ziel-Phase   │ Agent                           │
+├────────────────────────────────┼──────────────┼─────────────────────────────────┤
+│ Spec / Architektur             │ Phase 0      │ byt8:architect-planner          │
+│ Wireframes / UI Design         │ Phase 1      │ byt8:ui-designer                │
+│ API Design / OpenAPI           │ Phase 2      │ byt8:api-architect              │
+│ DB Migration / SQL             │ Phase 3      │ byt8:postgresql-architect       │
+│ Backend / Java / Controller    │ Phase 4      │ byt8:spring-boot-developer      │
+│ Frontend / Angular / TypeScript│ Phase 5      │ byt8:angular-frontend-developer │
+│ Tests / E2E / Specs            │ Phase 6      │ byt8:test-engineer              │
+└────────────────────────────────┴──────────────┴─────────────────────────────────┘
+
+SCHRITT 2 - An Agent delegieren (⛔ NICHT SELBST FIXEN!):
+  Task(byt8:ZUSTÄNDIGER_AGENT, "
+    Phase [ZIEL_PHASE] (Hotfix): Fix für Issue #[NUM]
+
+    ## TECHNICAL SPECIFICATION
+    [Spec-Inhalt injizieren]
+
+    ## ZU FIXENDE PUNKTE
+    [Konkrete Fix-Beschreibung vom User / Audit / Review]
+
+    ## YOUR TASK
+    Fixe NUR die oben genannten Punkte. Keine anderen Änderungen.
+  ")
+
+SCHRITT 3 - Workflow-State zurücksetzen:
+  - currentPhase = ZIEL_PHASE
+  - Context ab Ziel-Phase aufwärts löschen (downstream invalidiert)
+  - Iteration-Counter incrementieren (securityFixCount / reviewFixCount)
+
+SCHRITT 4 - Auto-Advance-Kette:
+  - Ab Ziel-Phase läuft Auto-Advance automatisch weiter
+  - Bis zum nächsten Approval Gate (7 oder 8)
+  - Dort erneut User fragen
+```
+
+### Beispiele
+
+```
+BEISPIEL: User sagt "Fix die OpenAPI-Doku" in Phase 7
+  1. Ziel: Java-Datei → Phase 4 → byt8:spring-boot-developer
+  2. Task(byt8:spring-boot-developer, "Phase 4 (Hotfix): ...")
+  3. State: currentPhase = 4
+  4. Auto-Advance: 4 → 5 → 6 → 7 (Approval Gate)
+
+BEISPIEL: Code Review sagt "Backend Authorization fehlt"
+  1. Ziel: Backend → Phase 4 → byt8:spring-boot-developer
+  2. Task(byt8:spring-boot-developer, "Phase 4 (Hotfix): ...")
+  3. State: currentPhase = 4
+  4. Auto-Advance: 4 → 5 → 6 → 7 → 8 (Approval Gate)
+
+BEISPIEL: Code Review sagt "DB-Migration fehlt"
+  1. Ziel: Database → Phase 3 → byt8:postgresql-architect
+  2. Task(byt8:postgresql-architect, "Phase 3 (Hotfix): ...")
+  3. State: currentPhase = 3
+  4. Auto-Advance: 3 → 4 → 5 → 6 → 7 → 8 (Approval Gate)
 ```
 
 ---
