@@ -286,9 +286,11 @@ grep -r "keyword" frontend/src --include="*.ts" | head -10
 **Speichere die vollständige Technical Specification als Markdown-Datei:**
 
 ```bash
-mkdir -p docs/specs
-# Dateiname: docs/specs/issue-{N}-{kurzer-name}.md
+mkdir -p .workflow/specs
+# Dateiname: .workflow/specs/issue-{N}-{kurzer-name}.md
 ```
+
+**Hinweis:** `.workflow/` ist in `.gitignore` — die Spec ist temporäre Workflow-Daten, keine permanente Dokumentation.
 
 Die Spec-Datei enthält ALLE Details:
 - 5x Warum Root Cause Analyse
@@ -305,7 +307,7 @@ Die Spec-Datei enthält ALLE Details:
 # Context in workflow-state.json schreiben
 jq '.context.technicalSpec = {
   "issueNumber": 42,
-  "specFile": "docs/specs/issue-42-feature-name.md",
+  "specFile": ".workflow/specs/issue-42-feature-name.md",
   "affectedLayers": ["database", "backend", "frontend"],
   "newEntities": ["EntityName"],
   "reuseServices": ["ServiceA", "ServiceB"],
