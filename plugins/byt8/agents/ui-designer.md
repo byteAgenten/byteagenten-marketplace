@@ -324,9 +324,21 @@ When creating wireframes, provide:
 ### Input (Technical Spec lesen)
 
 ```bash
-# Technical Spec aus vorheriger Phase lesen
+# 1. VOLLSTÄNDIGE Technical Spec lesen (enthält alle Details!)
+SPEC_FILE=$(jq -r '.context.technicalSpec.specFile // empty' .workflow/workflow-state.json)
+if [ -n "$SPEC_FILE" ] && [ -f "$SPEC_FILE" ]; then
+  cat "$SPEC_FILE"
+fi
+
+# 2. Reduzierter Context (für schnelle Referenz)
 cat .workflow/workflow-state.json | jq '.context.technicalSpec'
 ```
+
+**WICHTIG:** Die vollständige Spec-Datei enthält Details die im reduzierten Context fehlen:
+- Code-Snippets und konkrete Implementierungsvorschläge
+- Architektur-Begründungen (Warum Option A statt B?)
+- Detaillierte Test-Szenarien mit Beschreibungen
+- Risiko-Mitigationen
 
 ### Output (Wireframes speichern) - MUSS ausgeführt werden!
 

@@ -281,24 +281,51 @@ grep -r "keyword" frontend/src --include="*.ts" | head -10
 
 ## Context Protocol - PFLICHT!
 
-**Nach Abschluss der Technical Specification MUSST du den Context in workflow-state.json speichern:**
+### 1. Vollständige Spec-Datei speichern
+
+**Speichere die vollständige Technical Specification als Markdown-Datei:**
+
+```bash
+mkdir -p docs/specs
+# Dateiname: docs/specs/issue-{N}-{kurzer-name}.md
+```
+
+Die Spec-Datei enthält ALLE Details:
+- 5x Warum Root Cause Analyse
+- Architektur-Entscheidungen mit Begründungen
+- Konkrete Code-Snippets und Queries
+- Detaillierte Test-Szenarien
+- Risiko-Mitigationen
+
+### 2. Reduzierten Context in workflow-state.json speichern
+
+**Nach Speichern der Spec-Datei MUSST du den Context speichern:**
 
 ```bash
 # Context in workflow-state.json schreiben
 jq '.context.technicalSpec = {
   "issueNumber": 42,
+  "specFile": "docs/specs/issue-42-feature-name.md",
   "affectedLayers": ["database", "backend", "frontend"],
   "newEntities": ["EntityName"],
   "reuseServices": ["ServiceA", "ServiceB"],
   "newEndpoints": ["POST /api/xyz", "GET /api/xyz"],
+  "modifiedEndpoints": [],
   "patternsUsed": ["Factory", "Strategy"],
   "securityNotes": "...",
   "uiConstraints": ["..."],
   "risks": ["..."],
+  "testScenarios": {
+    "unit": ["test1", "test2"],
+    "integration": ["test3"],
+    "e2e": ["test4"]
+  },
   "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
 }' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
 mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```
+
+**⚠️ WICHTIG:** Das `specFile`-Feld ist PFLICHT! Alle nachfolgenden Agents lesen die vollständige Spec über diesen Pfad.
 
 **⚠️ OHNE diesen Schritt schlägt die Phase-Validierung fehl!**
 

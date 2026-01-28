@@ -217,13 +217,20 @@ Focus on clear, concise API sketches. The spring-boot-developer will implement f
 ### Input (Vorherige Phasen lesen)
 
 ```bash
-# Technical Spec und Wireframes lesen
+# 1. VOLLSTÄNDIGE Technical Spec lesen (enthält alle Details!)
+SPEC_FILE=$(jq -r '.context.technicalSpec.specFile // empty' .workflow/workflow-state.json)
+if [ -n "$SPEC_FILE" ] && [ -f "$SPEC_FILE" ]; then
+  cat "$SPEC_FILE"
+fi
+
+# 2. Reduzierter Context (für schnelle Referenz)
 cat .workflow/workflow-state.json | jq '.context.technicalSpec'
 cat .workflow/workflow-state.json | jq '.context.wireframes'
 ```
 
 Nutze den Kontext:
-- **technicalSpec**: Architektur-Entscheidungen, betroffene Layer, neue Entities
+- **Vollständige Spec**: Code-Snippets, JPQL-Queries, Architektur-Begründungen, Risiko-Mitigationen
+- **technicalSpec**: Schnelle Referenz für betroffene Layer, neue Entities
 - **wireframes**: UI-Komponenten die API-Endpoints brauchen
 
 ### Output (API Design speichern) - MUSS ausgeführt werden!

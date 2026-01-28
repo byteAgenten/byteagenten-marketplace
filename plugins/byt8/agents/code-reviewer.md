@@ -388,7 +388,13 @@ Issue identified during review
 ### Input (Vorherige Phasen lesen)
 
 ```bash
-# Alle relevanten Context-Keys aus workflow-state.json lesen
+# 1. VOLLSTÄNDIGE Technical Spec lesen (enthält alle Details!)
+SPEC_FILE=$(jq -r '.context.technicalSpec.specFile // empty' .workflow/workflow-state.json)
+if [ -n "$SPEC_FILE" ] && [ -f "$SPEC_FILE" ]; then
+  cat "$SPEC_FILE"
+fi
+
+# 2. Alle relevanten Context-Keys aus workflow-state.json lesen
 cat .workflow/workflow-state.json | jq '.context.technicalSpec'
 cat .workflow/workflow-state.json | jq '.context.apiDesign'
 cat .workflow/workflow-state.json | jq '.context.backendImpl'
@@ -399,7 +405,8 @@ cat .workflow/workflow-state.json | jq '.targetCoverage'
 ```
 
 Nutze den Kontext:
-- **technicalSpec**: Architektur-Entscheidungen prüfen (von architect-planner)
+- **Vollständige Spec**: Implementation vs. Spec-Anforderungen vergleichen, alle Business Rules prüfen
+- **technicalSpec**: Schnelle Referenz für Architektur-Entscheidungen
 - **apiDesign**: Implementation vs. Design vergleichen
 - **backendImpl**: Endpoints, Coverage, Test-Counts prüfen
 - **frontendImpl**: Components, Routes, State Management prüfen

@@ -529,14 +529,27 @@ Focus on data integrity, performance, and maintainability. Always consider the i
 ### Input (Vorherige Phasen lesen)
 
 ```bash
-# Technical Spec und API Design lesen
+# 1. VOLLSTÄNDIGE Technical Spec lesen (enthält alle Details!)
+SPEC_FILE=$(jq -r '.context.technicalSpec.specFile // empty' .workflow/workflow-state.json)
+if [ -n "$SPEC_FILE" ] && [ -f "$SPEC_FILE" ]; then
+  cat "$SPEC_FILE"
+fi
+
+# 2. Reduzierter Context (für schnelle Referenz)
 cat .workflow/workflow-state.json | jq '.context.technicalSpec'
 cat .workflow/workflow-state.json | jq '.context.apiDesign'
+
+# 3. Rollback-Context prüfen (Security/Review Findings)
+cat .workflow/workflow-state.json | jq '.context.securityAudit.findings // empty'
+cat .workflow/workflow-state.json | jq '.context.reviewFeedback.fixes // empty'
 ```
 
 Nutze den Kontext:
-- **technicalSpec**: Architektur-Entscheidungen, Performance-Anforderungen
+- **Vollständige Spec**: Schema-Details, Index-Empfehlungen, Performance-Überlegungen
+- **technicalSpec**: Schnelle Referenz für Architektur-Entscheidungen
 - **apiDesign**: Data Model für Tables, Columns, Relationships
+- **securityAudit.findings**: Bei Rollback — Security-Findings die gefixt werden müssen (z.B. SQL Injection)
+- **reviewFeedback.fixes**: Bei Rollback — Code-Review-Findings die gefixt werden müssen
 
 ### Output (Migrations speichern) - MUSS ausgeführt werden!
 

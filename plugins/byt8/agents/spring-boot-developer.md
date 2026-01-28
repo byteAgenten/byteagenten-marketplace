@@ -239,18 +239,31 @@ Before submitting code for commit, verify:
 ### Input (Vorherige Phasen lesen)
 
 ```bash
-# Technical Spec, API Design und Migrations lesen
+# 1. VOLLSTÄNDIGE Technical Spec lesen (enthält alle Details!)
+SPEC_FILE=$(jq -r '.context.technicalSpec.specFile // empty' .workflow/workflow-state.json)
+if [ -n "$SPEC_FILE" ] && [ -f "$SPEC_FILE" ]; then
+  cat "$SPEC_FILE"
+fi
+
+# 2. Reduzierter Context (für schnelle Referenz)
 cat .workflow/workflow-state.json | jq '.context.technicalSpec'
 cat .workflow/workflow-state.json | jq '.context.apiDesign'
 cat .workflow/workflow-state.json | jq '.context.migrations'
 cat .workflow/workflow-state.json | jq '.targetCoverage'
+
+# 3. Rollback-Context prüfen (Security/Review Findings)
+cat .workflow/workflow-state.json | jq '.context.securityAudit.findings // empty'
+cat .workflow/workflow-state.json | jq '.context.reviewFeedback.fixes // empty'
 ```
 
 Nutze den Kontext:
-- **technicalSpec**: Architektur-Entscheidungen, betroffene Layer, Risiken
+- **Vollständige Spec**: Code-Snippets, JPQL-Queries, Business Rules im Detail, Validierungs-Logik
+- **technicalSpec**: Schnelle Referenz für Architektur-Entscheidungen, Risiken
 - **apiDesign**: Endpoints, DTOs, Business Rules
 - **migrations**: DB-Schema für JPA Entity Mapping
 - **targetCoverage**: Test Coverage Ziel (50%/70%/85%/95%)
+- **securityAudit.findings**: Bei Rollback — Security-Findings die gefixt werden müssen
+- **reviewFeedback.fixes**: Bei Rollback — Code-Review-Findings die gefixt werden müssen
 
 ### Output (Backend Implementation speichern) - MUSS ausgeführt werden!
 

@@ -250,7 +250,13 @@ Ready for code review.
 ### Input (Vorherige Phasen lesen)
 
 ```bash
-# Context aus workflow-state.json lesen
+# 1. VOLLSTÄNDIGE Technical Spec lesen (enthält alle Details!)
+SPEC_FILE=$(jq -r '.context.technicalSpec.specFile // empty' .workflow/workflow-state.json)
+if [ -n "$SPEC_FILE" ] && [ -f "$SPEC_FILE" ]; then
+  cat "$SPEC_FILE"
+fi
+
+# 2. Reduzierter Context (für schnelle Referenz)
 cat .workflow/workflow-state.json | jq '.context.technicalSpec'
 cat .workflow/workflow-state.json | jq '.context.backendImpl'
 cat .workflow/workflow-state.json | jq '.context.frontendImpl'
@@ -258,7 +264,8 @@ cat .workflow/workflow-state.json | jq '.targetCoverage'
 ```
 
 Nutze den Kontext:
-- **technicalSpec**: Welche Komponenten getestet werden müssen
+- **Vollständige Spec**: Detaillierte Test-Szenarien mit Beschreibungen, Edge Cases, Erwartetes Verhalten
+- **technicalSpec**: Schnelle Referenz für zu testende Komponenten
 - **backendImpl**: Backend-Dateien für Unit/Integration-Tests
 - **frontendImpl**: Frontend-Dateien für Spec-Tests
 - **targetCoverage**: Coverage-Ziel (50%/70%/85%/95%)

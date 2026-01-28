@@ -435,14 +435,21 @@ Focus on identifying real vulnerabilities, providing clear remediation guidance,
 ### Input (Vorherige Phasen lesen)
 
 ```bash
-# Context aus workflow-state.json lesen
+# 1. VOLLSTÄNDIGE Technical Spec lesen (enthält alle Details!)
+SPEC_FILE=$(jq -r '.context.technicalSpec.specFile // empty' .workflow/workflow-state.json)
+if [ -n "$SPEC_FILE" ] && [ -f "$SPEC_FILE" ]; then
+  cat "$SPEC_FILE"
+fi
+
+# 2. Reduzierter Context (für schnelle Referenz)
 cat .workflow/workflow-state.json | jq '.context.technicalSpec'
 cat .workflow/workflow-state.json | jq '.context.backendImpl'
 cat .workflow/workflow-state.json | jq '.context.frontendImpl'
 ```
 
 Nutze den Kontext:
-- **technicalSpec**: Architektur und Security-relevante Entscheidungen
+- **Vollständige Spec**: Sicherheitsaspekte im Detail, Autorisierungs-Anforderungen, Risiko-Mitigationen
+- **technicalSpec**: Schnelle Referenz für Architektur-Entscheidungen
 - **backendImpl**: Welche Controller/Services geprüft werden müssen
 - **frontendImpl**: Welche Komponenten auf XSS geprüft werden müssen
 
