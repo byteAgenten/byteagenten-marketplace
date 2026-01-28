@@ -8,21 +8,21 @@
 
 Dieses Plugin orchestriert spezialisierte Agents durch einen strukturierten Entwicklungs-Workflow mit Quality Gates und User Approvals.
 
-### Ralph Wiggum Pattern (v5.0+)
+### Workflow-Steuerung
 
-Ab Version 5.0 folgt das Plugin dem **Ralph Wiggum Pattern** für deterministische Workflow-Kontrolle:
+Das Plugin nutzt eine **hybride Workflow-Kontrolle** aus Hooks und SKILL-Logik:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  1. User ruft /byt8:full-stack-feature auf                  │
-│  2. SKILL führt EINE Phase aus und stoppt                   │
+│  2. SKILL führt Phasen aus bis zum nächsten Approval Gate   │
 │  3. Stop-Hook validiert und gibt Anweisungen                │
 │  4. User gibt Approval oder Feedback                        │
-│  5. Nächster Aufruf → nächste Phase                         │
+│  5. Nächster Aufruf → weiter bis zum nächsten Gate          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Kernprinzip:** EINE Phase pro Aufruf. Der Stop-Hook kontrolliert den Workflow, nicht Claude.
+**Kernprinzip:** Approval Gates (0, 1, 7, 8, 9) pausieren für User-Input. Auto-Advance Phasen (2-6) laufen ohne Stopp durch. Der Stop-Hook kontrolliert den Workflow, nicht Claude.
 
 ---
 
