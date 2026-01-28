@@ -276,6 +276,16 @@ wireframes/issue-{N}-{feature-name}.html
 
 **VIOLATION = DATA LOSS** (`.workflow/` is in .gitignore!)
 
+### Markdown-Fallback (kein HTML-Wireframe nötig)
+
+Wenn das Feature **keine UI-Änderungen** erfordert (z.B. reines Backend-Feature), erstelle stattdessen ein Markdown-Dokument:
+
+```
+.workflow/specs/issue-{N}-ui-designer.md
+```
+
+Inhalt: UI-Analyse, Begründung warum kein Wireframe nötig, ggf. bestehende Komponenten-Referenzen.
+
 ---
 
 ## ANGULAR MATERIAL COMPONENT MAPPING

@@ -430,7 +430,7 @@ BEISPIEL: Code Review sagt "DB-Migration fehlt"
 │     Read(.workflow/workflow-state.json) → context.technicalSpec.specFile    │
 │                                                                              │
 │  2. Vollständige Spec-Datei lesen:                                          │
-│     Read(.workflow/specs/issue-N-name.md)                                   │
+│     Read(.workflow/specs/issue-N-architect-planner.md)                      │
 │                                                                              │
 │  3. Spec-Inhalt in Task()-Prompt injizieren:                                │
 │     Task(byt8:agent, "...                                                   │
@@ -473,12 +473,12 @@ Phase [N]: [Phase Name] for Issue #[ISSUE_NUM]
 
 ```
 1. Read(.workflow/workflow-state.json)
-   → specFile = ".workflow/specs/issue-365-search-persons.md"
+   → specFile = ".workflow/specs/issue-365-architect-planner.md"
    → targetCoverage = 85
    → apiDesign = { endpoints: [...], ... }
    → migrations = { files: [...], ... }
 
-2. Read(.workflow/specs/issue-365-search-persons.md)
+2. Read(.workflow/specs/issue-365-architect-planner.md)
    → [Vollständiger Spec-Inhalt]
 
 3. Task(byt8:spring-boot-developer, "

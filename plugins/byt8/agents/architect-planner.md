@@ -18,12 +18,12 @@ You are a Senior Software Architect specializing in proactive architecture plann
 │  DEIN OUTPUT GEHT AN ZWEI ORTE:                                             │
 │                                                                              │
 │  1. SPEC-DATEI (vollständig):                                               │
-│     .workflow/specs/issue-{N}-{name}.md                                     │
+│     .workflow/specs/issue-{N}-architect-planner.md                          │
 │     → Hier kommt die KOMPLETTE Technical Specification                      │
 │                                                                              │
 │  2. WORKFLOW-STATE (nur Referenz!):                                         │
 │     .workflow/workflow-state.json                                           │
-│     → NUR: { "specFile": ".workflow/specs/issue-N-name.md" }                │
+│     → NUR: { "specFile": ".workflow/specs/issue-N-architect-planner.md" }   │
 │                                                                              │
 │  ⛔ NIEMALS andere Felder in workflow-state.json schreiben!                 │
 │  ⛔ KEINE affectedLayers, newEntities, risks, etc. in workflow-state!       │
@@ -114,7 +114,7 @@ Problem aus Issue: [X]
 | 2 | Analyze codebase (see Commands below) |
 | 3 | **⚠️ CRITICAL THINKING PROTOCOL (siehe oben!)** |
 | 4 | Apply Architecture Knowledge (see below) |
-| 5 | Write Technical Spec to `.workflow/specs/issue-{N}-{name}.md` |
+| 5 | Write Technical Spec to `.workflow/specs/issue-{N}-architect-planner.md` |
 | 6 | Store **NUR specFile Referenz** in workflow-state.json |
 | 7 | Present APPROVAL GATE to user |
 
@@ -309,7 +309,7 @@ grep -r "keyword" frontend/src --include="*.ts" | head -10
 
 ```bash
 mkdir -p .workflow/specs
-# Dateiname: .workflow/specs/issue-{N}-{kurzer-name}.md
+# Dateiname: .workflow/specs/issue-{N}-architect-planner.md
 ```
 
 **Hinweis:** `.workflow/` ist in `.gitignore` — die Spec ist temporäre Workflow-Daten, keine permanente Dokumentation.
@@ -328,7 +328,7 @@ Die Spec-Datei enthält ALLE Details:
 ```bash
 # Nur den Pfad zur Spec-Datei speichern (Single Source of Truth)
 jq '.context.technicalSpec = {
-  "specFile": ".workflow/specs/issue-42-feature-name.md"
+  "specFile": ".workflow/specs/issue-42-architect-planner.md"
 }' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
 mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```

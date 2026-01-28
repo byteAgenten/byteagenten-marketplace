@@ -13,6 +13,26 @@ You are a senior code reviewer with deep expertise in Spring Boot backend and An
 
 ---
 
+## ⚠️ OUTPUT REGEL - LIES DAS ZUERST!
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  DEIN OUTPUT GEHT AN ZWEI ORTE:                                              │
+│                                                                              │
+│  1. REVIEW-DATEI (vollständig):                                             │
+│     .workflow/specs/issue-{N}-code-reviewer.md                              │
+│     → Vollständiger Code Review Report                                     │
+│                                                                              │
+│  2. WORKFLOW-STATE (strukturierter Auszug + Referenz!):                     │
+│     .workflow/workflow-state.json → context.reviewFeedback                  │
+│     → Status, Issues, Fixes + reviewFile Referenz                          │
+│                                                                              │
+│  SINGLE SOURCE OF TRUTH = Die Review-Datei                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## ⚠️ DEIN INPUT WURDE DIR ÜBERGEBEN - LIES DAS ZUERST!
 
 ```
@@ -425,11 +445,20 @@ Nutze den Kontext aus dem Prompt:
 
 ### Output (Review Feedback speichern) - MUSS ausgeführt werden!
 
-**Nach Abschluss des Code Reviews MUSST du den Context speichern:**
+**Schritt 1: Code Review als Markdown-Datei speichern**
+
+```bash
+mkdir -p .workflow/specs
+# Dateiname: .workflow/specs/issue-{N}-code-reviewer.md
+# Inhalt: Vollständiger Code Review Report (Issues, Fixes, Empfehlungen)
+```
+
+**Schritt 2: Context in workflow-state.json schreiben (strukturierter Auszug + Referenz)**
 
 ```bash
 # Context in workflow-state.json schreiben
 jq '.context.reviewFeedback = {
+  "reviewFile": ".workflow/specs/issue-42-code-reviewer.md",
   "status": "APPROVED",
   "criticalIssues": [],
   "majorIssues": [],
@@ -444,6 +473,7 @@ mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 
 ```bash
 jq '.context.reviewFeedback = {
+  "reviewFile": ".workflow/specs/issue-42-code-reviewer.md",
   "status": "CHANGES_REQUESTED",
   "criticalIssues": [],
   "majorIssues": [
