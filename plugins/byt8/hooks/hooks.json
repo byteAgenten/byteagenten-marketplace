@@ -24,6 +24,17 @@
         ]
       }
     ],
+    "SubagentStart": [
+      {
+        "description": "Subagent Start Notification",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/subagent_start.sh"
+          }
+        ]
+      }
+    ],
     "SubagentStop": [
       {
         "description": "Subagent Output Validation",
