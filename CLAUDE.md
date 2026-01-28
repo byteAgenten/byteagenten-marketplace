@@ -26,7 +26,7 @@ Dein Summary ist UNVOLLSTÄNDIG! Es fehlen die Workflow-Regeln.
 
 ## Project Overview
 
-This is the **byteAgenten Plugin Marketplace** - a private Claude Code plugin repository. The main plugin is **byt8**, a full-stack development toolkit for Angular 21 + Spring Boot 4 applications with a 9-phase workflow.
+This is the **byteAgenten Plugin Marketplace** - a private Claude Code plugin repository. The main plugin is **byt8**, a full-stack development toolkit for Angular 21 + Spring Boot 4 applications with a 10-phase workflow.
 
 ## Architecture
 
@@ -51,9 +51,9 @@ byteagenten-marketplace/
 - **Skills** (`skills/*/SKILL.md`) = Workflow logic with detailed instructions
 - **Agents** (`agents/*.md`) = Specialized AI personas for specific tasks
 
-### The 10-Phase Workflow (full-stack-feature)
+### The Workflow (full-stack-feature)
 
-The main workflow orchestrates these agents in sequence:
+The main workflow orchestrates these agents in a 10-phase sequence:
 
 | Phase | Agent | Purpose |
 |-------|-------|---------|
@@ -63,9 +63,10 @@ The main workflow orchestrates these agents in sequence:
 | 3 | postgresql-architect | Database migrations (Flyway) |
 | 4 | spring-boot-developer | Backend implementation |
 | 5 | angular-frontend-developer | Frontend implementation |
-| 6 | test-engineer + security-auditor | E2E tests + security audit |
-| 7 | code-reviewer | Code review |
-| 8 | (orchestrator) | Push & PR erstellen |
+| 6 | test-engineer | E2E tests |
+| 7 | security-auditor | Security audit |
+| 8 | code-reviewer | Code review |
+| 9 | (orchestrator) | Push & PR erstellen |
 
 ### Workflow State Management
 
@@ -78,7 +79,7 @@ State is persisted in `.workflow/workflow-state.json` with:
 
 | Command | Description |
 |---------|-------------|
-| `/byt8:full-stack-feature` | 9-phase workflow for full-stack feature development |
+| `/byt8:full-stack-feature` | 10-phase workflow for full-stack feature development |
 | `/byt8:ui-theming` | Design system initialization (theme, tokens, typography) |
 | `/byt8:python-expert` | Python development support |
 

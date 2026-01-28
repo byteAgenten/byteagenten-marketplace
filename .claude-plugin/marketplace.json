@@ -5,13 +5,12 @@
     "email": "hans.pickelmann@byteagenten.de"
   },
   "metadata": {
-    "description": "byteAgenten Claude Code Plugin Marketplace",
-    "version": "4.4.6"
+    "description": "byteAgenten Claude Code Plugin Marketplace"
   },
   "plugins": [
     {
       "name": "byt8",
-      "description": "Full-stack development toolkit for Angular 21 + Spring Boot 4 applications with 9-phase workflow",
+      "description": "Full-stack development toolkit for Angular 21 + Spring Boot 4 applications with 10-phase workflow",
       "source": "./plugins/byt8",
       "commands": [
         "./commands/full-stack-feature.md",

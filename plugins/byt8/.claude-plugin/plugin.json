@@ -1,7 +1,7 @@
   {
   "name": "byt8",
-  "version": "5.3.0",
-  "description": "Full-stack development toolkit for Angular 21 + Spring Boot 4 applications with 9-phase workflow",
+  "version": "6.0.0",
+  "description": "Full-stack development toolkit for Angular 21 + Spring Boot 4 applications with 10-phase workflow",
   "author": {
     "name": "byteAgenten"
   },

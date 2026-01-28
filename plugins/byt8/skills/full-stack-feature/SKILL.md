@@ -1,13 +1,12 @@
 ---
 name: full-stack-feature
 description: Orchestrates full-stack feature development with hook-based automation.
-version: 5.3.0
 author: byteagent - Hans Pickelmann
 ---
 
 # Full-Stack Feature Development Skill
 
-## ⚠️ WICHTIGSTE REGEL: KONTINUIERLICHER WORKFLOW
+## WICHTIGSTE REGEL: KONTINUIERLICHER WORKFLOW
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -16,9 +15,9 @@ author: byteagent - Hans Pickelmann
 │                                                                              │
 │  Nach JEDEM Agent-Aufruf:                                                   │
 │                                                                              │
-│  1. Prüfe: Ist die NÄCHSTE Phase ein Approval Gate? (0, 1, 6, 7, 8)        │
+│  1. Prüfe: Ist die NÄCHSTE Phase ein Approval Gate? (0, 1, 7, 8, 9)       │
 │                                                                              │
-│  2. WENN NEIN (Phasen 2, 3, 4, 5):                                          │
+│  2. WENN NEIN (Phasen 2, 3, 4, 5, 6):                                     │
 │     → SOFORT nächsten Agent aufrufen                                        │
 │     → NICHT stoppen, NICHT auf User warten                                  │
 │                                                                              │
@@ -42,9 +41,10 @@ author: byteagent - Hans Pickelmann
 | 3 | `byt8:postgresql-architect` | ▶️ AUTO | → Sofort Phase 4 starten |
 | 4 | `byt8:spring-boot-developer` | ▶️ AUTO | → Sofort Phase 5 starten |
 | 5 | `byt8:angular-frontend-developer` | ▶️ AUTO | → Sofort Phase 6 starten |
-| 6 | `byt8:test-engineer` + `byt8:security-auditor` | ⏸️ APPROVAL | → Stopp, User fragen |
-| 7 | `byt8:code-reviewer` | ⏸️ APPROVAL | → Stopp, User fragen |
-| 8 | Claude direkt (Push & PR) | ⏸️ APPROVAL | → Stopp, User fragen |
+| 6 | `byt8:test-engineer` | ▶️ AUTO | → Sofort Phase 7 starten |
+| 7 | `byt8:security-auditor` | ⏸️ APPROVAL | → Stopp, Findings anzeigen |
+| 8 | `byt8:code-reviewer` | ⏸️ APPROVAL | → Stopp, User fragen |
+| 9 | Claude direkt (Push & PR) | ⏸️ APPROVAL | → Stopp, User fragen |
 
 ---
 
@@ -72,7 +72,7 @@ Claude:
   5. "Wireframes fertig. Zufrieden?" → STOPP
 ```
 
-### Phase 2-5: Auto-Advance (KEIN STOPP!)
+### Phase 2-6: Auto-Advance (KEIN STOPP!)
 
 ```
 User: "Ja" (nach Wireframes)
@@ -89,34 +89,34 @@ Claude:
   9. Agent fertig → Phase 4 ist AUTO → WEITERMACHEN!
   10. State: currentPhase = 5
   11. Task(byt8:angular-frontend-developer, "...")
-  12. Agent fertig → Phase 5 führt zu Phase 6 = APPROVAL
-  13. State: status = "awaiting_approval", currentPhase = 6
-  14. "Frontend fertig. Bereit für Tests?" → STOPP
+  12. Agent fertig → Phase 5 ist AUTO → WEITERMACHEN!
+  13. State: currentPhase = 6
+  14. Task(byt8:test-engineer, "...")
+  15. Agent fertig → Phase 6 ist AUTO → WEITERMACHEN!
+  16. State: currentPhase = 7
+  17. Task(byt8:security-auditor, "...")
+  18. Agent fertig → Phase 7 ist APPROVAL
+  19. State: status = "awaiting_approval"
+  20. Security Findings anzeigen → STOPP
 ```
 
-### Phase 6-8: Mit Approval Gates
+### Phase 7-9: Mit Approval Gates
 
 ```
-User: "Ja"
+User: "Weiter" (oder "Fix critical+high")
 
 Claude:
-  1. Task(byt8:test-engineer, "...")
-  2. Task(byt8:security-auditor, "...")
-  3. Phase 6 ist APPROVAL
-  4. "Tests + Security Audit fertig. Zufrieden?" → STOPP
-
-User: "Ja"
-
-Claude:
-  1. Task(byt8:code-reviewer, "...")
-  2. Phase 7 ist APPROVAL
-  3. Wenn APPROVED: "Code Review bestanden. PR erstellen?" → STOPP
-  4. Wenn CHANGES_REQUESTED: Fixes durchführen, erneut reviewen
+  1. Falls Fixes: An zuständige Agents delegieren, dann Re-Audit
+  2. Falls Weiter: State: currentPhase = 8
+  3. Task(byt8:code-reviewer, "...")
+  4. Phase 8 ist APPROVAL
+  5. Wenn APPROVED: "Code Review bestanden. PR erstellen?" → STOPP
+  6. Wenn CHANGES_REQUESTED: Fixes durchführen, erneut reviewen
 
 User: "Ja"
 
 Claude:
-  1. Phase 8: Push & PR erstellen
+  1. Phase 9: Push & PR erstellen
   2. "PR erstellt: [URL]. Workflow abgeschlossen."
 ```
 
@@ -195,12 +195,12 @@ Task(byt8:architect-planner, "Create Technical Specification for Issue #N: Title
 │  aktuelle_phase = currentPhase aus State                                     │
 │  nächste_phase = aktuelle_phase + 1                                          │
 │                                                                              │
-│  WENN nächste_phase IN (2, 3, 4, 5):                                        │
+│  WENN nächste_phase IN (2, 3, 4, 5, 6):                                    │
 │    → WIP-Commit erstellen (falls Änderungen)                                │
 │    → State updaten: currentPhase = nächste_phase                            │
 │    → SOFORT nächsten Agent aufrufen                                         │
 │                                                                              │
-│  WENN nächste_phase IN (0, 1, 6, 7, 8) ODER aktuelle_phase IN (6, 7, 8):   │
+│  WENN nächste_phase IN (0, 1, 7, 8, 9) ODER aktuelle_phase IN (7, 8, 9):  │
 │    → WIP-Commit erstellen (falls Änderungen)                                │
 │    → State updaten: status = "awaiting_approval"                            │
 │    → User fragen: "Phase X fertig. Zufrieden?"                              │
@@ -227,35 +227,68 @@ git commit -m "wip(#351/phase-4): Backend - Projektliste erweitern"
 
 ---
 
-## Phase 7: Code Review Spezialfall
+## Phase 7: Security Audit Spezialfall
+
+Der Security-Auditor zeigt alle Findings im Approval Gate an. Der User entscheidet:
+
+### Weiter (keine Fixes)
+```
+→ State: currentPhase = 8, status = "awaiting_approval"
+→ Findings akzeptiert, weiter zu Code Review
+```
+
+### Findings fixen
+```
+→ User kann granular wählen: "fix alle", "fix critical+high", "fix HIGH-001, MED-003"
+→ Claude filtert Findings nach User-Auswahl
+→ securityFixCount incrementieren
+→ Delegation an zuständige Agents basierend auf Finding-Location:
+  - Backend (.java) → byt8:spring-boot-developer
+  - Frontend (.ts/.html) → byt8:angular-frontend-developer
+→ Context für Re-Validierung löschen:
+  - context.securityAudit
+  - context.testResults
+→ Rollback zu Phase 6 (E2E Tests)
+→ Auto-Advance: Phase 6 → Phase 7 (Re-Audit) → Approval Gate
+```
+
+**Max 3 Fix-Iterationen**, danach nur noch "Weiter" oder Pause.
+
+---
+
+## Phase 8: Code Review Spezialfall
 
 Der Code-Reviewer kann zwei Ergebnisse liefern:
 
 ### APPROVED
 ```
-→ State: currentPhase = 8, status = "awaiting_approval"
+→ State: currentPhase = 9, status = "awaiting_approval"
 → User fragen: "Code Review bestanden. PR erstellen?"
 ```
 
 ### CHANGES_REQUESTED
 ```
-→ Lies context.reviewFeedback.fixes[]
-→ Für jeden Fix den passenden Agent aufrufen:
-   - type: "backend" → byt8:spring-boot-developer
-   - type: "frontend" → byt8:angular-frontend-developer
-   - type: "database" → byt8:postgresql-architect
-   - type: "tests" → byt8:test-engineer
-→ Danach: context.reviewFeedback löschen
-→ Erneut: Task(byt8:code-reviewer, "Re-review after fixes")
+→ Lies context.reviewFeedback.fixes[] (jeder Fix hat type + issue)
+→ Dynamisches Rollback basierend auf frühestem Fix-Typ:
+  - type: "database" → Rollback zu Phase 3 (Migrations)
+  - type: "backend"  → Rollback zu Phase 4 (Backend)
+  - type: "frontend" → Rollback zu Phase 5 (Frontend)
+  - type: "tests"    → Rollback zu Phase 6 (E2E Tests)
+→ Context ab Rollback-Ziel löschen (alle downstream Phasen)
+→ Review-Feedback als Kontext an den Rollback-Agent übergeben
+→ Auto-Advance-Kette läuft automatisch bis Phase 8 (Re-Review)
 ```
 
-**Max 3 Iterationen**, danach pausieren.
+**Prinzip:** Kein separates Fix-Routing. Rollback zum frühesten betroffenen Punkt,
+die Agents der Folgephasen erkennen selbständig was sich geändert hat.
+
+**Max 3 Review-Iterationen**, danach pausieren.
 
 ---
 
-## Phase 8: Push & PR
+## Phase 9: Push & PR
 
-Phase 8 hat keinen Agent - Claude führt direkt aus:
+Phase 9 hat keinen Agent - Claude führt direkt aus:
 
 1. **Ziel-Branch fragen:** "In welchen Branch mergen? (Default: fromBranch)"
 2. **PR-Body generieren** aus allen context.* Keys
@@ -265,7 +298,7 @@ Phase 8 hat keinen Agent - Claude führt direkt aus:
    git push -u origin $BRANCH
    gh pr create --base $INTO_BRANCH --title "feat(#N): Title" --body "$PR_BODY"
    ```
-5. **State updaten:** `status: "completed"`, `phases["8"].prUrl: "..."`
+5. **State updaten:** `status: "completed"`, `phases["9"].prUrl: "..."`
 
 ---
 
@@ -297,8 +330,8 @@ Wenn User nicht "Ja/OK/Weiter" sagt, sondern Änderungswünsche hat:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  APPROVAL GATES: 0, 1, 6, 7, 8  →  STOPP und User fragen                    │
-│  AUTO-ADVANCE:   2, 3, 4, 5     →  SOFORT weitermachen                      │
+│  APPROVAL GATES: 0, 1, 7, 8, 9  →  STOPP und User fragen                    │
+│  AUTO-ADVANCE:   2, 3, 4, 5, 6  →  SOFORT weitermachen                      │
 │                                                                              │
 │  Der Stop-Hook validiert im Hintergrund und erstellt WIP-Commits.           │
 │  Claude wartet NICHT auf Hook-Output für Auto-Advance Phasen.               │

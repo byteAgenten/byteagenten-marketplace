@@ -7,10 +7,11 @@ Setze den Retry-Counter für die aktuelle Phase zurück.
 1. Lies `.workflow/workflow-state.json` um die aktuelle Phase zu ermitteln
 2. Lies `.workflow/recovery/retry-tracker.json`
 3. Setze den Counter für die aktuelle Phase auf 0
-4. Falls der Workflow wegen `max_retries` pausiert ist:
+4. Falls Phase 7 (Security Audit): Setze auch `securityFixCount` auf 0 in `workflow-state.json`
+5. Falls der Workflow wegen `max_retries` oder `max_review_iterations` pausiert ist:
    - Setze `status` auf `"active"`
    - Lösche `pauseReason`
-5. Speichere alle Änderungen
+6. Speichere alle Änderungen
 
 Bestätige das Zurücksetzen und zeige:
 - Aktuelle Phase

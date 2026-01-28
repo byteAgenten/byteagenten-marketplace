@@ -94,8 +94,8 @@ echo "════════════════════════�
 echo "📚 KONTEXT AUS VORHERIGEN PHASEN"
 echo "═══════════════════════════════════════════════════════════════════════════════"
 
-PHASE_NAMES=("Tech Spec" "Wireframes" "API Design" "Migrations" "Backend" "Frontend" "E2E Tests" "Review" "PR")
-PHASE_FILES=("spec" "wireframes" "api" "migrations" "backend" "frontend" "tests" "review" "pr")
+PHASE_NAMES=("Tech Spec" "Wireframes" "API Design" "Migrations" "Backend" "Frontend" "E2E Tests" "Security Audit" "Code Review" "Push & PR")
+PHASE_FILES=("spec" "wireframes" "api" "migrations" "backend" "frontend" "tests" "security" "review" "pr")
 
 for i in $(seq 0 $((CURRENT_PHASE - 1))); do
   PHASE_FILE="${CONTEXT_DIR}/phase-${i}-${PHASE_FILES[$i]}.json"
@@ -156,10 +156,17 @@ for i in $(seq 0 $((CURRENT_PHASE - 1))); do
         jq -r '
           .summary |
           "  Test Status: \(.testStatus)",
-          "  Security Findings: \(.securityFindings | length) issues"
+          "  Tests Passed: \(.testsPassed // "unbekannt")"
         ' "$PHASE_FILE" 2>/dev/null || echo "  [Keine Details verfügbar]"
         ;;
-      7) # Review
+      7) # Security Audit
+        jq -r '
+          .summary |
+          "  Findings: Critical=\(.severity.critical // 0) High=\(.severity.high // 0) Medium=\(.severity.medium // 0) Low=\(.severity.low // 0)",
+          "  Hotfix Required: \(.hotfixRequired // false)"
+        ' "$PHASE_FILE" 2>/dev/null || echo "  [Keine Details verfügbar]"
+        ;;
+      8) # Code Review
         jq -r '
           .summary |
           "  Review Status: \(.status)",
@@ -239,8 +246,28 @@ EOF
     cat << 'EOF'
   REGELN FÜR PHASE 6 (E2E Tests):
   - Playwright Tests MÜSSEN PASS sein
-  - Bei FAIL: Hotfix-Loop ab Phase 4
-  - User-Approval erforderlich vor Phase 7
+  - Bei FAIL: Hotfix und erneut versuchen
+  - Auto-Advance zu Phase 7 (Security Audit) wenn Tests grün
+EOF
+    ;;
+  7)
+    cat << 'EOF'
+  REGELN FÜR PHASE 7 (Security Audit):
+  - Security-Auditor prüft Backend und Frontend
+  - Findings werden im Approval Gate angezeigt
+  - User entscheidet: Fixen oder akzeptieren
+  - Max 3 Fix-Iterationen (securityFixCount)
+  - User-Approval erforderlich vor Phase 8
+EOF
+    ;;
+  8)
+    cat << 'EOF'
+  REGELN FÜR PHASE 8 (Code Review):
+  - Code-Reviewer prüft alle Änderungen
+  - Bei APPROVED: Weiter zu Phase 9 (Push & PR)
+  - Bei CHANGES_REQUESTED: Dynamischer Rollback zum frühesten Fix-Typ
+    (database→3, backend→4, frontend→5, tests→6), dann Auto-Advance bis Phase 8
+  - Max 3 Review-Iterationen, danach Pause
 EOF
     ;;
 esac

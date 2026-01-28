@@ -38,7 +38,7 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════
 # WORKFLOW-DATEN LADEN
 # ═══════════════════════════════════════════════════════════════════════════
-PHASE_NAMES=("Tech-Spec" "Wireframes" "API-Design" "Migrations" "Backend" "Frontend" "E2E-Tests" "Review" "PR")
+PHASE_NAMES=("Tech Spec" "Wireframes" "API Design" "Migrations" "Backend" "Frontend" "E2E Tests" "Security Audit" "Code Review" "Push & PR")
 
 CURRENT_PHASE=$(jq -r '.currentPhase // 0' "$WORKFLOW_FILE")
 CURRENT_AGENT=$(jq -r '.currentAgent // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")

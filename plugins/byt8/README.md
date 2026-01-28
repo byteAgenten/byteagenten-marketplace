@@ -1,6 +1,6 @@
 # byt8 Plugin
 
-**Version 5.3.0** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 9-Phasen Workflow, Approval Gates und **kontinuierlichem Auto-Advance**.
+**Version 6.0.0** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 10-Phasen Workflow, Approval Gates und **kontinuierlichem Auto-Advance**.
 
 ## Philosophy
 
@@ -87,7 +87,7 @@ export CONTEXT7_API_KEY=ctx7sk-dein-key-hier
 
 | Command | Beschreibung |
 |---------|--------------|
-| `/byt8:full-stack-feature` | 9-Phasen Feature Development Workflow |
+| `/byt8:full-stack-feature` | 10-Phasen Feature Development Workflow |
 | `/byt8:ui-theming` | Einmalige Design System Initialisierung |
 | `/byt8:python-expert` | Python Development Support |
 
@@ -111,7 +111,7 @@ export CONTEXT7_API_KEY=ctx7sk-dein-key-hier
 
 ---
 
-## Der 9-Phasen Workflow
+## Der 10-Phasen Workflow
 
 Der `full-stack-feature` Command orchestriert diese Phasen:
 
@@ -119,23 +119,23 @@ Der `full-stack-feature` Command orchestriert diese Phasen:
 |-------|-------|---------|
 | 0 | architect-planner | Technical Specification erstellen |
 | 1 | ui-designer | Wireframes erstellen |
-| 2 | api-architect | API Design (OpenAPI 3.1) |    
+| 2 | api-architect | API Design (OpenAPI 3.1) |
 | 3 | postgresql-architect | Database Migrations (Flyway) |
 | 4 | spring-boot-developer | Backend Implementation + Tests |
 | 5 | angular-frontend-developer | Frontend Implementation + Tests |
 | 6 | test-engineer | E2E Tests (Playwright) |
-| 6b | security-auditor | Security Audit |
-| 7 | code-reviewer | Code Review |
-| 8 | - (Orchestrator) | Push & PR erstellen |
+| 7 | security-auditor | Security Audit |
+| 8 | code-reviewer | Code Review |
+| 9 | - (Orchestrator) | Push & PR erstellen |
 
 ### Approval Gates
 
 Der Workflow pausiert an kritischen Punkten für User-Approval:
 - Nach Phase 0 (Technical Spec)
 - Nach Phase 1 (Wireframes)
-- Nach Phase 6 (Tests + Security)
-- Nach Phase 7 (Code Review)
-- Nach Phase 8 (PR erstellt)
+- Nach Phase 7 (Security Audit)
+- Nach Phase 8 (Code Review)
+- Nach Phase 9 (PR erstellt)
 
 ---
 
@@ -322,7 +322,7 @@ Der Zustand wird in `.workflow/` persistiert:
 
 | Skill | Beschreibung |
 |-------|--------------|
-| `full-stack-feature` | 9-Phasen Workflow mit State Management |
+| `full-stack-feature` | 10-Phasen Workflow mit State Management |
 | `ui-theming` | Design System Initialisierung (inkl. 10 vordefinierte Themes) |
 | `python-expert` | Async, Typing, Testing Patterns |
 

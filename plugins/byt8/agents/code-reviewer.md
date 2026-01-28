@@ -1,6 +1,5 @@
 ---
 name: code-reviewer
-version: 5.1.0
 last_updated: 2026-01-26
 description: Code review, quality checks before commits. TRIGGER "review code", "code review", "check my code", "before commit", "PR review". NOT FOR architecture review, security audit, writing tests.
 tools: ["Bash", "Glob", "Grep", "Read", "WebFetch", "TodoWrite", "WebSearch", "mcp__plugin_byt8_context7__resolve-library-id", "mcp__plugin_byt8_context7__query-docs", "mcp__plugin_byt8_angular-cli__list_projects", "mcp__plugin_byt8_angular-cli__get_best_practices", "mcp__plugin_byt8_angular-cli__find_examples", "mcp__plugin_byt8_angular-cli__search_documentation"]
@@ -405,7 +404,7 @@ Nutze den Kontext:
 - **backendImpl**: Endpoints, Coverage, Test-Counts prüfen
 - **frontendImpl**: Components, Routes, State Management prüfen
 - **testResults**: Coverage-Ziele verifizieren
-- **securityAudit**: Security-Findings addressiert?
+- **securityAudit**: Security-Findings addressiert? Prüfe `findings[]` Array mit Location, Impact und Recommendation pro Finding
 - **targetCoverage**: Coverage-Ziel (50%/70%/85%/95%)
 
 ### Output (Review Feedback speichern) - MUSS ausgeführt werden!

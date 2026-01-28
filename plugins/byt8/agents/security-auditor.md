@@ -1,6 +1,5 @@
 ---
 name: security-auditor
-version: 5.1.0
 last_updated: 2026-01-26
 description: Security audit, vulnerability checks, OWASP compliance. TRIGGER "security audit", "vulnerability", "OWASP", "XSS", "CSRF", "authentication security". NOT FOR code review, architecture review, general testing.
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "mcp__plugin_byt8_context7__resolve-library-id", "mcp__plugin_byt8_context7__query-docs"]
@@ -391,70 +390,6 @@ sessionStorage.setItem('tempData', 'non-sensitive');
 
 ---
 
-## SECURITY REPORT TEMPLATE
-
-```markdown
-# Security Audit Report - ProjectOrbit
-
-**Date:** YYYY-MM-DD
-**Auditor:** Claude Code Security Auditor
-**Scope:** Full application security review
-
-## Executive Summary
-
-| Severity | Count |
-|----------|-------|
-| Critical | 0     |
-| High     | 1     |
-| Medium   | 3     |
-| Low      | 5     |
-
-## Findings
-
-### HIGH-001: Missing Authorization Check
-
-**Location:** `TimeEntryController.java:45`
-**Description:** The getEntry endpoint does not verify resource ownership.
-**Impact:** Any authenticated user can access any time entry.
-**Recommendation:** Add ownership validation in service layer.
-
-```java
-// Before (vulnerable)
-return repository.findById(id);
-
-// After (fixed)
-TimeEntry entry = repository.findById(id).orElseThrow();
-if (!entry.getUser().getId().equals(currentUserId)) {
-    throw new AccessDeniedException("Not authorized");
-}
-return entry;
-```
-
-### MEDIUM-002: Insufficient Password Requirements
-
-**Location:** `RegisterRequest.java:12`
-**Description:** Password validation only checks minimum length.
-**Impact:** Users can create weak passwords.
-**Recommendation:** Add complexity requirements.
-
-### LOW-003: Missing Security Headers
-
-**Location:** `SecurityConfig.java`
-**Description:** Content-Security-Policy header not configured.
-**Impact:** Reduced protection against XSS.
-**Recommendation:** Configure CSP header.
-
-## Recommendations Summary
-
-1. Implement ownership checks on all resource endpoints
-2. Add password complexity validation
-3. Configure security headers (CSP, X-Frame-Options)
-4. Enable rate limiting on authentication endpoints
-5. Review and update dependencies
-```
-
----
-
 ## OUTPUT FORMAT
 
 When completing security audit:
@@ -485,8 +420,6 @@ Findings:
 - High: 0
 - Medium: 1 (addressed)
 - Low: 2
-
-Report: docs/security/audit-YYYY-MM-DD.md
 
 Ready for deployment.
 ```
@@ -533,9 +466,18 @@ jq '.context.securityAudit = {
     "A09_LoggingMonitoring": "PASSED",
     "A10_SSRF": "N/A"
   },
+  "findings": [
+    {
+      "id": "HIGH-001",
+      "severity": "high",
+      "location": "TimeEntryController.java:45",
+      "description": "The getEntry endpoint does not verify resource ownership.",
+      "impact": "Any authenticated user can access any time entry.",
+      "recommendation": "Add ownership validation in service layer."
+    }
+  ],
   "recommendations": ["Update dependency X to version Y", "Add rate limiting to login endpoint"],
   "hotfixRequired": false,
-  "reportPath": "docs/security/audit-YYYY-MM-DD.md",
   "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
 }' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
 mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
@@ -543,9 +485,9 @@ mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 
 **⚠️ OHNE diesen Schritt schlägt die Phase-Validierung fehl!**
 
-Der Stop-Hook prüft: `jq -e '.context.securityAudit.severity'`
+Der Stop-Hook prüft: `jq -e '.context.securityAudit | keys | length > 0'`
 
-Dies ermöglicht dem code-reviewer (Phase 7), den Security-Status zu verifizieren und Hotfix-Loops zu triggern.
+Bei Critical/High Findings zeigt die wf_engine diese im Approval Gate an. Der User entscheidet: Fixen oder akzeptieren. Bei "Fixen" werden die Findings an die zuständigen Agents delegiert und der Security Audit wird erneut ausgeführt.
 
 
 ---
