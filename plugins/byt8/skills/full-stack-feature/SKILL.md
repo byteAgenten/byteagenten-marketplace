@@ -321,6 +321,28 @@ Phase 9 hat keinen Agent - Claude führt direkt aus:
    gh pr create --base $INTO_BRANCH --title "feat(#N): Title" --body "$PR_BODY"
    ```
 5. **State updaten:** `status: "completed"`, `phases["9"].prUrl: "..."`
+6. **Workflow-Zusammenfassung anzeigen** mit Dauer-Berechnung:
+   - `startedAt` aus `.workflow/workflow-state.json` lesen
+   - Dauer berechnen (Differenz zu jetzt)
+   - Ausgabe im folgenden Format:
+
+   ```
+   ✅ Workflow abgeschlossen!
+
+   PR erstellt: <PR_URL>
+
+   Workflow-Zusammenfassung
+   ┌───────────────┬────────┬──────────────────────────────┐
+   │     Phase     │ Status │           Details            │
+   ├───────────────┼────────┼──────────────────────────────┤
+   │ 0 Architect   │ ✅/⏭️  │ ...                          │
+   │ ...           │        │                              │
+   │ 9 Push & PR   │ ✅     │ <PR_URL>                     │
+   └───────────────┴────────┴──────────────────────────────┘
+   ⏱ Dauer: Xm Ys (von startedAt bis jetzt)
+   ```
+
+   **WICHTIG:** Die Zeile `⏱ Dauer: ...` MUSS immer am Ende der Zusammenfassung stehen.
 
 ---
 
