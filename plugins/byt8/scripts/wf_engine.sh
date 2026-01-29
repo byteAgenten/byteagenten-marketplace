@@ -180,25 +180,27 @@ check_done() {
   esac
 }
 
-# Phase-Skip Guard: Erkennt übersprungene Phasen (gibt fehlende Phase aus, oder leer)
+# Phase-Skip Guard: Prüft ob ALLE Vorgänger-Phasen ihren Context geschrieben haben.
+# Gibt die früheste fehlende Phase aus, oder leer wenn alles OK.
+# Nutzt Context-Checks (nicht File-Checks), weil Context nur im aktuellen Workflow existiert.
 detect_skipped_phase() {
-  case $1 in
-    9)
-      if ! jq -e '.context.reviewFeedback.status == "APPROVED"' "$WORKFLOW_FILE" > /dev/null 2>&1; then
-        echo 8; return
-      fi
-      ;;
-    8)
-      if ! jq -e '.context.securityAudit | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1; then
-        echo 7; return
-      fi
-      ;;
-    7)
-      if ! jq -e '.context.testResults | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1; then
-        echo 6; return
-      fi
-      ;;
-  esac
+  local current=$1
+  local i=0
+
+  while [ $i -lt $current ]; do
+    case $i in
+      0) jq -e '.context.technicalSpec | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || { echo $i; return; } ;;
+      1) jq -e '.context.wireframes | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || { echo $i; return; } ;;
+      2) jq -e '.context.apiDesign | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || { echo $i; return; } ;;
+      3) jq -e '.context.migrations | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || { echo $i; return; } ;;
+      4) jq -e '.context.backendImpl | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || { echo $i; return; } ;;
+      5) jq -e '.context.frontendImpl | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || { echo $i; return; } ;;
+      6) jq -e '.context.testResults | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || { echo $i; return; } ;;
+      7) jq -e '.context.securityAudit | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || { echo $i; return; } ;;
+      8) jq -e '.context.reviewFeedback.status == "APPROVED"' "$WORKFLOW_FILE" > /dev/null 2>&1 || { echo $i; return; } ;;
+    esac
+    i=$((i + 1))
+  done
   echo ""
 }
 
