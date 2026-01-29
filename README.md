@@ -124,14 +124,17 @@ byteagenten-marketplace/
 ├── .claude-plugin/
 │   └── marketplace.json       # Plugin registry
 ├── plugins/
-│   ├── byt8/                  # Full-stack development
-│   │   ├── .claude-plugin/
-│   │   │   └── plugin.json
-│   │   ├── agents/            # 10 specialized agents
-│   │   ├── commands/          # 6 slash commands
-│   │   └── skills/            # Workflow implementations
-│   ├── byt8-docs/             # (planned)
-│   └── byt8-design/           # (planned)
+│   └── byt8/                  # Full-stack development toolkit
+│       ├── .claude-plugin/
+│       │   └── plugin.json    # Plugin metadata & version
+│       ├── .mcp.json          # MCP server configuration
+│       ├── agents/            # 10 specialized agents
+│       ├── commands/          # 10 slash commands
+│       ├── hooks/             # Workflow hooks (hooks.json)
+│       ├── scripts/           # Hook scripts (bash)
+│       ├── skills/            # Workflow implementations (SKILL.md)
+│       └── README.md
+├── CLAUDE.md                  # Project instructions for Claude Code
 └── README.md
 ```
 
