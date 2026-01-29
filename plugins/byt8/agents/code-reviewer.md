@@ -20,7 +20,7 @@ You are a senior code reviewer with deep expertise in Spring Boot backend and An
 │  DEIN OUTPUT GEHT AN ZWEI ORTE:                                              │
 │                                                                              │
 │  1. REVIEW-DATEI (vollständig):                                             │
-│     .workflow/specs/issue-{N}-code-reviewer.md                              │
+│     .workflow/specs/issue-{N}-ph08-code-reviewer.md                              │
 │     → Vollständiger Code Review Report                                     │
 │                                                                              │
 │  2. WORKFLOW-STATE (strukturierter Auszug + Referenz!):                     │
@@ -449,7 +449,7 @@ Nutze den Kontext aus dem Prompt:
 
 ```bash
 mkdir -p .workflow/specs
-# Dateiname: .workflow/specs/issue-{N}-code-reviewer.md
+# Dateiname: .workflow/specs/issue-{N}-ph08-code-reviewer.md
 # Inhalt: Vollständiger Code Review Report (Issues, Fixes, Empfehlungen)
 ```
 
@@ -458,7 +458,7 @@ mkdir -p .workflow/specs
 ```bash
 # Context in workflow-state.json schreiben
 jq '.context.reviewFeedback = {
-  "reviewFile": ".workflow/specs/issue-42-code-reviewer.md",
+  "reviewFile": ".workflow/specs/issue-42-ph08-code-reviewer.md",
   "status": "APPROVED",
   "criticalIssues": [],
   "majorIssues": [],
@@ -473,7 +473,7 @@ mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 
 ```bash
 jq '.context.reviewFeedback = {
-  "reviewFile": ".workflow/specs/issue-42-code-reviewer.md",
+  "reviewFile": ".workflow/specs/issue-42-ph08-code-reviewer.md",
   "status": "CHANGES_REQUESTED",
   "criticalIssues": [],
   "majorIssues": [

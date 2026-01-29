@@ -276,15 +276,15 @@ wireframes/issue-{N}-{feature-name}.html
 
 **VIOLATION = DATA LOSS** (`.workflow/` is in .gitignore!)
 
-### Markdown-Fallback (kein HTML-Wireframe nötig)
+### ⛔ KEIN Markdown-Fallback!
 
-Wenn das Feature **keine UI-Änderungen** erfordert (z.B. reines Backend-Feature), erstelle stattdessen ein Markdown-Dokument:
+**Es wird IMMER ein HTML-Wireframe erstellt** - auch bei einfachen Features.
+Es gibt KEINE Ausnahme. Markdown-Dateien, tabellarische Darstellungen oder
+reine Text-Beschreibungen sind KEIN gültiger Output für Phase 1.
 
-```
-.workflow/specs/issue-{N}-ui-designer.md
-```
+**Einziger gültiger Output:** `wireframes/issue-{N}-[feature].html`
 
-Inhalt: UI-Analyse, Begründung warum kein Wireframe nötig, ggf. bestehende Komponenten-Referenzen.
+Der Stop-Hook prüft: `ls wireframes/*.html` - ohne HTML-Datei schlägt die Phase fehl!
 
 ---
 

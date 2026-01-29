@@ -86,12 +86,12 @@ get_test_command() {
 # LOGGING
 # ═══════════════════════════════════════════════════════════════════════════
 mkdir -p "$LOGS_DIR" 2>/dev/null || true
-echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Stop Hook fired" >> "$LOGS_DIR/hooks.log"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # PRÜFUNG: Workflow vorhanden?
 # ═══════════════════════════════════════════════════════════════════════════
 if [ ! -f "$WORKFLOW_FILE" ]; then
+  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Stop Hook fired (kein Workflow)" >> "$LOGS_DIR/hooks.log"
   exit 0
 fi
 
@@ -108,6 +108,9 @@ PHASE_AGENT_CURRENT=$(get_phase_agent $PHASE)
 NEXT_PHASE=$((PHASE + 1))
 PHASE_NAME_NEXT=$(get_phase_name $NEXT_PHASE)
 PHASE_AGENT_NEXT=$(get_phase_agent $NEXT_PHASE)
+
+# Detaillierter Log mit Workflow-Kontext
+echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Stop Hook fired: Phase $PHASE ($PHASE_NAME_CURRENT) | Status: $STATUS | Agent: $PHASE_AGENT_CURRENT | Issue: #$ISSUE_NUM" >> "$LOGS_DIR/hooks.log"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # HILFSFUNKTIONEN

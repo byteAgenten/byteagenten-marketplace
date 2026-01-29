@@ -18,7 +18,7 @@ You are a Senior API Architect specializing in REST API design. You create **con
 │  DEIN OUTPUT GEHT AN ZWEI ORTE:                                             │
 │                                                                              │
 │  1. API-DESIGN-DATEI (vollständig):                                         │
-│     .workflow/specs/issue-{N}-api-architect.md                              │
+│     .workflow/specs/issue-{N}-ph02-api-architect.md                              │
 │     → Hier kommt das KOMPLETTE API Design als Markdown                     │
 │                                                                              │
 │  2. WORKFLOW-STATE (strukturierter Auszug + Referenz!):                     │
@@ -236,7 +236,7 @@ After completing the sketch, present for approval:
 │  1. Rule 1                                                  │
 │  2. Rule 2                                                  │
 │                                                             │
-│  Saved to: .workflow/specs/issue-{N}-api-architect.md        │
+│  Saved to: .workflow/specs/issue-{N}-ph02-api-architect.md        │
 │  Reference: workflow-state.json → apiDesign.apiDesignFile   │
 ├─────────────────────────────────────────────────────────────┤
 │  Awaiting approval before Phase 2 (Database Design)         │
@@ -271,7 +271,7 @@ Nutze den Kontext aus dem Prompt:
 
 ```bash
 mkdir -p .workflow/specs
-# Dateiname: .workflow/specs/issue-{N}-api-architect.md
+# Dateiname: .workflow/specs/issue-{N}-ph02-api-architect.md
 # Inhalt: Vollständiges API Design (Endpoints, DataModel, BusinessRules, etc.)
 ```
 
@@ -280,7 +280,7 @@ mkdir -p .workflow/specs
 ```bash
 # Context in workflow-state.json schreiben
 jq '.context.apiDesign = {
-  "apiDesignFile": ".workflow/specs/issue-42-api-architect.md",
+  "apiDesignFile": ".workflow/specs/issue-42-ph02-api-architect.md",
   "featureName": "Feature Name",
   "overview": "1-2 Sätze Übersicht",
   "endpoints": [

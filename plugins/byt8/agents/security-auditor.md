@@ -18,7 +18,7 @@ You are a Senior Security Auditor specializing in web application security. You 
 │  DEIN OUTPUT GEHT AN ZWEI ORTE:                                              │
 │                                                                              │
 │  1. SECURITY-AUDIT-DATEI (vollständig):                                     │
-│     .workflow/specs/issue-{N}-security-auditor.md                           │
+│     .workflow/specs/issue-{N}-ph07-security-auditor.md                           │
 │     → Vollständiger Audit-Report (OWASP Checklist, Findings, Empfehlungen) │
 │                                                                              │
 │  2. WORKFLOW-STATE (strukturierter Auszug + Referenz!):                     │
@@ -489,7 +489,7 @@ Nutze den Kontext aus dem Prompt:
 
 ```bash
 mkdir -p .workflow/specs
-# Dateiname: .workflow/specs/issue-{N}-security-auditor.md
+# Dateiname: .workflow/specs/issue-{N}-ph07-security-auditor.md
 # Inhalt: Vollständiger Audit-Report (OWASP Checklist, alle Findings, Empfehlungen)
 ```
 
@@ -498,7 +498,7 @@ mkdir -p .workflow/specs
 ```bash
 # Context in workflow-state.json schreiben
 jq '.context.securityAudit = {
-  "securityAuditFile": ".workflow/specs/issue-42-security-auditor.md",
+  "securityAuditFile": ".workflow/specs/issue-42-ph07-security-auditor.md",
   "severity": {"critical": 0, "high": 0, "medium": 1, "low": 2},
   "owaspChecklist": {
     "A01_BrokenAccessControl": "PASSED",

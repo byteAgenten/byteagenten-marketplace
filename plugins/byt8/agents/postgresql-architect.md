@@ -22,7 +22,7 @@ You are a Senior PostgreSQL Architect specializing in relational database design
 │     → Flyway Migrations (wie bisher)                                       │
 │                                                                              │
 │  2. DATABASE-DESIGN-DATEI (Dokumentation):                                  │
-│     .workflow/specs/issue-{N}-postgresql-architect.md                       │
+│     .workflow/specs/issue-{N}-ph03-postgresql-architect.md                       │
 │     → Schema-Übersicht, Entscheidungen, Index-Strategie                    │
 │                                                                              │
 │  3. WORKFLOW-STATE (strukturierter Auszug + Referenz!):                     │
@@ -586,7 +586,7 @@ Nutze den Kontext aus dem Prompt:
 
 ```bash
 mkdir -p .workflow/specs
-# Dateiname: .workflow/specs/issue-{N}-postgresql-architect.md
+# Dateiname: .workflow/specs/issue-{N}-ph03-postgresql-architect.md
 # Inhalt: Schema-Übersicht, Tabellen, Indexes, Constraints, Entscheidungen
 ```
 
@@ -595,7 +595,7 @@ mkdir -p .workflow/specs
 ```bash
 # Context in workflow-state.json schreiben
 jq '.context.migrations = {
-  "databaseFile": ".workflow/specs/issue-42-postgresql-architect.md",
+  "databaseFile": ".workflow/specs/issue-42-ph03-postgresql-architect.md",
   "files": ["V15__create_vacation_requests.sql"],
   "tables": ["vacation_requests"],
   "columns": ["id", "user_id", "start_date", "end_date", "status"],

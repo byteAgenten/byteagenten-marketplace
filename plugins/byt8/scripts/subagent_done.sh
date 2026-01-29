@@ -24,10 +24,10 @@ LOG_DIR="${WORKFLOW_DIR}/logs"
 # LOGGING
 # ═══════════════════════════════════════════════════════════════════════════
 mkdir -p "$LOG_DIR" 2>/dev/null || true
-echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] SubagentStop Hook fired" >> "$LOG_DIR/hooks.log"
 
 # Prüfen ob Workflow aktiv
 if [ ! -f "$WORKFLOW_FILE" ]; then
+  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] SubagentStop Hook fired" >> "$LOG_DIR/hooks.log"
   exit 0
 fi
 
@@ -68,6 +68,7 @@ echo ""
 # Log
 AGENT_LABEL="${CURRENT_AGENT:-Phase $CURRENT_PHASE Agent}"
 [ "$AGENT_LABEL" = "null" ] && AGENT_LABEL="Phase $CURRENT_PHASE Agent"
+echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] SubagentStop Hook fired: $AGENT_LABEL" >> "$LOG_DIR/hooks.log"
 echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Agent finished: $AGENT_LABEL (Phase $CURRENT_PHASE)" >> "$LOG_DIR/hooks.log"
 
 # ═══════════════════════════════════════════════════════════════════════════
