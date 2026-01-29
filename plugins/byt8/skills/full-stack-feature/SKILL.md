@@ -18,20 +18,20 @@ hooks:
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  CLAUDE LÄUFT DURCH BIS ZUM NÄCHSTEN APPROVAL GATE                          │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
+│                                                                             │
 │  Nach JEDEM Agent-Aufruf:                                                   │
-│                                                                              │
-│  1. Prüfe: Ist die NÄCHSTE Phase ein Approval Gate? (0, 1, 7, 8, 9)       │
-│                                                                              │
-│  2. WENN NEIN (Phasen 2, 3, 4, 5, 6):                                     │
+│                                                                             │
+│  1. Prüfe: Ist die NÄCHSTE Phase ein Approval Gate? (0, 1, 7, 8, 9)         │
+│                                                                             │
+│  2. WENN NEIN (Phasen 2, 3, 4, 5, 6):                                       │
 │     → SOFORT nächsten Agent aufrufen                                        │
 │     → NICHT stoppen, NICHT auf User warten                                  │
-│                                                                              │
+│                                                                             │
 │  3. WENN JA (Approval Gate):                                                │
 │     → State updaten: status = "awaiting_approval"                           │
 │     → User fragen: "Phase X fertig. Zufrieden?"                             │
 │     → STOPP - Warte auf User                                                │
-│                                                                              │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -41,21 +41,22 @@ hooks:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  DER ORCHESTRATOR SCHREIBT KEINEN CODE!                                      │
-│                                                                              │
-│  Ein PreToolUse-Hook BLOCKIERT jedes Edit/Write auf Code-Dateien.          │
-│  (.java, .ts, .html, .scss, .sql, .xml, .properties, etc.)                │
-│                                                                              │
+│  DER ORCHESTRATOR SCHREIBT KEINEN CODE!                                     │
+│                                                                             │
+│  Ein PreToolUse-Hook BLOCKIERT jedes Edit/Write auf Code-Dateien.           │
+│  (.java, .ts, .html, .scss, .sql, .xml, .properties, etc.)                  │
+│                                                                             │
 │  Du darfst:                                                                 │
 │  ✅ workflow-state.json lesen/schreiben                                     │
-│  ✅ Task() Aufrufe an Agents machen                                        │
-│  ✅ Spec-Dateien (.md) lesen und injizieren                                │
-│  ✅ Git/GitHub Befehle (nur Phase 9: push, PR)                             │
-│                                                                              │
-│  JEDE Code-Änderung → Task(byt8:ZUSTÄNDIGER_AGENT, "...")                  │
-│  Der Hook blockiert dich physisch wenn du es trotzdem versuchst.           │
-│                                                                              │
-│  Wenn ein Fix nötig ist → Siehe "Rückdelegation-Protocol" unten!           │
+│  ✅ Task() Aufrufe an Agents machen (nur Dateipfade übergeben!)             │
+│  ✅ Git/GitHub Befehle (nur Phase 9: push, PR)                              │
+│                                                                             │
+│  ⛔ KEINE Spec-Dateien lesen! (Agents lesen selbst via Read-Tool)           │
+│                                                                             │
+│  JEDE Code-Änderung → Task(byt8:ZUSTÄNDIGER_AGENT, "...")                   │
+│  Der Hook blockiert dich physisch wenn du es trotzdem versuchst.            │
+│                                                                             │
+│  Wenn ein Fix nötig ist → Siehe "Rückdelegation-Protocol" unten!            │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -392,8 +393,9 @@ SCHRITT 2 - An Agent delegieren (⛔ NICHT SELBST FIXEN!):
   Task(byt8:ZUSTÄNDIGER_AGENT, "
     Phase [ZIEL_PHASE] (Hotfix): Fix für Issue #[NUM]
 
-    ## TECHNICAL SPECIFICATION
-    [Spec-Inhalt injizieren]
+    ## SPEC FILES (LIES DIESE ZUERST!)
+    - Technical Spec: [Pfad aus context.technicalSpec.specFile]
+    - [Weitere relevante Spec-Pfade gemäß Phase-Dependency-Map]
 
     ## ZU FIXENDE PUNKTE
     [Konkrete Fix-Beschreibung vom User / Audit / Review]
@@ -449,33 +451,46 @@ BEISPIEL: Code Review sagt "DB-Migration fehlt"
 
 ---
 
-## ⚠️ SPEC INJECTION PROTOCOL (PFLICHT!)
+## ⚠️ FILE REFERENCE PROTOCOL (PFLICHT!)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  VOR JEDEM AGENT-AUFRUF (Phase 1-8):                                        │
 │                                                                              │
-│  1. Spec-Pfad aus workflow-state.json lesen:                                │
-│     Read(.workflow/workflow-state.json) → context.technicalSpec.specFile    │
+│  1. Workflow-State lesen (NUR PFADE, nicht Dateiinhalt!):                  │
+│     Read(.workflow/workflow-state.json) → context.*.specFile/...File paths  │
 │                                                                              │
-│  2. Vollständige Spec-Datei lesen:                                          │
-│     Read(.workflow/specs/issue-N-ph00-architect-planner.md)                      │
-│                                                                              │
-│  3. Spec-Inhalt in Task()-Prompt injizieren:                                │
+│  2. NUR PFADE in Task()-Prompt übergeben:                                  │
 │     Task(byt8:agent, "...                                                   │
-│       ## TECHNICAL SPECIFICATION                                             │
-│       {SPEC_CONTENT}                                                         │
-│       ## YOUR TASK                                                           │
-│       ...")                                                                  │
+│       ## SPEC FILES (LIES DIESE ZUERST!)                                    │
+│       - Technical Spec: [pfad aus context.technicalSpec.specFile]           │
+│       - [weitere Dateien je nach Phase-Dependency-Map]                     │
+│       ## YOUR TASK ...")                                                    │
 │                                                                              │
-│  ⚠️ AGENTS LESEN DIE SPEC NICHT SELBST - DU MUSST SIE ÜBERGEBEN!           │
+│  ⛔ DU (Orchestrator) DARFST SPEC-DATEIEN NICHT LESEN!                     │
+│  ⛔ AGENTS LESEN SPECS SELBST via Read-Tool (in eigenem Kontext)           │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Warum?
 
-Agents führen Bash-Commands nicht deterministisch aus.
-Die einzige Garantie ist der **Task()-Prompt selbst**.
+**Alt:** Orchestrator liest Specs → eigener Context voll → Compaction nach wenigen Phasen
+**Neu:** Agent liest Specs in EIGENEM Context → Orchestrator bleibt clean
+
+Das Read-Tool ist **DETERMINISTISCH** (kein Bash-Command). Alle Agents haben `Read` in ihrer Tool-Liste.
+
+### Phase-Dependency-Map (welche Dateien übergeben)
+
+| Phase | Agent | SPEC FILES im Prompt |
+|-------|-------|---------------------|
+| 1 | ui-designer | `technicalSpec.specFile` |
+| 2 | api-architect | `technicalSpec.specFile` |
+| 3 | postgresql-architect | `technicalSpec.specFile`, `apiDesign.apiDesignFile` |
+| 4 | spring-boot-developer | `technicalSpec.specFile`, `apiDesign.apiDesignFile`, `migrations.databaseFile` |
+| 5 | angular-frontend-developer | `technicalSpec.specFile`, `apiDesign.apiDesignFile` + Pfade aus `wireframes.paths` |
+| 6 | test-engineer | `technicalSpec.specFile` |
+| 7 | security-auditor | `technicalSpec.specFile` |
+| 8 | code-reviewer | `technicalSpec.specFile`, `apiDesign.apiDesignFile` |
 
 ### Task()-Prompt Format (Phasen 1-8)
 
@@ -483,14 +498,15 @@ Die einzige Garantie ist der **Task()-Prompt selbst**.
 Task(byt8:[agent-name], "
 Phase [N]: [Phase Name] for Issue #[ISSUE_NUM]
 
-## TECHNICAL SPECIFICATION (LIES DAS ZUERST!)
+## SPEC FILES (LIES DIESE ZUERST mit dem Read-Tool!)
 
-[Hier den VOLLSTÄNDIGEN Inhalt der Spec-Datei einfügen]
+- Technical Spec: [Pfad aus context.technicalSpec.specFile]
+- [Weitere Dateien gemäß Phase-Dependency-Map oben]
 
 ## WORKFLOW CONTEXT
 
+- Issue: #[NUM] - [TITLE]
 - Target Coverage: [targetCoverage]%
-- Previous Phase Output: [relevante context.* Felder]
 
 ## YOUR TASK
 
@@ -502,29 +518,32 @@ Phase [N]: [Phase Name] for Issue #[ISSUE_NUM]
 
 ```
 1. Read(.workflow/workflow-state.json)
-   → specFile = ".workflow/specs/issue-365-ph00-architect-planner.md"
+   → context.technicalSpec.specFile = ".workflow/specs/issue-365-ph00-architect-planner.md"
+   → context.apiDesign.apiDesignFile = ".workflow/specs/issue-365-ph02-api-architect.md"
+   → context.migrations.databaseFile = ".workflow/specs/issue-365-ph03-postgresql-architect.md"
    → targetCoverage = 85
-   → apiDesign = { endpoints: [...], ... }
-   → migrations = { files: [...], ... }
+   → issue = { number: 365, title: "Projektliste erweitern" }
 
-2. Read(.workflow/specs/issue-365-ph00-architect-planner.md)
-   → [Vollständiger Spec-Inhalt]
+   ⛔ KEINE Spec-Dateien lesen! Nur workflow-state.json!
 
-3. Task(byt8:spring-boot-developer, "
+2. Task(byt8:spring-boot-developer, "
    Phase 4: Backend Implementation for Issue #365
 
-   ## TECHNICAL SPECIFICATION
-   [Vollständiger Spec-Inhalt hier]
+   ## SPEC FILES (LIES DIESE ZUERST mit dem Read-Tool!)
+   - Technical Spec: .workflow/specs/issue-365-ph00-architect-planner.md
+   - API Design: .workflow/specs/issue-365-ph02-api-architect.md
+   - Migrations: .workflow/specs/issue-365-ph03-postgresql-architect.md
 
    ## WORKFLOW CONTEXT
+   - Issue: #365 - Projektliste erweitern
    - Target Coverage: 85%
-   - API Design: GET /api/projects (search extended)
-   - Migrations: Keine DB-Änderungen
 
    ## YOUR TASK
    Implement the backend changes as specified.
    Write unit tests to achieve 85% coverage.
    ")
+
+3. Agent returniert ~10 Zeilen Summary (in Orchestrator-Kontext: ~1 KB)
 ```
 
 ---
@@ -539,7 +558,8 @@ Phase [N]: [Phase Name] for Issue #[ISSUE_NUM]
 │  SubagentStop Hook erstellt WIP-Commits automatisch (Phasen 1, 3, 4, 5, 6) │
 │  → Deterministisch nach jedem Task() Aufruf                                 │
 │                                                                              │
-│  SPEC INJECTION: Orchestrator liest Spec und übergibt im Task()-Prompt     │
-│  → Agents erhalten Spec garantiert - kein selbständiges Lesen nötig         │
+│  FILE REFERENCE: Orchestrator übergibt NUR DATEIPFADE im Task()-Prompt     │
+│  → Agents lesen Specs SELBST via Read-Tool (eigener Kontext)               │
+│  → Orchestrator-Kontext bleibt unter 5 KB pro Phase                        │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```

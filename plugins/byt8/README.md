@@ -1,6 +1,6 @@
 # byt8 Plugin
 
-**Version 6.7.0** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 10-Phasen Workflow, Approval Gates und **kontinuierlichem Auto-Advance**.
+**Version 6.8.0** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 10-Phasen Workflow, Approval Gates und **kontinuierlichem Auto-Advance**.
 
 ## Philosophy
 
@@ -152,18 +152,31 @@ Ab Version 4.0 nutzt byt8 **Workflow Hooks** für zuverlässige Automatisierung.
 | Tests fehlgeschlagen aber weitergemacht | **Stop Hook** validiert Done-Kriterien und blockiert bei Fehler |
 | Retry-Chaos nach Testfehlern | Automatisches **Retry-Management** mit Max 3 Versuchen |
 | Approval Gate übersprungen | Hooks erzwingen **Approval Gates** an kritischen Punkten |
+| Orchestrator schreibt Code direkt | **PreToolUse Hooks** blockieren Edit/Write und unerlaubten Push |
 
-### Die 3 Workflow Hooks
+### Workflow Hooks
+
+Das Plugin nutzt **zwei Ebenen** von Hooks:
+
+**Plugin-Level Hooks** (`hooks/hooks.json`) — gelten global:
 
 | Hook | Trigger | Script | Funktion |
 |------|---------|--------|----------|
+| `PreToolUse` (Bash) | Vor jedem Bash-Aufruf | `guard_git_push.sh` | Blockiert `git push` / `gh pr create` ohne `pushApproved` Flag |
 | `SessionStart` | Session-Start/Resume | `session_recovery.sh` | Context Recovery nach Overflow |
 | `Stop` | Haupt-Agent fertig | `wf_engine.sh` | Phase Validation, Retry-Management |
-| `SubagentStop` | Subagent beendet | `subagent_done.sh` | **WIP-Commits**, Agent-Info, Output Validation |
+| `SubagentStart` | Subagent startet | `subagent_start.sh` | Subagent Start-Notification |
+| `SubagentStop` | Subagent beendet | `subagent_done.sh` | WIP-Commits, Output Validation |
+
+**Skill-Level Hook** (SKILL.md Frontmatter) — gilt nur im Workflow:
+
+| Hook | Trigger | Script | Funktion |
+|------|---------|--------|----------|
+| `PreToolUse` (Edit\|Write) | Vor Edit/Write-Aufruf | `block_orchestrator_code_edit.sh` | Verhindert, dass der Orchestrator Code-Dateien direkt ändert |
 
 ### Setup
 
-Hooks werden automatisch über die Plugin-Konfiguration (`hooks/hooks.json`) geladen - **kein manuelles Setup nötig**.
+Hooks werden automatisch über die Plugin-Konfiguration geladen — **kein manuelles Setup nötig**.
 
 Falls bereits Project-Hooks in `.claude/settings.json` existieren (aus älteren Versionen), sollten diese entfernt werden um doppeltes Feuern zu vermeiden:
 
@@ -172,9 +185,7 @@ Falls bereits Project-Hooks in `.claude/settings.json` existieren (aus älteren 
 /byt8:remove-hooks
 ```
 
-### Startup-Flow & Hook-Initialisierung
-
-Das folgende Diagramm zeigt, wie der Workflow startet und wie die Hooks automatisch eingerichtet werden:
+### Startup-Flow
 
 ```mermaid
 flowchart TD
@@ -186,10 +197,6 @@ flowchart TD
         B{".workflow/<br/>state.json<br/>existiert?"}
         C["Context Recovery<br/>Zeige Recovery-Prompt"]
         D["Kein aktiver Workflow"]
-    end
-
-    subgraph HOOKS_SETUP["Plugin Hooks"]
-        E["Hooks via Plugin<br/>hooks.json geladen"]
     end
 
     subgraph INIT["Workflow Initialisierung"]
@@ -218,9 +225,8 @@ flowchart TD
     A --> B
     B -->|Ja, status: active/paused| C
     B -->|Nein| D
-    C --> E
-    D --> E
-    E --> H
+    C --> H
+    D --> H
     H -->|"active"| I
     H -->|"paused"| J
     H -->|Nicht gefunden| K
@@ -235,40 +241,42 @@ flowchart TD
 
     style TRIGGER fill:#1565c0,color:#fff
     style SESSION fill:#e65100,color:#fff
-    style HOOKS_SETUP fill:#6a1b9a,color:#fff
     style INIT fill:#2e7d32,color:#fff
     style NEW_WF fill:#c62828,color:#fff
     style PHASE fill:#00695c,color:#fff
 ```
 
-**Ablauf im Detail:**
-
-1. **SessionStart Hook feuert** bei jedem Session-Start/Resume
-2. **Plugin Hooks** werden automatisch via `hooks.json` geladen
-3. **Workflow-Status** bestimmt ob Resume, Pause-Info oder Neustart
-4. **Neuer Workflow** durchläuft vollständige Initialisierung
-5. **Phasen-Loop** wird von Stop/SubagentStop Hooks gesteuert
-
 ### Was die Hooks tun
+
+**guard_git_push.sh** (PreToolUse/Bash):
+- Blockiert `git push` und `gh pr create` solange `pushApproved` nicht `true` ist
+- Verhindert unautorisierten Push nach Context Compaction
+- Nur Phase 9 setzt `pushApproved = true` nach User-Zustimmung
+
+**block_orchestrator_code_edit.sh** (PreToolUse/Edit|Write, Skill-Level):
+- Blockiert Edit/Write auf Code-Dateien (.java, .ts, .html, .scss, .sql, etc.)
+- Erlaubt nur workflow-state.json und .workflow/-Dateien
+- Erzwingt: Alle Code-Änderungen laufen über spezialisierte Agents
 
 **session_recovery.sh** (SessionStart):
 - Erkennt aktiven Workflow nach Context Overflow
-- Gibt vollständigen Recovery-Prompt mit allem Kontext aus
-- Zeigt Status, abgeschlossene Phasen, nächsten Schritt
-- **Kein Auto-Setup von Project-Hooks** (verhindert Doppel-Ausführung)
+- Gibt Recovery-Prompt mit Workflow-Status und nächstem Schritt aus
+- Zeigt abgeschlossene Phasen und aktuelle Phase
 
 **wf_engine.sh** (Stop):
 - Prüft Done-Kriterien für aktuelle Phase (z.B. Tests bestanden?)
-- Erstellt WIP-Commits für commitbare Phasen (1, 3, 4, 5, 6)
-- Verwaltet Retry-Counter für Test-Phasen
+- Verwaltet Retry-Counter für Test-Phasen (max 3 Versuche)
 - Pausiert nach 3 fehlgeschlagenen Versuchen
-- Erzwingt Approval Gates
+- Erzwingt Approval Gates an Phasen 0, 1, 7, 8, 9
+
+**subagent_start.sh** (SubagentStart):
+- Loggt welcher Agent gestartet wurde
+- Zeigt Phase-Info in der Ausgabe
 
 **subagent_done.sh** (SubagentStop):
-- **Erstellt WIP-Commits** für commitbare Phasen (1, 3, 4, 5, 6)
-- Zeigt sichtbare Ausgabe welcher Agent fertig ist
-- Validiert Agent-Output (z.B. Dateien vorhanden?)
-- Loggt alle Agent-Aktivitäten
+- Erstellt **WIP-Commits** für commitbare Phasen (1, 3, 4, 5, 6)
+- Validiert Agent-Output (z.B. erwartete Dateien vorhanden?)
+- Loggt Agent-Aktivitäten
 
 ### Workflow-State
 
@@ -277,9 +285,9 @@ Der Zustand wird in `.workflow/` persistiert:
 ```
 .workflow/
 ├── workflow-state.json    # Hauptzustand (Phase, Status, Context)
-├── context/               # Phase-Snapshots für Recovery
-│   ├── phase-0-spec.json
-│   ├── phase-1-wireframes.json
+├── specs/                 # Spec-Dateien der Agents
+│   ├── issue-N-ph00-architect-planner.md
+│   ├── issue-N-ph02-api-architect.md
 │   └── ...
 ├── recovery/              # Recovery-Daten
 │   ├── retry-tracker.json
@@ -298,6 +306,34 @@ Der Zustand wird in `.workflow/` persistiert:
 | `/byt8:wf-resume` | Pausierten Workflow fortsetzen |
 | `/byt8:wf-retry-reset` | Retry-Counter zurücksetzen |
 | `/byt8:wf-skip` | ⚠️ Phase überspringen (Notfall) |
+
+---
+
+## Context-Optimierung: File Reference Protocol (v6.8.0+)
+
+Ab Version 6.8.0 übergibt der Orchestrator **nur Dateipfade** an Agents — nicht den Inhalt der Spec-Dateien. Agents lesen die Specs **selbst** via Read-Tool in ihrem eigenen, isolierten Kontext.
+
+### Vorher (Spec Injection)
+
+```
+Orchestrator liest Spec → injiziert Inhalt in Task()-Prompt → ~60 KB pro Phase
+Auto-Advance (5 Phasen) → ~300 KB Orchestrator-Kontext → Context Compaction 💥
+```
+
+### Jetzt (File Reference)
+
+```
+Orchestrator liest NUR workflow-state.json → übergibt Dateipfade → ~3 KB pro Phase
+Auto-Advance (5 Phasen) → ~15 KB Orchestrator-Kontext → kein Compaction ✅
+```
+
+### Drei Output-Kanäle pro Agent
+
+| Kanal | Wo | Wer schreibt | Context-Kosten |
+|-------|----|-------------|----------------|
+| Spec-Datei | `.workflow/specs/` | Agent | 0 KB (nur auf Platte) |
+| Workflow-State | `context.*` Keys | Agent | 0 KB (nur auf Platte) |
+| Task()-Return | Orchestrator-Kontext | Agent (letzte Nachricht) | ~1 KB (max 10 Zeilen) |
 
 ---
 

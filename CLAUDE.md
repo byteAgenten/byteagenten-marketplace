@@ -75,47 +75,40 @@ byteagenten-marketplace/
 - **Skills** (`skills/*/SKILL.md`) = Workflow logic with detailed instructions
 - **Agents** (`agents/*.md`) = Specialized AI personas for specific tasks
 
-### The Workflow (full-stack-feature)
+### Key Files
 
-The main workflow orchestrates these agents in a 10-phase sequence:
+| Datei | Zweck |
+|-------|-------|
+| `plugins/byt8/skills/full-stack-feature/SKILL.md` | Workflow-Logik (Orchestrator-Anweisungen) |
+| `plugins/byt8/agents/*.md` | Agent-Definitionen (10 Agents) |
+| `plugins/byt8/hooks/hooks.json` | Hook-Konfiguration (Source of Truth für Hooks) |
+| `plugins/byt8/scripts/*.sh` | Hook-Scripts |
+| `plugins/byt8/commands/*.md` | Slash-Command-Definitionen |
+| `plugins/byt8/README.md` | Plugin-Dokumentation für Nutzer |
 
-| Phase | Agent | Purpose |
-|-------|-------|---------|
-| 0 | architect-planner | Technical specification |
-| 1 | ui-designer | Wireframes |
-| 2 | api-architect | API design (OpenAPI 3.1) |
-| 3 | postgresql-architect | Database migrations (Flyway) |
-| 4 | spring-boot-developer | Backend implementation |
-| 5 | angular-frontend-developer | Frontend implementation |
-| 6 | test-engineer | E2E tests |
-| 7 | security-auditor | Security audit |
-| 8 | code-reviewer | Code review |
-| 9 | (orchestrator) | Push & PR erstellen |
+## ⛔ Änderungs-Checkliste (PFLICHT bei JEDER Änderung!)
 
-### Workflow State Management
-
-State is persisted in `.workflow/workflow-state.json` with:
-- `currentPhase`: Current workflow phase
-- `nextStep`: Allowed next action (for validation)
-- `context`: Phase outputs for downstream agents
-
-## Available Commands
-
-| Command | Description |
-|---------|-------------|
-| `/byt8:full-stack-feature` | 10-phase workflow for full-stack feature development |
-| `/byt8:ui-theming` | Design system initialization (theme, tokens, typography) |
-| `/byt8:python-expert` | Python development support |
-
-## Release-Checkliste (bei Version-Bump)
-
-Bei JEDEM Version-Bump von `plugin.json` MÜSSEN diese Dateien synchron aktualisiert werden:
+### Bei JEDEM Version-Bump:
 
 1. `plugins/byt8/.claude-plugin/plugin.json` → `"version": "X.Y.Z"`
 2. `plugins/byt8/README.md` → `**Version X.Y.Z**` (Zeile 3)
 3. `README.md` → Versions-Spalte in der Plugin-Tabelle (Zeile 9)
 
-**Niemals nur plugin.json bumpen und die READMEs vergessen!**
+### Bei JEDER funktionalen Änderung (Hooks, Agents, Skills, Workflow):
+
+**NACH der Implementierung MUSST du prüfen und aktualisieren:**
+
+`plugins/byt8/README.md` — Beschreibt das Plugin für Nutzer. Jede Änderung an Hooks, Agents, Workflow-Ablauf oder Architektur MUSS dort reflektiert werden.
+
+| Was geändert? | Was aktualisieren? |
+|---------------|-------------------|
+| Hook hinzugefügt/entfernt | Plugin-README (Hook-Tabelle + Beschreibungen) |
+| Script hinzugefügt/entfernt | Plugin-README (Hook-Beschreibungen) |
+| Agent hinzugefügt/geändert | Plugin-README (Agents-Tabelle) |
+| Workflow-Ablauf geändert | Plugin-README (Workflow-Beschreibung, Diagramme) + SKILL.md |
+| Neue Architektur-Konzepte | Plugin-README (neuer Abschnitt) |
+
+**Niemals Implementierung abschließen ohne README-Prüfung!**
 
 ## Development
 
@@ -128,39 +121,10 @@ rm -rf ~/.claude/plugins/cache/byteagenten-marketplace/
 
 ### Plugin Hooks
 
-Hooks werden in `plugins/byt8/hooks/hooks.json` definiert. Verfügbare Events:
-- `SessionStart` - Bei Session-Start/Resume (für Workflow-Recovery)
-- `PreCompact` - Vor Context-Komprimierung
+Hooks werden auf zwei Ebenen definiert:
 
-Scripts in `plugins/byt8/scripts/` können via `${CLAUDE_PLUGIN_ROOT}` referenziert werden.
+- **Plugin-Level:** `plugins/byt8/hooks/hooks.json` (Source of Truth)
+- **Skill-Level:** Frontmatter in `SKILL.md`-Dateien
 
-### Adding a New Agent
+Scripts liegen in `plugins/byt8/scripts/` und werden via `${CLAUDE_PLUGIN_ROOT}` referenziert.
 
-1. Create `plugins/byt8/agents/[name].md` with frontmatter (name, description, version)
-2. Add to `.claude-plugin/marketplace.json` under `agents` array
-
-### Adding a New Skill
-
-1. Create folder `plugins/byt8/skills/[name]/`
-2. Add `SKILL.md` with frontmatter (name, description, version)
-3. Create matching command in `plugins/byt8/commands/[name].md`
-4. Update `.claude-plugin/marketplace.json`
-
-## Installation (for Users)
-
-Add to project's `.claude/settings.json`:
-```json
-{
-  "extraKnownMarketplaces": {
-    "byteagenten-marketplace": {
-      "source": {
-        "source": "github",
-        "repo": "byteAgenten/byteagenten-marketplace"
-      }
-    }
-  },
-  "enabledPlugins": {
-    "byt8@byteagenten-marketplace": true
-  }
-}
-```

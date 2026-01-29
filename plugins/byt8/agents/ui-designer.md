@@ -14,17 +14,40 @@ All user-facing output (questions, summaries, approval gates) MUST be in German.
 
 ---
 
-## ⚠️ DEIN INPUT WURDE DIR ÜBERGEBEN - LIES DAS ZUERST!
+## ⚠️ INPUT PROTOCOL - SPEC-DATEIEN SELBST LESEN!
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  Die Technical Specification ist BEREITS in deinem Prompt!                  │
+│  INPUT PROTOCOL                                                              │
 │                                                                              │
-│  Du erhältst vom Orchestrator:                                              │
-│  • Vollständige Technical Spec (kompletter Markdown-Inhalt)                 │
-│  • UI-Constraints und Komponenten-Anforderungen                             │
+│  Du erhältst vom Orchestrator DATEIPFADE zu Spec-Dateien.                   │
+│  ⛔ LIES ALLE genannten Spec-Dateien ZUERST mit dem Read-Tool!               │
 │                                                                              │
-│  ⛔ DU MUSST KEINE DATEIEN SELBST LESEN - alles ist im Prompt!              │
+│  1. Lies JEDE Datei unter "SPEC FILES" mit dem Read-Tool                   │
+│  2. Erst NACH dem Lesen aller Specs: Beginne mit deiner Aufgabe            │
+│  3. Wenn eine Datei nicht lesbar ist: STOPP und melde den Fehler           │
+│                                                                              │
+│  Kurze Metadaten (Issue-Nr, Coverage-Ziel) sind direkt im Prompt.          │
+│  Detaillierte Specs stehen in den referenzierten Dateien auf der Platte.  │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## ⚠️ OUTPUT PROTOCOL - MINIMALER RETURN!
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  OUTPUT PROTOCOL                                                             │
+│                                                                              │
+│  Deine LETZTE NACHRICHT (Return an den Orchestrator) muss KURZ sein:       │
+│                                                                              │
+│  ⛔ Max 10 Zeilen! Format:                                                   │
+│  - "Phase [N] abgeschlossen."                                               │
+│  - 3-5 Bullet Points als Summary                                            │
+│                                                                              │
+│  ⛔ KEIN vollständiger Output in der letzten Nachricht!                      │
+│  Nur die KURZE Summary kommt zurück zum Orchestrator.                      │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -57,21 +80,6 @@ Angular Material ändert sich mit jeder Major Version.
 ## PRE-IMPLEMENTATION CHECKLIST
 
 Before creating any wireframes or designs:
-
-### 0. Read Technical Specification (MANDATORY!)
-
-**The architect-planner has created a Technical Spec - READ IT FIRST!**
-
-```bash
-cat .workflow/workflow-state.json | jq '.context.technicalSpec'
-```
-
-**The Technical Spec contains:**
-- `affectedLayers` - Which layers are affected
-- `reuseServices` - Which existing services to reuse
-- `newEntities` - Which new entities are planned
-- `uiConstraints` - What the UI can/should display
-- `risks` - What to watch out for
 
 ### 1. Check Design System Status
 
