@@ -180,6 +180,28 @@ check_done() {
   esac
 }
 
+# Phase-Skip Guard: Erkennt übersprungene Phasen (gibt fehlende Phase aus, oder leer)
+detect_skipped_phase() {
+  case $1 in
+    9)
+      if ! jq -e '.context.reviewFeedback.status == "APPROVED"' "$WORKFLOW_FILE" > /dev/null 2>&1; then
+        echo 8; return
+      fi
+      ;;
+    8)
+      if ! jq -e '.context.securityAudit | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1; then
+        echo 7; return
+      fi
+      ;;
+    7)
+      if ! jq -e '.context.testResults | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1; then
+        echo 6; return
+      fi
+      ;;
+  esac
+  echo ""
+}
+
 # ═══════════════════════════════════════════════════════════════════════════
 # AUSGABE: Anweisung für Claude
 # ═══════════════════════════════════════════════════════════════════════════
@@ -376,6 +398,33 @@ fi
 # ───────────────────────────────────────────────────────────────────────────
 # FALL 2: Phase prüfen (status = active)
 # ───────────────────────────────────────────────────────────────────────────
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PHASE-SKIP GUARD: Übersprungene Phasen deterministisch abfangen
+# ═══════════════════════════════════════════════════════════════════════════
+SKIPPED_TO=$(detect_skipped_phase $PHASE)
+if [ -n "$SKIPPED_TO" ]; then
+  SKIP_NAME=$(get_phase_name $SKIPPED_TO)
+  SKIP_AGENT=$(get_phase_agent $SKIPPED_TO)
+
+  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] PHASE SKIP DETECTED: Phase $PHASE erfordert Phase $SKIPPED_TO ($SKIP_NAME). Auto-Korrektur." >> "$LOGS_DIR/hooks.log"
+
+  # State auto-korrigieren
+  jq --argjson sp "$SKIPPED_TO" '.currentPhase = $sp | .status = "active"' \
+    "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+
+  print_instruction
+  echo "⚠️  PHASE-SKIP ERKANNT UND KORRIGIERT"
+  echo ""
+  echo "Phase $SKIPPED_TO ($SKIP_NAME) wurde übersprungen!"
+  echo "State wurde automatisch auf Phase $SKIPPED_TO zurückgesetzt."
+  echo ""
+  echo "AKTION FÜR CLAUDE:"
+  echo "  → Task($SKIP_AGENT)"
+  echo "    \"Phase $SKIPPED_TO ($SKIP_NAME) für Issue #$ISSUE_NUM: $ISSUE_TITLE\""
+  print_footer
+  exit 0
+fi
 
 if check_done; then
   # ═══════════════════════════════════════════════════════════════════════
