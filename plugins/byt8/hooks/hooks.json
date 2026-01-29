@@ -2,6 +2,18 @@
   "description": "byt8 Workflow Engine - Hook-based Orchestration with Context Recovery",
   "version": "2.0.0",
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "description": "Guard: Block git push/PR during active workflow without user approval",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/guard_git_push.sh"
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "description": "Context Recovery after Context Overflow",

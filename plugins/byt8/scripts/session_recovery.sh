@@ -38,7 +38,7 @@ fi
 
 STATUS=$(jq -r '.status // "unknown"' "$WORKFLOW_FILE" 2>/dev/null || echo "unknown")
 
-if [ "$STATUS" != "active" ] && [ "$STATUS" != "paused" ]; then
+if [ "$STATUS" != "active" ] && [ "$STATUS" != "paused" ] && [ "$STATUS" != "awaiting_approval" ]; then
   # Workflow nicht aktiv - nichts zu tun
   exit 0
 fi
@@ -270,6 +270,18 @@ EOF
   - Max 3 Review-Iterationen, danach Pause
 EOF
     ;;
+  9)
+    cat << 'EOF'
+  REGELN FÜR PHASE 9 (Push & PR):
+  ⛔ APPROVAL GATE - NICHTS AUTOMATISCH PUSHEN!
+  1. User fragen: "In welchen Branch mergen? (Default: fromBranch)"
+  2. PR-Body generieren aus allen context.* Keys
+  3. PR-Body dem User ZEIGEN und FRAGEN: "Soll ich pushen und PR erstellen?"
+  4. NUR bei explizitem Ja: git push + gh pr create
+  5. State updaten: status = "completed"
+  6. Workflow-Zusammenfassung mit Dauer anzeigen
+EOF
+    ;;
 esac
 
 echo ""
@@ -290,11 +302,33 @@ if [ "$STATUS" == "paused" ]; then
   echo ""
 fi
 
+if [ "$STATUS" == "awaiting_approval" ]; then
+  APPROVAL_PHASE=$(jq -r '.awaitingApprovalFor // .currentPhase' "$WORKFLOW_FILE" 2>/dev/null)
+  echo "═══════════════════════════════════════════════════════════════════════════════"
+  echo "⛔ APPROVAL GATE AKTIV - WARTE AUF USER!"
+  echo "═══════════════════════════════════════════════════════════════════════════════"
+  echo ""
+  echo "  Phase ${APPROVAL_PHASE} wartet auf User-Approval."
+  echo "  ⛔ NICHTS eigenständig ausführen! User MUSS zuerst bestätigen."
+  echo "  → /byt8:wf-resume oder User antwortet direkt"
+  echo ""
+fi
+
 echo "═══════════════════════════════════════════════════════════════════════════════"
-echo "🚀 AKTION ERFORDERLICH"
+echo "⛔⛔⛔ PFLICHT-AKTION - KEINE EIGENSTÄNDIGEN AKTIONEN! ⛔⛔⛔"
 echo "═══════════════════════════════════════════════════════════════════════════════"
 echo ""
-echo "  Rufe jetzt /byt8:full-stack-feature auf um fortzufahren!"
+echo "  Du hast einen Context Overflow erlebt. Du MUSST den Workflow neu betreten:"
+echo ""
+echo "  → Rufe /byt8:full-stack-feature auf!"
+echo ""
+echo "  ⛔ Du DARFST NICHT eigenständig handeln:"
+echo "    - KEIN git push (durch PreToolUse-Hook BLOCKIERT)"
+echo "    - KEIN gh pr create (durch PreToolUse-Hook BLOCKIERT)"
+echo "    - KEIN eigenständiger git commit"
+echo "    - KEINE Code-Änderungen ohne Workflow"
+echo ""
+echo "  NUR /byt8:full-stack-feature aufrufen. Sonst NICHTS."
 echo ""
 echo "═══════════════════════════════════════════════════════════════════════════════"
 echo ""

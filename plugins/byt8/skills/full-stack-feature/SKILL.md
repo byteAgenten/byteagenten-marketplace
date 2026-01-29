@@ -317,9 +317,16 @@ Phase 9 hat keinen Agent - Claude führt direkt aus:
 3. **User zeigen** und fragen: "Soll ich pushen und PR erstellen?"
 4. **Bei Ja:**
    ```bash
+   # ZUERST pushApproved setzen (Guard-Hook prüft diesen Flag!)
+   jq '.pushApproved = true' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
+
+   # DANN pushen und PR erstellen
    git push -u origin $BRANCH
    gh pr create --base $INTO_BRANCH --title "feat(#N): Title" --body "$PR_BODY"
    ```
+   > ⚠️ **pushApproved MUSS vor git push gesetzt werden!** Ein Plugin-Level PreToolUse-Hook
+   > (`guard_git_push.sh`) blockiert alle `git push` / `gh pr create` Befehle wenn
+   > `pushApproved` nicht `true` ist. Dies verhindert unautorisierten Push nach Context Compaction.
 5. **State updaten:** `status: "completed"`, `phases["9"].prUrl: "..."`
 6. **Workflow-Zusammenfassung anzeigen** mit Dauer-Berechnung:
    - `startedAt` aus `.workflow/workflow-state.json` lesen
