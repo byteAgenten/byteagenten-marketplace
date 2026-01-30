@@ -6,7 +6,7 @@ Private Claude Code Plugins for byteAgenten team members.
 
 | Plugin | Description | Version |
 |--------|-------------|---------|
-| [byt8](./plugins/byt8) | Full-stack development toolkit for Angular 21 + Spring Boot 4 | 6.8.1 |
+| [byt8](./plugins/byt8) | Full-stack development toolkit for Angular 21 + Spring Boot 4 | 7.0.0 |
 
 ## Prerequisites
 

@@ -1,9 +1,18 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════════
-# byt8 Workflow Engine (Stop Hook) - Deterministische Steuerung
+# byt8 Workflow Engine (Stop Hook) - v7.0 Context-Injection
 # ═══════════════════════════════════════════════════════════════════════════
-# Dieser Hook steuert den GESAMTEN Workflow.
-# Claude führt NUR die Anweisungen aus, die dieser Hook ausgibt.
+# Kontrolliert den Workflow via JSON decision:block Mechanismus.
+# Claude SIEHT die "reason" und MUSS weitermachen wenn decision=block.
+#
+# Output-Kanäle:
+#   stdout JSON {"decision":"block","reason":"..."} → Claude sieht "reason"
+#   stdout (kein JSON, exit 0)                      → nur User (verbose mode)
+#   Log-Datei (.workflow/logs/hooks.log)             → Debugging
+#   State (jq auf workflow-state.json)               → Direkte Modifikation
+#
+# WICHTIG: Nur JSON auf stdout wenn Claude weitermachen soll!
+# Alles andere → Log-Datei oder gar nichts.
 # ═══════════════════════════════════════════════════════════════════════════
 # BASH 3.x KOMPATIBEL (macOS default)
 # ═══════════════════════════════════════════════════════════════════════════
@@ -19,6 +28,13 @@ LOGS_DIR="${WORKFLOW_DIR}/logs"
 RECOVERY_DIR="${WORKFLOW_DIR}/recovery"
 
 MAX_RETRIES=3
+MAX_STOP_HOOK_BLOCKS=15
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STDIN LESEN (stop_hook_active prüfen für Loop-Prevention)
+# ═══════════════════════════════════════════════════════════════════════════
+INPUT=$(cat)
+STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // false' 2>/dev/null || echo "false")
 
 # ═══════════════════════════════════════════════════════════════════════════
 # PHASE-DEFINITIONEN (Bash 3.x kompatibel via case statements)
@@ -83,34 +99,40 @@ get_test_command() {
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
-# LOGGING
+# LOGGING (nur in Datei, NICHT auf stdout)
 # ═══════════════════════════════════════════════════════════════════════════
 mkdir -p "$LOGS_DIR" 2>/dev/null || true
 
+log() {
+  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] $1" >> "$LOGS_DIR/hooks.log" 2>/dev/null || true
+}
+
+log_transition() {
+  local event="$1"
+  local detail="$2"
+  echo "{\"timestamp\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\",\"event\":\"$event\",\"detail\":\"$detail\"}" >> "$LOGS_DIR/transitions.jsonl" 2>/dev/null || true
+}
+
 # ═══════════════════════════════════════════════════════════════════════════
-# PRÜFUNG: Workflow vorhanden?
+# JSON OUTPUT: Claude sieht "reason" und MUSS weitermachen
 # ═══════════════════════════════════════════════════════════════════════════
-if [ ! -f "$WORKFLOW_FILE" ]; then
-  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Stop Hook fired (kein Workflow)" >> "$LOGS_DIR/hooks.log"
+output_block() {
+  local reason="$1"
+
+  # Block-Counter inkrementieren
+  local count
+  count=$(jq -r '.stopHookBlockCount // 0' "$WORKFLOW_FILE" 2>/dev/null || echo "0")
+  count=$((count + 1))
+  jq --argjson c "$count" '.stopHookBlockCount = $c' \
+    "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+
+  log "BLOCK ($count/$MAX_STOP_HOOK_BLOCKS): ${reason:0:120}"
+  log_transition "stop_hook_block" "count=$count"
+
+  # JSON auf stdout → Claude Code parsed dies und zeigt "reason" an Claude
+  jq -n --arg r "$reason" '{"decision":"block","reason":$r}'
   exit 0
-fi
-
-# State lesen
-STATUS=$(jq -r '.status // "unknown"' "$WORKFLOW_FILE" 2>/dev/null || echo "unknown")
-PHASE=$(jq -r '.currentPhase // 0' "$WORKFLOW_FILE" 2>/dev/null || echo "0")
-ISSUE_NUM=$(jq -r '.issue.number // "?"' "$WORKFLOW_FILE" 2>/dev/null || echo "?")
-ISSUE_TITLE=$(jq -r '.issue.title // "Feature"' "$WORKFLOW_FILE" 2>/dev/null || echo "Feature")
-FROM_BRANCH=$(jq -r '.fromBranch // "main"' "$WORKFLOW_FILE" 2>/dev/null || echo "main")
-
-# Phase-Namen für aktuelle/nächste Phase
-PHASE_NAME_CURRENT=$(get_phase_name $PHASE)
-PHASE_AGENT_CURRENT=$(get_phase_agent $PHASE)
-NEXT_PHASE=$((PHASE + 1))
-PHASE_NAME_NEXT=$(get_phase_name $NEXT_PHASE)
-PHASE_AGENT_NEXT=$(get_phase_agent $NEXT_PHASE)
-
-# Detaillierter Log mit Workflow-Kontext
-echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] Stop Hook fired: Phase $PHASE ($PHASE_NAME_CURRENT) | Status: $STATUS | Agent: $PHASE_AGENT_CURRENT | Issue: #$ISSUE_NUM" >> "$LOGS_DIR/hooks.log"
+}
 
 # ═══════════════════════════════════════════════════════════════════════════
 # HILFSFUNKTIONEN
@@ -151,15 +173,16 @@ reset_retry() {
 
 create_wip_commit() {
   local phase=$1
-  local phase_name=$(get_phase_name $phase)
+  local phase_name
+  phase_name=$(get_phase_name $phase)
 
-  if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+  # Alles stagen, dann prüfen
+  git add -A 2>/dev/null || true
+  if ! git diff --cached --quiet 2>/dev/null; then
     local commit_msg="wip(#${ISSUE_NUM}/phase-${phase}): ${phase_name} - ${ISSUE_TITLE:0:50}"
 
-    git add -A 2>/dev/null || true
     if git commit -m "$commit_msg" 2>/dev/null; then
-      echo "│ 📦 WIP-Commit: $commit_msg"
-      echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] WIP-Commit: $commit_msg" >> "$LOGS_DIR/hooks.log"
+      log "WIP-Commit: $commit_msg"
     fi
   fi
 }
@@ -181,8 +204,6 @@ check_done() {
 }
 
 # Phase-Skip Guard: Prüft ob ALLE Vorgänger-Phasen ihren Context geschrieben haben.
-# Gibt die früheste fehlende Phase aus, oder leer wenn alles OK.
-# Nutzt Context-Checks (nicht File-Checks), weil Context nur im aktuellen Workflow existiert.
 detect_skipped_phase() {
   local current=$1
   local i=0
@@ -205,414 +226,220 @@ detect_skipped_phase() {
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
-# AUSGABE: Anweisung für Claude
+# PRÜFUNG: Workflow vorhanden?
 # ═══════════════════════════════════════════════════════════════════════════
-
-print_instruction() {
-  echo ""
-  echo "═══════════════════════════════════════════════════════════════════════════════"
-  echo "WORKFLOW ENGINE - NÄCHSTE AKTION"
-  echo "═══════════════════════════════════════════════════════════════════════════════"
-}
-
-print_footer() {
-  echo "───────────────────────────────────────────────────────────────────────────────"
-  echo "⛔ VERBOTEN: Andere Agents aufrufen, mehrere Phasen, eigene Entscheidungen"
-  echo "═══════════════════════════════════════════════════════════════════════════════"
-  echo ""
-}
-
-# ═══════════════════════════════════════════════════════════════════════════
-# STATUS-HANDLING
-# ═══════════════════════════════════════════════════════════════════════════
-
-if [ "$STATUS" == "paused" ]; then
-  PAUSE_REASON=$(jq -r '.pauseReason // "unbekannt"' "$WORKFLOW_FILE")
-  print_instruction
-  echo "STATUS: paused"
-  echo "GRUND: $PAUSE_REASON"
-  echo ""
-  echo "AKTION: Workflow ist pausiert. Warte auf User."
-  echo ""
-  echo "OPTIONEN FÜR USER:"
-  echo "  → /byt8:wf-resume      Workflow fortsetzen"
-  echo "  → /byt8:wf-retry-reset Retry-Counter zurücksetzen"
-  print_footer
+if [ ! -f "$WORKFLOW_FILE" ]; then
+  log "Stop Hook fired (kein Workflow)"
   exit 0
 fi
 
-if [ "$STATUS" == "idle" ] || [ "$STATUS" == "completed" ]; then
-  # Workflow-Dauer berechnen und protokollieren
-  if [ "$STATUS" == "completed" ]; then
-    STARTED_AT=$(jq -r '.startedAt // ""' "$WORKFLOW_FILE" 2>/dev/null)
-    COMPLETED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+# State lesen
+STATUS=$(jq -r '.status // "unknown"' "$WORKFLOW_FILE" 2>/dev/null || echo "unknown")
+PHASE=$(jq -r '.currentPhase // 0' "$WORKFLOW_FILE" 2>/dev/null || echo "0")
+ISSUE_NUM=$(jq -r '.issue.number // "?"' "$WORKFLOW_FILE" 2>/dev/null || echo "?")
+ISSUE_TITLE=$(jq -r '.issue.title // "Feature"' "$WORKFLOW_FILE" 2>/dev/null || echo "Feature")
+FROM_BRANCH=$(jq -r '.fromBranch // "main"' "$WORKFLOW_FILE" 2>/dev/null || echo "main")
 
-    if [ -n "$STARTED_AT" ] && [ "$STARTED_AT" != "null" ]; then
-      START_EPOCH=$(date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "$STARTED_AT" +%s 2>/dev/null || echo "")
-      END_EPOCH=$(date -u +%s)
+PHASE_NAME=$(get_phase_name $PHASE)
+PHASE_AGENT=$(get_phase_agent $PHASE)
+NEXT_PHASE=$((PHASE + 1))
+NEXT_NAME=$(get_phase_name $NEXT_PHASE)
+NEXT_AGENT=$(get_phase_agent $NEXT_PHASE)
 
-      if [ -n "$START_EPOCH" ]; then
-        DURATION_SEC=$((END_EPOCH - START_EPOCH))
-        DURATION_MIN=$((DURATION_SEC / 60))
-        DURATION_REM_SEC=$((DURATION_SEC % 60))
+log "Stop Hook fired: Phase $PHASE ($PHASE_NAME) | Status: $STATUS | stop_hook_active: $STOP_HOOK_ACTIVE"
 
-        # In workflow-state.json speichern
-        jq --arg ca "$COMPLETED_AT" --arg dur "${DURATION_MIN}m ${DURATION_REM_SEC}s" \
-          '.completedAt = $ca | .duration = $dur' \
-          "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+# ═══════════════════════════════════════════════════════════════════════════
+# LOOP-PREVENTION: Zu viele consecutive blocks → Workflow pausieren
+# ═══════════════════════════════════════════════════════════════════════════
+if [ "$STOP_HOOK_ACTIVE" = "true" ]; then
+  BLOCK_COUNT=$(jq -r '.stopHookBlockCount // 0' "$WORKFLOW_FILE" 2>/dev/null || echo "0")
+  if [ "$BLOCK_COUNT" -ge "$MAX_STOP_HOOK_BLOCKS" ]; then
+    jq '.status = "paused" | .pauseReason = "stop_hook_loop_detected"' \
+      "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+    log "LOOP DETECTED: $BLOCK_COUNT consecutive blocks. Pausing workflow."
+    log_transition "loop_detected" "blockCount=$BLOCK_COUNT"
+    exit 0  # Claude darf stoppen
+  fi
+fi
 
-        # Hooks-Log
-        echo "[${COMPLETED_AT}] Workflow completed: #${ISSUE_NUM} - ${ISSUE_TITLE} (Duration: ${DURATION_MIN}m ${DURATION_REM_SEC}s)" >> "$LOGS_DIR/hooks.log"
+# ═══════════════════════════════════════════════════════════════════════════
+# STATUS-HANDLING: Nicht-aktive Zustände → Claude darf stoppen
+# ═══════════════════════════════════════════════════════════════════════════
 
-        print_instruction
-        echo "STATUS: completed"
-        echo ""
-        echo "┌─────────────────────────────────────────────────────────────────────┐"
-        echo "│ ✅ WORKFLOW ABGESCHLOSSEN                                            │"
-        echo "├─────────────────────────────────────────────────────────────────────┤"
-        echo "│ Issue:    #$ISSUE_NUM - ${ISSUE_TITLE:0:45}"
-        echo "│ Gestartet: $STARTED_AT"
-        echo "│ Beendet:   $COMPLETED_AT"
-        echo "│ Dauer:     ${DURATION_MIN}m ${DURATION_REM_SEC}s"
-        echo "└─────────────────────────────────────────────────────────────────────┘"
-        echo ""
-        echo "AKTION: Workflow abgeschlossen. Kein weiterer Schritt nötig."
-        print_footer
-        exit 0
-      fi
+if [ "$STATUS" = "completed" ]; then
+  # Dauer berechnen und speichern
+  STARTED_AT=$(jq -r '.startedAt // ""' "$WORKFLOW_FILE" 2>/dev/null)
+  COMPLETED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+  if [ -n "$STARTED_AT" ] && [ "$STARTED_AT" != "null" ]; then
+    START_EPOCH=$(date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "$STARTED_AT" +%s 2>/dev/null || echo "")
+    END_EPOCH=$(date -u +%s)
+
+    if [ -n "$START_EPOCH" ]; then
+      DURATION_SEC=$((END_EPOCH - START_EPOCH))
+      DURATION_MIN=$((DURATION_SEC / 60))
+      DURATION_REM_SEC=$((DURATION_SEC % 60))
+
+      jq --arg ca "$COMPLETED_AT" --arg dur "${DURATION_MIN}m ${DURATION_REM_SEC}s" \
+        '.completedAt = $ca | .duration = $dur' \
+        "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+
+      log "Workflow completed: #${ISSUE_NUM} - ${ISSUE_TITLE} (Duration: ${DURATION_MIN}m ${DURATION_REM_SEC}s)"
     fi
   fi
-
-  print_instruction
-  echo "STATUS: $STATUS"
-  echo ""
-  echo "AKTION: Workflow abgeschlossen. Kein weiterer Schritt nötig."
-  print_footer
   exit 0
 fi
 
+if [ "$STATUS" = "paused" ] || [ "$STATUS" = "idle" ]; then
+  log "Stop allowed: Status=$STATUS"
+  exit 0
+fi
+
+# Nur active und awaiting_approval weiter verarbeiten
 if [ "$STATUS" != "active" ] && [ "$STATUS" != "awaiting_approval" ]; then
   exit 0
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
-# HAUPTLOGIK
+# AWAITING_APPROVAL → Claude darf stoppen
+# UserPromptSubmit Hook injiziert Kontext beim nächsten User-Prompt
 # ═══════════════════════════════════════════════════════════════════════════
-
-# ───────────────────────────────────────────────────────────────────────────
-# FALL 1: Warte auf Approval
-# ───────────────────────────────────────────────────────────────────────────
-if [ "$STATUS" == "awaiting_approval" ]; then
-  print_instruction
-  echo "STATUS: awaiting_approval"
-  echo "PHASE: $PHASE ($PHASE_NAME_CURRENT)"
-  echo ""
-  echo "WARTE AUF USER-INPUT:"
-  echo ""
-  echo "┌─────────────────────────────────────────────────────────────────────────────┐"
-  echo "│ WENN USER 'Ja/OK/Weiter/Approve':                                           │"
-  echo "├─────────────────────────────────────────────────────────────────────────────┤"
-
-  # WIP-Commit bei Approval?
-  if needs_commit $PHASE; then
-    echo "│ 1. WIP-Commit erstellen (git add -A && git commit)                          │"
-  fi
-
-  echo "│ 2. State updaten:                                                            │"
-  if [ "$PHASE" == "7" ]; then
-    echo "│    jq '.status = \"active\" | .currentPhase = $NEXT_PHASE | del(.securityFixCount)' \\│"
-  else
-    echo "│    jq '.status = \"active\" | .currentPhase = $NEXT_PHASE' \\                   │"
-  fi
-  echo "│      .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json│"
-  echo "│                                                                              │"
-
-  if [ "$NEXT_PHASE" -le 9 ]; then
-    echo "│ 3. Nächste Phase starten:                                                    │"
-    if [ "$PHASE_AGENT_NEXT" == "ORCHESTRATOR" ]; then
-      echo "│    → Phase 9 (Push & PR) direkt ausführen (kein Agent)                      │"
-    else
-      echo "│    → Task($PHASE_AGENT_NEXT)                                                 │"
-      echo "│      \"Phase $NEXT_PHASE für Issue #$ISSUE_NUM: $ISSUE_TITLE\"                │"
-    fi
-  fi
-
-  echo "└─────────────────────────────────────────────────────────────────────────────┘"
-  echo ""
-
-  if [ "$PHASE" == "7" ]; then
-    # Phase 7 (Security Audit): Iteration limit + Intelligentes Routing für Fixes
-    SEC_FIX_COUNT=$(jq -r '.securityFixCount // 0' "$WORKFLOW_FILE" 2>/dev/null || echo "0")
-
-    echo "┌─────────────────────────────────────────────────────────────────────────────┐"
-    echo "│ WENN USER ÄNDERUNGEN ODER FIXES WILL:                                       │"
-    echo "├─────────────────────────────────────────────────────────────────────────────┤"
-
-    if [ "$SEC_FIX_COUNT" -ge "$MAX_RETRIES" ]; then
-      echo "│ 🛑 MAX SECURITY-FIX-ITERATIONEN ($MAX_RETRIES) ERREICHT                     │"
-      echo "│                                                                              │"
-      echo "│ AKTION: Informiere User dass Security-Fix-Limit erreicht ist.               │"
-      echo "│ Optionen:                                                                    │"
-      echo "│   - 'Weiter' → Verbleibende Findings akzeptieren, Phase 8                   │"
-      echo "│   - /byt8:wf-retry-reset → Counter zurücksetzen, nochmal fixen              │"
-      echo "│   - /byt8:wf-pause → Pausieren für manuelles Eingreifen                     │"
-    else
-      echo "│ Security-Fix Iteration: $((SEC_FIX_COUNT + 1))/$MAX_RETRIES                 │"
-      echo "│                                                                              │"
-      echo "│ 1. State updaten:                                                            │"
-      echo "│    jq '.status = \"active\" | del(.context.securityAudit) |                   │"
-      echo "│    del(.context.testResults) |                                               │"
-      echo "│    .securityFixCount = (.securityFixCount // 0) + 1 |                       │"
-      echo "│    .currentPhase = 6' \\                                                     │"
-      echo "│      .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json│"
-      echo "│                                                                              │"
-      echo "│ 2. Claude analysiert User-Input und routet an zuständigen Agent:             │"
-      echo "│    - Security Findings fixen:                                                │"
-      echo "│      User kann: 'fix alle', 'fix critical+high', 'fix HIGH-001, MED-003'   │"
-      echo "│      → Findings nach User-Auswahl filtern                                   │"
-      echo "│      → Backend (.java) → Task(byt8:spring-boot-developer, \"Fix: ...\")       │"
-      echo "│      → Frontend (.ts/.html) → Task(byt8:angular-frontend-developer, \"...\") │"
-      echo "│                                                                              │"
-      echo "│ 3. Phase 6 (E2E Tests) starten:                                             │"
-      echo "│    → Task(byt8:test-engineer, \"Re-run tests after security fixes\")          │"
-      echo "│    ℹ️  Auto-Advance: Phase 6 → Phase 7 (Re-Audit)                            │"
-    fi
-
-    echo "└─────────────────────────────────────────────────────────────────────────────┘"
-  else
-    # Alle anderen Phasen: Generischer Feedback-Loop
-    echo "┌─────────────────────────────────────────────────────────────────────────────┐"
-    echo "│ WENN USER FEEDBACK GIBT (Änderungswünsche):                                 │"
-    echo "├─────────────────────────────────────────────────────────────────────────────┤"
-    echo "│ 1. State updaten:                                                            │"
-    echo "│    jq '.status = \"active\"' .workflow/workflow-state.json > tmp && mv tmp ... │"
-    echo "│                                                                              │"
-    echo "│ 2. Gleiche Phase mit Feedback wiederholen:                                   │"
-    echo "│    → Task($PHASE_AGENT_CURRENT)                                              │"
-    echo "│      \"Revise Phase $PHASE based on feedback: {USER_FEEDBACK}\"               │"
-    echo "└─────────────────────────────────────────────────────────────────────────────┘"
-  fi
-
-  print_footer
+if [ "$STATUS" = "awaiting_approval" ]; then
+  log "Stop allowed: awaiting_approval (Phase $PHASE)"
   exit 0
 fi
 
-# ───────────────────────────────────────────────────────────────────────────
-# FALL 2: Phase prüfen (status = active)
-# ───────────────────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════
+# AB HIER: status = active → Workflow läuft
+# ═══════════════════════════════════════════════════════════════════════════
 
 # ═══════════════════════════════════════════════════════════════════════════
-# PHASE-SKIP GUARD: Übersprungene Phasen deterministisch abfangen
+# PHASE-SKIP GUARD: Fehlende Vorgänger-Phasen abfangen
 # ═══════════════════════════════════════════════════════════════════════════
 SKIPPED_TO=$(detect_skipped_phase $PHASE)
 if [ -n "$SKIPPED_TO" ]; then
   SKIP_NAME=$(get_phase_name $SKIPPED_TO)
   SKIP_AGENT=$(get_phase_agent $SKIPPED_TO)
 
-  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] PHASE SKIP DETECTED: Phase $PHASE erfordert Phase $SKIPPED_TO ($SKIP_NAME). Auto-Korrektur." >> "$LOGS_DIR/hooks.log"
+  log "PHASE SKIP DETECTED: Phase $PHASE erfordert Phase $SKIPPED_TO ($SKIP_NAME). Auto-Korrektur."
+  log_transition "phase_skip_corrected" "from=$PHASE to=$SKIPPED_TO"
 
   # State auto-korrigieren
   jq --argjson sp "$SKIPPED_TO" '.currentPhase = $sp | .status = "active"' \
     "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
 
-  print_instruction
-  echo "⚠️  PHASE-SKIP ERKANNT UND KORRIGIERT"
-  echo ""
-  echo "Phase $SKIPPED_TO ($SKIP_NAME) wurde übersprungen!"
-  echo "State wurde automatisch auf Phase $SKIPPED_TO zurückgesetzt."
-  echo ""
-  echo "AKTION FÜR CLAUDE:"
-  echo "  → Task($SKIP_AGENT)"
-  echo "    \"Phase $SKIPPED_TO ($SKIP_NAME) für Issue #$ISSUE_NUM: $ISSUE_TITLE\""
-  print_footer
-  exit 0
+  output_block "PHASE-SKIP ERKANNT UND KORRIGIERT: Phase $SKIPPED_TO ($SKIP_NAME) wurde uebersprungen. State auf Phase $SKIPPED_TO zurueckgesetzt. Starte sofort: Task($SKIP_AGENT, 'Phase $SKIPPED_TO ($SKIP_NAME) fuer Issue #$ISSUE_NUM: $ISSUE_TITLE'). Lies .workflow/workflow-state.json fuer Spec-File-Pfade."
 fi
 
+# ═══════════════════════════════════════════════════════════════════════════
+# DONE-CHECK: Phase abgeschlossen?
+# ═══════════════════════════════════════════════════════════════════════════
 if check_done; then
-  # ═══════════════════════════════════════════════════════════════════════
+  # ═════════════════════════════════════════════════════════════════════════
   # ✅ PHASE ERFOLGREICH ABGESCHLOSSEN
-  # ═══════════════════════════════════════════════════════════════════════
+  # ═════════════════════════════════════════════════════════════════════════
 
   reset_retry $PHASE
 
-  print_instruction
-  echo "STATUS: active"
-  echo "PHASE: $PHASE ($PHASE_NAME_CURRENT) ✅ DONE"
-  echo ""
-
-  # WIP-Commit?
+  # WIP-Commit (silent, kein stdout)
   if needs_commit $PHASE; then
     create_wip_commit $PHASE
-    echo "│"
   fi
 
-  # Approval Gate?
   if needs_approval $PHASE; then
-    # Status auf awaiting_approval setzen
+    # ═══════════════════════════════════════════════════════════════════════
+    # APPROVAL GATE → Claude darf stoppen, User antwortet
+    # UserPromptSubmit Hook injiziert dann den Kontext
+    # ═══════════════════════════════════════════════════════════════════════
     jq '.status = "awaiting_approval" | .awaitingApprovalFor = .currentPhase' \
       "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
 
-    echo "⏸️  APPROVAL GATE"
-    echo ""
+    log "APPROVAL GATE: Phase $PHASE ($PHASE_NAME) done. awaiting_approval gesetzt."
+    log_transition "approval_gate" "phase=$PHASE"
 
-    # Phase 7 Spezial: Security Findings anzeigen
-    if [ "$PHASE" == "7" ]; then
-      CRITICAL_COUNT=$(jq -r '.context.securityAudit.severity.critical // 0' "$WORKFLOW_FILE" 2>/dev/null)
-      HIGH_COUNT=$(jq -r '.context.securityAudit.severity.high // 0' "$WORKFLOW_FILE" 2>/dev/null)
-      MEDIUM_COUNT=$(jq -r '.context.securityAudit.severity.medium // 0' "$WORKFLOW_FILE" 2>/dev/null)
-      LOW_COUNT=$(jq -r '.context.securityAudit.severity.low // 0' "$WORKFLOW_FILE" 2>/dev/null)
-      TOTAL_FINDINGS=$(jq -r '.context.securityAudit.findings | length // 0' "$WORKFLOW_FILE" 2>/dev/null)
-
-      if [ "$TOTAL_FINDINGS" -gt 0 ]; then
-        echo "SECURITY AUDIT ERGEBNIS: $TOTAL_FINDINGS Findings"
-        echo "  Critical: $CRITICAL_COUNT | High: $HIGH_COUNT | Medium: $MEDIUM_COUNT | Low: $LOW_COUNT"
-        echo ""
-        echo "FINDINGS:"
-        jq -r '.context.securityAudit.findings[]? | "  [\(.severity | ascii_upcase)] \(.id): \(.description) (\(.location))"' "$WORKFLOW_FILE" 2>/dev/null
-        echo ""
-        echo "AKTION FÜR CLAUDE:"
-        echo "  Zeige dem User ALLE Findings als Tabelle (Severity, ID, Description, Location)."
-        echo "  Frage: \"Security Audit fertig. Welche Findings sollen gefixt werden?\""
-        echo "  Optionen:"
-        echo "    - 'Weiter' → Alle akzeptieren, weiter zu Phase 8 (Code Review)"
-        echo "    - 'Fix alle' → Alle Findings fixen"
-        echo "    - 'Fix critical+high' → Nur ab Severity High fixen"
-        echo "    - 'Fix HIGH-001, MEDIUM-003' → Bestimmte Findings per ID fixen"
-      else
-        echo "AKTION FÜR CLAUDE:"
-        echo "  Frage den User: \"Phase $PHASE ($PHASE_NAME_CURRENT) ist fertig. Keine Security-Findings. Zufrieden?\""
-      fi
-    else
-      echo "AKTION FÜR CLAUDE:"
-      echo "  Frage den User: \"Phase $PHASE ($PHASE_NAME_CURRENT) ist fertig. Zufrieden?\""
-    fi
-
-    echo ""
-    echo "DANN STOPP - Warte auf User-Antwort."
-    echo "Der nächste Hook-Aufruf gibt die Anweisung basierend auf User-Input."
+    # Kein JSON → exit 0 → Claude stoppt normal
+    # SKILL.md im Context sagt Claude: User fragen
+    exit 0
 
   else
-    # Auto-Advance
+    # ═══════════════════════════════════════════════════════════════════════
+    # AUTO-ADVANCE → Claude MUSS weitermachen (decision:block)
+    # ═══════════════════════════════════════════════════════════════════════
     jq --argjson np "$NEXT_PHASE" \
       '.currentPhase = $np | .status = "active"' \
       "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
 
-    echo "▶️  AUTO-ADVANCE zu Phase $NEXT_PHASE"
-    echo ""
-    echo "AKTION FÜR CLAUDE:"
-    echo "  → Task($PHASE_AGENT_NEXT)"
-    echo "    \"Phase $NEXT_PHASE ($PHASE_NAME_NEXT) für Issue #$ISSUE_NUM\""
-    echo ""
-    echo "Kontext für Agent:"
+    log "AUTO-ADVANCE: Phase $PHASE ($PHASE_NAME) → Phase $NEXT_PHASE ($NEXT_NAME)"
+    log_transition "auto_advance" "from=$PHASE to=$NEXT_PHASE"
 
-    case $NEXT_PHASE in
-      3)
-        echo "  - context.technicalSpec (Architektur)"
-        echo "  - context.apiDesign (Datenmodell)"
-        ;;
-      4)
-        echo "  - context.technicalSpec"
-        echo "  - context.apiDesign"
-        echo "  - context.migrations (DB Schema)"
-        ;;
-      5)
-        echo "  - context.wireframes (UI)"
-        echo "  - context.apiDesign (Endpoints)"
-        ;;
-      7)
-        echo "  - context.testResults (Test-Ergebnisse)"
-        echo "  - context.backendImpl (Backend Code)"
-        echo "  - context.frontendImpl (Frontend Code)"
-        ;;
-      *)
-        echo "  - Alle vorherigen context.* Keys"
-        ;;
-    esac
+    output_block "Phase $PHASE ($PHASE_NAME) DONE. Auto-Advance zu Phase $NEXT_PHASE ($NEXT_NAME). Starte sofort: Task($NEXT_AGENT, 'Phase $NEXT_PHASE ($NEXT_NAME) fuer Issue #$ISSUE_NUM: $ISSUE_TITLE'). Lies .workflow/workflow-state.json fuer Spec-File-Pfade (File Reference Protocol)."
   fi
 
-  print_footer
-
 else
-  # ═══════════════════════════════════════════════════════════════════════
+  # ═════════════════════════════════════════════════════════════════════════
   # ❌ PHASE NICHT FERTIG
-  # ═══════════════════════════════════════════════════════════════════════
+  # ═════════════════════════════════════════════════════════════════════════
 
-  print_instruction
-  echo "STATUS: active"
-  echo "PHASE: $PHASE ($PHASE_NAME_CURRENT) ❌ NICHT FERTIG"
-  echo ""
-
-  # Phase 8 Spezial: CHANGES_REQUESTED
-  if [ "$PHASE" == "8" ]; then
+  # ─────────────────────────────────────────────────────────────────────────
+  # Phase 8 Spezial: CHANGES_REQUESTED → Deterministic Rollback
+  # ─────────────────────────────────────────────────────────────────────────
+  if [ "$PHASE" = "8" ]; then
     REVIEW_STATUS=$(jq -r '.context.reviewFeedback.status // "PENDING"' "$WORKFLOW_FILE" 2>/dev/null)
 
-    if [ "$REVIEW_STATUS" == "CHANGES_REQUESTED" ]; then
+    if [ "$REVIEW_STATUS" = "CHANGES_REQUESTED" ]; then
       RETRY=$(increment_retry $PHASE)
 
       if [ "$RETRY" -ge "$MAX_RETRIES" ]; then
         jq '.status = "paused" | .pauseReason = "max_review_iterations"' \
           "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
-
-        echo "🛑 MAX REVIEW-ITERATIONEN ($MAX_RETRIES)"
-        echo ""
-        echo "AKTION: Workflow pausiert. User muss manuell eingreifen."
-        echo "  → /byt8:wf-retry-reset zum Zurücksetzen"
-      else
-        echo "🔄 CODE REVIEW: CHANGES REQUESTED (Iteration $RETRY/$MAX_RETRIES)"
-        echo ""
-        echo "FIXES:"
-        jq -r '.context.reviewFeedback.fixes[]? | "  → [\(.type)] \(.issue)"' "$WORKFLOW_FILE" 2>/dev/null
-        echo ""
-
-        # Dynamisches Rollback-Ziel basierend auf frühestem Fix-Typ
-        ROLLBACK_TARGET=6
-        if jq -e '.context.reviewFeedback.fixes[]? | select(.type == "database")' "$WORKFLOW_FILE" > /dev/null 2>&1; then
-          ROLLBACK_TARGET=3
-        elif jq -e '.context.reviewFeedback.fixes[]? | select(.type == "backend")' "$WORKFLOW_FILE" > /dev/null 2>&1; then
-          ROLLBACK_TARGET=4
-        elif jq -e '.context.reviewFeedback.fixes[]? | select(.type == "frontend")' "$WORKFLOW_FILE" > /dev/null 2>&1; then
-          ROLLBACK_TARGET=5
-        fi
-
-        ROLLBACK_NAME=$(get_phase_name $ROLLBACK_TARGET)
-        ROLLBACK_AGENT=$(get_phase_agent $ROLLBACK_TARGET)
-
-        # Context ab Rollback-Ziel aufräumen
-        CLEAR_CMD="del(.context.reviewFeedback) | del(.securityFixCount)"
-        if [ "$ROLLBACK_TARGET" -le 3 ]; then
-          CLEAR_CMD="$CLEAR_CMD | del(.context.migrations)"
-        fi
-        if [ "$ROLLBACK_TARGET" -le 4 ]; then
-          CLEAR_CMD="$CLEAR_CMD | del(.context.backendImpl)"
-        fi
-        if [ "$ROLLBACK_TARGET" -le 5 ]; then
-          CLEAR_CMD="$CLEAR_CMD | del(.context.frontendImpl)"
-        fi
-        CLEAR_CMD="$CLEAR_CMD | del(.context.testResults) | del(.context.securityAudit)"
-
-        echo "ROLLBACK ZU PHASE $ROLLBACK_TARGET ($ROLLBACK_NAME)"
-        echo ""
-        echo "AKTION FÜR CLAUDE:"
-        echo ""
-        echo "  1. Review-Feedback merken (für Agent-Prompt)"
-        echo ""
-        echo "  2. Context zurücksetzen und Rollback:"
-        echo "     jq '$CLEAR_CMD | .currentPhase = $ROLLBACK_TARGET | .status = \"active\"' \\"
-        echo "       .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
-        echo ""
-        echo "  3. Phase $ROLLBACK_TARGET ($ROLLBACK_NAME) starten:"
-        echo "     Task($ROLLBACK_AGENT, \"Phase $ROLLBACK_TARGET für Issue #$ISSUE_NUM."
-        echo "       Review-Feedback: {FIXES_VON_OBEN}\")"
-        echo ""
-        echo "  ℹ️  Auto-Advance: Phase $ROLLBACK_TARGET → ... → Phase 8 (Re-Review)"
+        log "MAX REVIEW ITERATIONS ($MAX_RETRIES). Pausing."
+        log_transition "max_review_retries" "retry=$RETRY"
+        exit 0  # Claude darf stoppen, User muss eingreifen
       fi
 
-      print_footer
-      exit 0
+      # Fixes-Text ZUERST lesen (vor State-Bereinigung!)
+      FIXES_TEXT=$(jq -r '[.context.reviewFeedback.fixes[]? | "[\(.type)] \(.issue)"] | join("; ")' "$WORKFLOW_FILE" 2>/dev/null || echo "Review changes requested")
+
+      # Rollback-Ziel deterministisch bestimmen
+      ROLLBACK_TARGET=6
+      if jq -e '.context.reviewFeedback.fixes[]? | select(.type == "database")' "$WORKFLOW_FILE" > /dev/null 2>&1; then
+        ROLLBACK_TARGET=3
+      elif jq -e '.context.reviewFeedback.fixes[]? | select(.type == "backend")' "$WORKFLOW_FILE" > /dev/null 2>&1; then
+        ROLLBACK_TARGET=4
+      elif jq -e '.context.reviewFeedback.fixes[]? | select(.type == "frontend")' "$WORKFLOW_FILE" > /dev/null 2>&1; then
+        ROLLBACK_TARGET=5
+      fi
+
+      ROLLBACK_NAME=$(get_phase_name $ROLLBACK_TARGET)
+      ROLLBACK_AGENT=$(get_phase_agent $ROLLBACK_TARGET)
+
+      # Context ab Rollback-Ziel aufräumen
+      CLEAR_CMD="del(.context.reviewFeedback) | del(.securityFixCount)"
+      if [ "$ROLLBACK_TARGET" -le 3 ]; then
+        CLEAR_CMD="$CLEAR_CMD | del(.context.migrations)"
+      fi
+      if [ "$ROLLBACK_TARGET" -le 4 ]; then
+        CLEAR_CMD="$CLEAR_CMD | del(.context.backendImpl)"
+      fi
+      if [ "$ROLLBACK_TARGET" -le 5 ]; then
+        CLEAR_CMD="$CLEAR_CMD | del(.context.frontendImpl)"
+      fi
+      CLEAR_CMD="$CLEAR_CMD | del(.context.testResults) | del(.context.securityAudit)"
+
+      # State korrigieren
+      jq "$CLEAR_CMD | .currentPhase = $ROLLBACK_TARGET | .status = \"active\"" \
+        "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+
+      log "REVIEW ROLLBACK: Phase 8 → Phase $ROLLBACK_TARGET ($ROLLBACK_NAME). Retry $RETRY/$MAX_RETRIES. Fixes: $FIXES_TEXT"
+      log_transition "review_rollback" "target=$ROLLBACK_TARGET retry=$RETRY"
+
+      output_block "Phase 8 Code Review: CHANGES_REQUESTED (Iteration $RETRY/$MAX_RETRIES). Rollback zu Phase $ROLLBACK_TARGET ($ROLLBACK_NAME). State bereits korrigiert (currentPhase=$ROLLBACK_TARGET, downstream Context geloescht). Starte sofort: Task($ROLLBACK_AGENT, 'Phase $ROLLBACK_TARGET ($ROLLBACK_NAME) Hotfix fuer Issue #$ISSUE_NUM. Review-Fixes: $FIXES_TEXT'). Auto-Advance laeuft bis Phase 8 (Re-Review)."
     fi
   fi
 
+  # ─────────────────────────────────────────────────────────────────────────
   # Test-Phasen: Retry bei Fehler
+  # ─────────────────────────────────────────────────────────────────────────
   TEST_CMD=$(get_test_command $PHASE)
   if [ -n "$TEST_CMD" ]; then
     RETRY=$(increment_retry $PHASE)
@@ -620,46 +447,36 @@ else
     if [ "$RETRY" -ge "$MAX_RETRIES" ]; then
       jq '.status = "paused" | .pauseReason = "max_test_retries"' \
         "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
-
-      echo "🛑 MAX TEST-RETRIES ($MAX_RETRIES)"
-      echo ""
-      echo "AKTION: Workflow pausiert. User muss manuell eingreifen."
-      echo "  → /byt8:wf-retry-reset zum Zurücksetzen"
-    else
-      echo "⚠️  TESTS FEHLGESCHLAGEN (Versuch $RETRY/$MAX_RETRIES)"
-      echo ""
-      echo "Test-Command: $TEST_CMD"
-      echo ""
-      echo "AKTION FÜR CLAUDE:"
-      echo "  1. Fehler analysieren"
-      echo "  2. Task($PHASE_AGENT_CURRENT, \"Fix test failures\")"
-      echo "  3. Tests werden beim nächsten Hook-Aufruf erneut geprüft"
+      log "MAX TEST RETRIES ($MAX_RETRIES). Phase $PHASE. Pausing."
+      log_transition "max_test_retries" "phase=$PHASE retry=$RETRY"
+      exit 0  # Claude darf stoppen
     fi
 
-    print_footer
-    exit 0
+    log "TEST RETRY: Phase $PHASE ($PHASE_NAME), Versuch $RETRY/$MAX_RETRIES"
+    log_transition "test_retry" "phase=$PHASE retry=$RETRY"
+
+    output_block "Phase $PHASE ($PHASE_NAME) Tests fehlgeschlagen (Versuch $RETRY/$MAX_RETRIES). Starte: Task($PHASE_AGENT, 'Fix test failures in Phase $PHASE ($PHASE_NAME) fuer Issue #$ISSUE_NUM'). Tests: $TEST_CMD"
   fi
 
+  # ─────────────────────────────────────────────────────────────────────────
   # Standard: Done-Kriterium nicht erfüllt
-  echo "Done-Kriterium nicht erfüllt."
-  echo ""
-
+  # ─────────────────────────────────────────────────────────────────────────
+  EXPECTED=""
   case $PHASE in
-    0) echo "Erwartet: context.technicalSpec muss existieren" ;;
-    1) echo "Erwartet: wireframes/*.html oder wireframes/*.svg" ;;
-    2) echo "Erwartet: context.apiDesign muss existieren" ;;
-    3) echo "Erwartet: backend/src/main/resources/db/migration/V*.sql" ;;
-    4) echo "Erwartet: context.backendImpl muss existieren" ;;
-    5) echo "Erwartet: context.frontendImpl muss existieren" ;;
-    6) echo "Erwartet: context.testResults muss existieren" ;;
-    7) echo "Erwartet: context.securityAudit muss existieren" ;;
-    8) echo "Erwartet: context.reviewFeedback.status == 'APPROVED'" ;;
-    9) echo "Erwartet: phases['9'].prUrl muss existieren" ;;
+    0) EXPECTED="context.technicalSpec" ;;
+    1) EXPECTED="wireframes/*.html oder wireframes/*.svg" ;;
+    2) EXPECTED="context.apiDesign" ;;
+    3) EXPECTED="V*.sql in backend/src/main/resources/db/migration/" ;;
+    4) EXPECTED="context.backendImpl" ;;
+    5) EXPECTED="context.frontendImpl" ;;
+    6) EXPECTED="context.testResults" ;;
+    7) EXPECTED="context.securityAudit" ;;
+    8) EXPECTED="context.reviewFeedback.status = APPROVED" ;;
+    9) EXPECTED="phases.9.prUrl" ;;
   esac
 
-  echo ""
-  echo "AKTION FÜR CLAUDE:"
-  echo "  → Task($PHASE_AGENT_CURRENT, \"Complete Phase $PHASE for Issue #$ISSUE_NUM\")"
+  log "PHASE NOT DONE: Phase $PHASE ($PHASE_NAME). Expected: $EXPECTED"
+  log_transition "phase_not_done" "phase=$PHASE expected=$EXPECTED"
 
-  print_footer
+  output_block "Phase $PHASE ($PHASE_NAME) NICHT FERTIG. Erwartet: $EXPECTED. Starte: Task($PHASE_AGENT, 'Complete Phase $PHASE ($PHASE_NAME) fuer Issue #$ISSUE_NUM: $ISSUE_TITLE'). Lies .workflow/workflow-state.json fuer Spec-File-Pfade."
 fi

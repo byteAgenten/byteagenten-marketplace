@@ -14,10 +14,17 @@ hooks:
 
 ## Regeln
 
-1. **AUTO-ADVANCE:** Nach Phasen 2–6 sofort nächste Phase starten — NICHT stoppen.
-2. **APPROVAL GATES:** Nach Phasen 0, 1, 7, 8, 9 → `status = "awaiting_approval"`, User fragen, STOPP.
+1. **AUTO-ADVANCE:** Nach Phasen 2–6 sofort nächste Phase starten — NICHT stoppen. _(Erzwungen durch Stop Hook: decision:block)_
+2. **APPROVAL GATES:** Nach Phasen 0, 1, 7, 8, 9 → `status = "awaiting_approval"`, User fragen, STOPP. _(UserPromptSubmit Hook injiziert Rollback-Regeln bei User-Antwort)_
 3. **Kein Code schreiben:** Hook blockiert Edit/Write. Jede Änderung → `Task(byt8:AGENT)`.
 4. **Keine Spec-Dateien lesen:** Nur `workflow-state.json` lesen. Agents lesen Specs selbst via Read-Tool.
+
+### Hook-Enforcement (v7.0)
+
+Drei Hooks steuern den Workflow deterministisch:
+- **Stop Hook** (`wf_engine.sh`): JSON `decision:block` erzwingt Auto-Advance. Claude KANN NICHT stoppen bei Phasen 2-6.
+- **UserPromptSubmit Hook** (`wf_user_prompt.sh`): Injiziert Workflow-Status und Rollback-Regeln in Claudes Kontext bei jedem User-Prompt.
+- **PreToolUse Hook** (`block_orchestrator_code_edit.sh`): Blockiert Code-Edits durch den Orchestrator.
 
 ---
 
@@ -36,7 +43,7 @@ hooks:
 | 8 | `byt8:code-reviewer` | APPROVAL |
 | 9 | Orchestrator direkt (Push & PR) | APPROVAL |
 
-WIP-Commits werden automatisch vom SubagentStop Hook erstellt (Phasen 1, 3, 4, 5, 6).
+WIP-Commits werden automatisch vom SubagentStop Hook erstellt (Phasen 1, 3, 4, 5, 6 + Safety Net: Agent-basiert bei Hotfixes).
 
 ---
 
@@ -167,6 +174,8 @@ User will Änderung an aktueller Phase → `Task(AKTUELLER_AGENT, "Revise: FEEDB
 
 ### Fall 2: Rollback auf frühere Phase
 
+Typische Situationen: User will bei Phase 7/8 noch UI-Änderungen, Backend-Fixes, oder Feature-Erweiterungen.
+
 | Fix-Typ | Ziel | Agent |
 |---------|------|-------|
 | Spec / Architektur | Phase 0 | `byt8:architect-planner` |
@@ -177,10 +186,20 @@ User will Änderung an aktueller Phase → `Task(AKTUELLER_AGENT, "Revise: FEEDB
 | Frontend / Angular | Phase 5 | `byt8:angular-frontend-developer` |
 | Tests / E2E | Phase 6 | `byt8:test-engineer` |
 
-Ablauf:
-1. `Task(byt8:AGENT, "Phase [N] (Hotfix): ## SPEC FILES [Pfade] ## ZU FIXENDE PUNKTE [Details] ## YOUR TASK Fixe NUR diese Punkte.")`
-2. `currentPhase = Ziel-Phase`, downstream Context löschen
-3. Auto-Advance läuft bis zum nächsten Approval Gate
+Ablauf — **Reihenfolge ist PFLICHT:**
+
+1. **ZUERST** `currentPhase = Ziel-Phase` setzen + downstream Context löschen:
+   ```bash
+   jq '.currentPhase = ZIEL | .status = "active" | del(.context.securityAudit) | del(.context.testResults)' \
+     .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
+   ```
+   Bei ZIEL ≤ 5: zusätzlich `del(.context.frontendImpl)`
+   Bei ZIEL ≤ 4: zusätzlich `del(.context.backendImpl)`
+   Bei ZIEL ≤ 3: zusätzlich `del(.context.migrations)`
+2. **DANN** Agent starten: `Task(byt8:AGENT, "Phase [N] (Hotfix): ## SPEC FILES [Pfade] ## ZU FIXENDE PUNKTE [Details] ## YOUR TASK Fixe NUR diese Punkte.")`
+3. Auto-Advance läuft automatisch bis zum nächsten Approval Gate (via wf_engine.sh Stop Hook)
+
+**⛔ NIEMALS** Agents aufrufen ohne vorher `currentPhase` zu setzen — sonst: keine WIP-Commits, Phase-Skip-Gefahr!
 
 ---
 

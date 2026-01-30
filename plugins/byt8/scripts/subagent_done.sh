@@ -81,16 +81,34 @@ needs_commit() {
   esac
 }
 
+# Safety Net: Agent-basierte Erkennung für Hotfix-Situationen.
+# Wenn currentPhase 7 oder 8 ist, aber ein Code-produzierender Agent lief
+# (z.B. bei Rückdelegation/Hotfix), trotzdem WIP-Commit erstellen.
+agent_produces_code() {
+  case "$1" in
+    *ui-designer*|*postgresql*|*spring-boot*|*angular-frontend*|*test-engineer*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 get_phase_name() {
   echo "${PHASE_NAMES[$1]:-Phase $1}"
 }
 
-if needs_commit $CURRENT_PHASE; then
+if needs_commit $CURRENT_PHASE || agent_produces_code "$CURRENT_AGENT"; then
   # Erst stagen, dann prüfen (git diff erkennt keine untracked files!)
   git add -A 2>/dev/null || true
   if ! git diff --cached --quiet 2>/dev/null; then
     PHASE_NAME=$(get_phase_name $CURRENT_PHASE)
-    COMMIT_MSG="wip(#${ISSUE_NUMBER}/phase-${CURRENT_PHASE}): ${PHASE_NAME} - ${ISSUE_TITLE:0:50}"
+
+    # Bei Hotfix: Agent-Info in Commit-Message, damit klar ist WAS geändert wurde
+    if ! needs_commit $CURRENT_PHASE && agent_produces_code "$CURRENT_AGENT"; then
+      # Hotfix-Commit: Phase stimmt nicht mit Agent überein
+      AGENT_SHORT="${CURRENT_AGENT##*:}"  # "byt8:angular-frontend-developer" → "angular-frontend-developer"
+      COMMIT_MSG="wip(#${ISSUE_NUMBER}/phase-${CURRENT_PHASE}-hotfix): ${AGENT_SHORT} - ${ISSUE_TITLE:0:50}"
+    else
+      COMMIT_MSG="wip(#${ISSUE_NUMBER}/phase-${CURRENT_PHASE}): ${PHASE_NAME} - ${ISSUE_TITLE:0:50}"
+    fi
 
     if git commit -m "$COMMIT_MSG" 2>/dev/null; then
       echo "┌─────────────────────────────────────────────────────────────────────┐"

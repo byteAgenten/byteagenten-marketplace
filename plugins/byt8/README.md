@@ -1,6 +1,6 @@
 # byt8 Plugin
 
-**Version 6.8.1** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 10-Phasen Workflow, Approval Gates und **kontinuierlichem Auto-Advance**.
+**Version 7.0.0** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 10-Phasen Workflow, Approval Gates und **deterministischem Auto-Advance via Context-Injection**.
 
 ## Philosophy
 
@@ -139,20 +139,19 @@ Der Workflow pausiert an kritischen Punkten für User-Approval:
 
 ---
 
-## Hook-basierte Automatisierung (v4.0+)
+## Hook-basierte Automatisierung (v4.0+, Context-Injection v7.0)
 
-Ab Version 4.0 nutzt byt8 **Workflow Hooks** für zuverlässige Automatisierung. Dies löst viele Probleme des rein prompt-gesteuerten Workflows.
+Ab Version 7.0 nutzt byt8 **Context-Injection** für deterministische Workflow-Steuerung. Hooks kommunizieren mit Claude über dokumentierte Kanäle statt unsichtbarem stdout.
 
-### Vorteile gegenüber Prompt-Steuerung
+### Hook-Output-Sichtbarkeit (Claude Code Architektur)
 
-| Problem (früher) | Lösung (mit Hooks) |
-|------------------|-------------------|
-| Context Overflow → Workflow-Zustand verloren | **SessionStart Hook** stellt automatisch den kompletten Kontext wieder her |
-| Agent vergisst WIP-Commit | **SubagentStop Hook** erstellt automatisch WIP-Commits nach jeder Phase |
-| Tests fehlgeschlagen aber weitergemacht | **Stop Hook** validiert Done-Kriterien und blockiert bei Fehler |
-| Retry-Chaos nach Testfehlern | Automatisches **Retry-Management** mit Max 3 Versuchen |
-| Approval Gate übersprungen | Hooks erzwingen **Approval Gates** an kritischen Punkten |
-| Orchestrator schreibt Code direkt | **PreToolUse Hooks** blockieren Edit/Write und unerlaubten Push |
+| Output-Kanal | Sieht Claude? | Sieht User? | Genutzt für |
+|---|---|---|---|
+| `Stop` Hook: JSON `decision:"block"` + `reason` | **Ja** (reason) | Ja | Auto-Advance, Retries |
+| `UserPromptSubmit` Hook: stdout | **Ja** (Context) | Verbose | Approval Gate Kontext |
+| `SessionStart` Hook: stdout | **Ja** (Context) | Verbose | Context Recovery |
+| `PreToolUse` Hook: exit 2 + stderr | **Ja** (stderr) | Ja | Push Guard, Code-Edit Block |
+| `Stop` Hook: stdout (exit 0, kein JSON) | **Nein** | Verbose | Nur Logging |
 
 ### Workflow Hooks
 
@@ -160,19 +159,20 @@ Das Plugin nutzt **zwei Ebenen** von Hooks:
 
 **Plugin-Level Hooks** (`hooks/hooks.json`) — gelten global:
 
-| Hook | Trigger | Script | Funktion |
-|------|---------|--------|----------|
-| `PreToolUse` (Bash) | Vor jedem Bash-Aufruf | `guard_git_push.sh` | Blockiert `git push` / `gh pr create` ohne `pushApproved` Flag |
-| `SessionStart` | Session-Start/Resume | `session_recovery.sh` | Context Recovery nach Overflow |
-| `Stop` | Haupt-Agent fertig | `wf_engine.sh` | Phase Validation, Retry-Management |
-| `SubagentStart` | Subagent startet | `subagent_start.sh` | Subagent Start-Notification |
-| `SubagentStop` | Subagent beendet | `subagent_done.sh` | WIP-Commits, Output Validation |
+| Hook | Trigger | Script | Funktion | Claude sieht? |
+|------|---------|--------|----------|----------------|
+| `UserPromptSubmit` | User-Prompt | `wf_user_prompt.sh` | Context-Injection: Status + Rollback-Regeln | **Ja** (stdout → Context) |
+| `PreToolUse` (Bash) | Vor Bash-Aufruf | `guard_git_push.sh` | Blockiert `git push` ohne `pushApproved` | **Ja** (exit 2 → stderr) |
+| `SessionStart` | Session-Start/Resume | `session_recovery.sh` | Context Recovery nach Overflow | **Ja** (stdout → Context) |
+| `Stop` | Haupt-Agent fertig | `wf_engine.sh` | Auto-Advance (decision:block), Phase Validation | **Ja** (JSON reason) |
+| `SubagentStart` | Subagent startet | `subagent_start.sh` | Logging, `currentAgent` setzen | Nein (Logging) |
+| `SubagentStop` | Subagent beendet | `subagent_done.sh` | WIP-Commits (Shell-Commands) | Nein (deterministisch) |
 
 **Skill-Level Hook** (SKILL.md Frontmatter) — gilt nur im Workflow:
 
-| Hook | Trigger | Script | Funktion |
-|------|---------|--------|----------|
-| `PreToolUse` (Edit\|Write) | Vor Edit/Write-Aufruf | `block_orchestrator_code_edit.sh` | Verhindert, dass der Orchestrator Code-Dateien direkt ändert |
+| Hook | Trigger | Script | Funktion | Claude sieht? |
+|------|---------|--------|----------|----------------|
+| `PreToolUse` (Edit\|Write) | Vor Edit/Write-Aufruf | `block_orchestrator_code_edit.sh` | Blockiert Code-Edits durch Orchestrator | **Ja** (exit 2 → stderr) |
 
 ### Setup
 
@@ -248,35 +248,42 @@ flowchart TD
 
 ### Was die Hooks tun
 
+**wf_engine.sh** (Stop) — Zentrale Workflow-Steuerung:
+- **Auto-Advance via `decision:block`:** Bei Phasen 2-6 gibt JSON `{"decision":"block","reason":"..."}` zurück → Claude KANN NICHT stoppen und sieht die Anweisung für die nächste Phase
+- **Approval Gates:** Setzt `status = "awaiting_approval"`, kein JSON → Claude stoppt normal
+- **Phase-Skip Guard:** Erkennt übersprungene Phasen, korrigiert State, blockiert mit Anweisung
+- **Test-Retries:** Max 3 Versuche, dann Workflow pausieren
+- **Phase 8 Rollback:** Deterministisch — bestimmt Rollback-Ziel aus `reviewFeedback.fixes[].type`
+- **Loop-Prevention:** Zählt consecutive blocks (`stopHookBlockCount`), pausiert bei >15
+
+**wf_user_prompt.sh** (UserPromptSubmit) — Context-Injection:
+- stdout wird in Claudes Kontext injiziert (UserPromptSubmit Spezial!)
+- **Approval Gates:** Injiziert phase-spezifische Anweisungen (Approval, Feedback, Rollback-Regeln)
+- **Phase 7:** Vollständige Rollback-Regeln (Security-Fixes + allgemeine Änderungen + PFLICHT-Reihenfolge)
+- **Loop-Prevention Reset:** Setzt `stopHookBlockCount` auf 0 bei jedem User-Prompt
+
 **guard_git_push.sh** (PreToolUse/Bash):
-- Blockiert `git push` und `gh pr create` solange `pushApproved` nicht `true` ist
-- Verhindert unautorisierten Push nach Context Compaction
+- Blockiert `git push` und `gh pr create` via exit 2 + stderr → Claude sieht die Fehlermeldung
 - Nur Phase 9 setzt `pushApproved = true` nach User-Zustimmung
 
 **block_orchestrator_code_edit.sh** (PreToolUse/Edit|Write, Skill-Level):
-- Blockiert Edit/Write auf Code-Dateien (.java, .ts, .html, .scss, .sql, etc.)
-- Erlaubt nur workflow-state.json und .workflow/-Dateien
+- Blockiert Edit/Write auf Code-Dateien via exit 2 + stderr → Claude sieht die Fehlermeldung
 - Erzwingt: Alle Code-Änderungen laufen über spezialisierte Agents
 
 **session_recovery.sh** (SessionStart):
-- Erkennt aktiven Workflow nach Context Overflow
+- stdout wird in Claudes Kontext injiziert (SessionStart Spezial!)
+- Erkennt aktiven Workflow nach Context Overflow/Compaction
 - Gibt Recovery-Prompt mit Workflow-Status und nächstem Schritt aus
-- Zeigt abgeschlossene Phasen und aktuelle Phase
-
-**wf_engine.sh** (Stop):
-- Prüft Done-Kriterien für aktuelle Phase (z.B. Tests bestanden?)
-- Verwaltet Retry-Counter für Test-Phasen (max 3 Versuche)
-- Pausiert nach 3 fehlgeschlagenen Versuchen
-- Erzwingt Approval Gates an Phasen 0, 1, 7, 8, 9
 
 **subagent_start.sh** (SubagentStart):
+- Speichert `currentAgent` in workflow-state.json (für WIP-Commit Safety Net)
 - Loggt welcher Agent gestartet wurde
-- Zeigt Phase-Info in der Ausgabe
 
 **subagent_done.sh** (SubagentStop):
-- Erstellt **WIP-Commits** für commitbare Phasen (1, 3, 4, 5, 6)
-- Validiert Agent-Output (z.B. erwartete Dateien vorhanden?)
-- Loggt Agent-Aktivitäten
+- Erstellt **WIP-Commits** deterministisch (Shell-Commands, kein LLM)
+- Commitbare Phasen: 1, 3, 4, 5, 6
+- **Safety Net:** Agent-basierte Erkennung für Hotfixes (`agent_produces_code()`)
+- stdout wird NICHT in Claudes Kontext injiziert (ist aber deterministisch und braucht kein LLM)
 
 ### Workflow-State
 
@@ -381,11 +388,14 @@ byt8/
 │   └── ...
 ├── hooks/                     # Hook-Konfiguration (v4.0+)
 │   └── hooks.json
-├── scripts/                   # Workflow-Scripts (v4.0+)
-│   ├── wf_engine.sh           # Phase Validation & Auto-Commits
-│   ├── subagent_done.sh       # Subagent Output Handling
-│   ├── session_recovery.sh    # Context Recovery
-│   └── setup_hooks.sh         # Hook Setup Helper
+├── scripts/                   # Workflow-Scripts (v7.0 Context-Injection)
+│   ├── wf_engine.sh           # Stop Hook: JSON decision:block für Auto-Advance
+│   ├── wf_user_prompt.sh      # UserPromptSubmit Hook: Context-Injection
+│   ├── subagent_done.sh       # SubagentStop Hook: WIP-Commits
+│   ├── subagent_start.sh      # SubagentStart Hook: Agent-Tracking
+│   ├── session_recovery.sh    # SessionStart Hook: Context Recovery
+│   ├── guard_git_push.sh      # PreToolUse Hook: Push Guard
+│   └── block_orchestrator_code_edit.sh  # PreToolUse Hook: Code-Edit Block
 ├── skills/                    # Workflow-Implementierungen
 │   ├── full-stack-feature/
 │   │   └── SKILL.md

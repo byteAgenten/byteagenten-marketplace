@@ -1,7 +1,18 @@
 {
-  "description": "byt8 Workflow Engine - Hook-based Orchestration with Context Recovery",
-  "version": "2.0.0",
+  "description": "byt8 Workflow Engine - Context-Injection Architecture (v7.0)",
+  "version": "3.0.0",
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "description": "Workflow Context Injection - injects phase status and rollback rules into Claude's context",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/wf_user_prompt.sh"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash",
