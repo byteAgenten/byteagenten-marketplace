@@ -43,7 +43,9 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════
 PHASE_NAMES=("Tech Spec" "Wireframes" "API Design" "Migrations" "Backend" "Frontend" "E2E Tests" "Security Audit" "Code Review" "Push & PR")
 
-CURRENT_PHASE=$(jq -r '.currentPhase // 0' "$WORKFLOW_FILE")
+# currentAgentPhase = Phase bei SubagentStart (gespeichert von subagent_start.sh)
+# Fallback auf currentPhase falls nicht gesetzt
+CURRENT_PHASE=$(jq -r '.currentAgentPhase // .currentPhase // 0' "$WORKFLOW_FILE")
 CURRENT_AGENT=$(jq -r '.currentAgent // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")
 ISSUE_NUMBER=$(jq -r '.issue.number // 0' "$WORKFLOW_FILE")
 ISSUE_TITLE=$(jq -r '.issue.title // "Feature"' "$WORKFLOW_FILE")

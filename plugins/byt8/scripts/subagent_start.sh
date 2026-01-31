@@ -39,7 +39,7 @@ fi
 
 # Save agent type to workflow state for SubagentStop hook
 if [ "$AGENT_TYPE" != "unknown" ]; then
-  jq --arg agent "$AGENT_TYPE" '.currentAgent = $agent' "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" 2>/dev/null && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE" || true
+  jq --arg agent "$AGENT_TYPE" '.currentAgent = $agent | .currentAgentPhase = .currentPhase' "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" 2>/dev/null && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE" || true
 fi
 
 STATUS=$(jq -r '.status // "unknown"' "$WORKFLOW_FILE" 2>/dev/null || echo "unknown")
