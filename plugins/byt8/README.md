@@ -1,6 +1,6 @@
 # byt8 Plugin
 
-**Version 7.0.0** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 10-Phasen Workflow, Approval Gates und **deterministischem Auto-Advance via Context-Injection**.
+**Version 7.1.0** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 10-Phasen Workflow, Approval Gates und **deterministischem Auto-Advance via Context-Injection**.
 
 ## Philosophy
 
@@ -168,11 +168,12 @@ Das Plugin nutzt **zwei Ebenen** von Hooks:
 | `SubagentStart` | Subagent startet | `subagent_start.sh` | Logging, `currentAgent` setzen | Nein (Logging) |
 | `SubagentStop` | Subagent beendet | `subagent_done.sh` | WIP-Commits (Shell-Commands) | Nein (deterministisch) |
 
-**Skill-Level Hook** (SKILL.md Frontmatter) — gilt nur im Workflow:
+**Skill-Level Hooks** (SKILL.md Frontmatter) — gelten nur im Workflow:
 
 | Hook | Trigger | Script | Funktion | Claude sieht? |
 |------|---------|--------|----------|----------------|
 | `PreToolUse` (Edit\|Write) | Vor Edit/Write-Aufruf | `block_orchestrator_code_edit.sh` | Blockiert Code-Edits durch Orchestrator | **Ja** (exit 2 → stderr) |
+| `PreToolUse` (Task) | Vor Task-Aufruf | `block_orchestrator_explore.sh` | Blockiert Explore/general-purpose Agents | **Ja** (exit 2 → stderr) |
 
 ### Setup
 
@@ -269,6 +270,12 @@ flowchart TD
 **block_orchestrator_code_edit.sh** (PreToolUse/Edit|Write, Skill-Level):
 - Blockiert Edit/Write auf Code-Dateien via exit 2 + stderr → Claude sieht die Fehlermeldung
 - Erzwingt: Alle Code-Änderungen laufen über spezialisierte Agents
+
+**block_orchestrator_explore.sh** (PreToolUse/Task, Skill-Level):
+- Blockiert Task(Explore) und Task(general-purpose) via exit 2 + stderr → Claude sieht die Fehlermeldung
+- Erlaubt: Task(byt8:*) — spezialisierte Phase-Agents
+- Erzwingt: Orchestrator delegiert sofort statt selbst zu explorieren
+- Loggt jeden blockierten Versuch in `hooks.log`
 
 **session_recovery.sh** (SessionStart):
 - stdout wird in Claudes Kontext injiziert (SessionStart Spezial!)
@@ -395,7 +402,8 @@ byt8/
 │   ├── subagent_start.sh      # SubagentStart Hook: Agent-Tracking
 │   ├── session_recovery.sh    # SessionStart Hook: Context Recovery
 │   ├── guard_git_push.sh      # PreToolUse Hook: Push Guard
-│   └── block_orchestrator_code_edit.sh  # PreToolUse Hook: Code-Edit Block
+│   ├── block_orchestrator_code_edit.sh  # PreToolUse Hook: Code-Edit Block
+│   └── block_orchestrator_explore.sh   # PreToolUse Hook: Explore-Block
 ├── skills/                    # Workflow-Implementierungen
 │   ├── full-stack-feature/
 │   │   └── SKILL.md

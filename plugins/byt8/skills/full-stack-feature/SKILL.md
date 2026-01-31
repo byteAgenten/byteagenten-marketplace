@@ -8,6 +8,10 @@ hooks:
       hooks:
         - type: command
           command: "${CLAUDE_PLUGIN_ROOT}/scripts/block_orchestrator_code_edit.sh"
+    - matcher: "Task"
+      hooks:
+        - type: command
+          command: "${CLAUDE_PLUGIN_ROOT}/scripts/block_orchestrator_explore.sh"
 ---
 
 # Full-Stack Feature Development Skill
@@ -17,14 +21,15 @@ hooks:
 1. **AUTO-ADVANCE:** Nach Phasen 2–6 sofort nächste Phase starten — NICHT stoppen. _(Erzwungen durch Stop Hook: decision:block)_
 2. **APPROVAL GATES:** Nach Phasen 0, 1, 7, 8, 9 → `status = "awaiting_approval"`, User fragen, STOPP. _(UserPromptSubmit Hook injiziert Rollback-Regeln bei User-Antwort)_
 3. **Kein Code schreiben:** Hook blockiert Edit/Write. Jede Änderung → `Task(byt8:AGENT)`.
-4. **Keine Spec-Dateien lesen:** Nur `workflow-state.json` lesen. Agents lesen Specs selbst via Read-Tool.
+4. **Nicht explorieren:** Hook blockiert Task(Explore) und Task(general-purpose). Nur `workflow-state.json` lesen. Agents explorieren und lesen Specs selbst. Bei Rollback-Entscheidungen: **User fragen** statt selbst untersuchen.
 
 ### Hook-Enforcement (v7.0)
 
-Drei Hooks steuern den Workflow deterministisch:
+Vier Hooks steuern den Workflow deterministisch:
 - **Stop Hook** (`wf_engine.sh`): JSON `decision:block` erzwingt Auto-Advance. Claude KANN NICHT stoppen bei Phasen 2-6.
 - **UserPromptSubmit Hook** (`wf_user_prompt.sh`): Injiziert Workflow-Status und Rollback-Regeln in Claudes Kontext bei jedem User-Prompt.
 - **PreToolUse Hook** (`block_orchestrator_code_edit.sh`): Blockiert Code-Edits durch den Orchestrator.
+- **PreToolUse Hook** (`block_orchestrator_explore.sh`): Blockiert Task(Explore/general-purpose). Orchestrator MUSS an byt8:Agents delegieren.
 
 ---
 
