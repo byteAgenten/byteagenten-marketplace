@@ -33,7 +33,8 @@
         "./skills/full-stack-feature",
         "./skills/ui-theming",
         "./skills/ui-design",
-        "./skills/python-expert"
+        "./skills/python-expert",
+        "./skills/prd-generator"
       ]
     }
   ]
