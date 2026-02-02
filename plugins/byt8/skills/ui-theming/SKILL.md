@@ -1,5 +1,4 @@
 ---
-name: ui-theming
 description: One-time UI theming skill. Sets up design system (theme, tokens, typography). Run ONCE at project start before implementing features.
 ---
 

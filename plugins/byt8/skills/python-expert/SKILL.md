@@ -1,5 +1,4 @@
 ---
-name: python-expert
 description: Use for Python development requiring async programming, type system expertise, testing patterns, or performance optimization.
 ---
 
