@@ -1,5 +1,4 @@
 ---
-name: remove-hooks
 description: Remove workflow hooks from project settings.
 ---
 

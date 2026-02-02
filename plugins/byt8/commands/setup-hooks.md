@@ -1,5 +1,4 @@
 ---
-name: setup-hooks
 description: Configure workflow hooks in project settings for Stop and SubagentStop events.
 ---
 
