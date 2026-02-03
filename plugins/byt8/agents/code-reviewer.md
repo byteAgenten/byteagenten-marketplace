@@ -132,12 +132,27 @@ Please choose 1-4 or provide a custom percentage:
 ```
 Dies MUSS als erstes im Review-Output erscheinen, damit der User weiß, gegen welchen Wert geprüft wird.
 
-**Build Commands:**
-```bash
-# Backend
-cd backend && mvn clean test
+**Build Commands (PFLICHT vor APPROVED!):**
 
-# Frontend
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  ⛔ BUILD-GATE: Du DARFST "APPROVED" NUR setzen wenn ALLE Tests grün sind! │
+│                                                                             │
+│  REIHENFOLGE (PFLICHT!):                                                   │
+│  1. mvn verify ausführen (Backend)                                         │
+│  2. npm test ausführen (Frontend)                                          │
+│  3. npm run build ausführen (Frontend)                                     │
+│  4. NUR bei ALLEN GRÜN: status = "APPROVED"                                │
+│                                                                             │
+│  Bei JEDEM Fehler: status = "CHANGES_REQUESTED" + Fix-Anweisung            │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+```bash
+# Backend - MUSS GRÜN sein!
+cd backend && mvn verify
+
+# Frontend - MUSS GRÜN sein!
 cd frontend && npm test -- --no-watch --browsers=ChromeHeadless
 cd frontend && npm run build
 ```

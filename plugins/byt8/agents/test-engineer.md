@@ -304,10 +304,41 @@ Nutze den Kontext aus dem Prompt:
 
 ### Output (Test Results speichern) - MUSS ausgeführt werden!
 
-**Nach Abschluss der Tests MUSST du den Context speichern:**
+**⚠️ KRITISCH: Tests MÜSSEN vor dem Speichern erfolgreich laufen!**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  WORKFLOW-GATE: allPassed == true wird vom Stop-Hook geprüft!              │
+│                                                                             │
+│  Du DARFST "allPassed": true NUR setzen wenn:                              │
+│  1. mvn verify ERFOLGREICH war (Backend Unit + Integration Tests)          │
+│  2. npm test ERFOLGREICH war (Frontend Unit Tests)                         │
+│  3. npx playwright test ERFOLGREICH war (E2E Tests - falls relevant)       │
+│                                                                             │
+│  Bei JEDEM Test-Fehler:                                                     │
+│  - "allPassed": false setzen                                               │
+│  - Fehler fixen                                                             │
+│  - Tests erneut ausführen                                                   │
+│  - Erst bei GRÜN: "allPassed": true                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Ablauf:**
 
 ```bash
-# Context in workflow-state.json schreiben
+# 1. Backend Tests ausführen (PFLICHT!)
+cd backend && mvn verify
+# Bei Fehler: STOPP, fixen, erneut versuchen
+
+# 2. Frontend Tests ausführen (PFLICHT!)
+cd frontend && npm test -- --no-watch --browsers=ChromeHeadless
+# Bei Fehler: STOPP, fixen, erneut versuchen
+
+# 3. E2E Tests ausführen (falls vorhanden)
+cd frontend && npx playwright test
+# Bei Fehler: STOPP, fixen, erneut versuchen
+
+# 4. NUR bei ALLEN GRÜN: Context speichern
 jq '.context.testResults = {
   "backend": {"total": 45, "passed": 45, "failed": 0, "coverage": "87%"},
   "frontend": {"total": 38, "passed": 38, "failed": 0, "coverage": "85%"},
@@ -318,8 +349,7 @@ jq '.context.testResults = {
 mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```
 
-**⚠️ OHNE diesen Schritt schlägt die Phase-Validierung fehl!**
-
-Der Stop-Hook führt `mvn test` und `npm test` aus und prüft auf Erfolg.
+**⚠️ OHNE `allPassed: true` schlägt die Phase-Validierung fehl!**
+**⚠️ Mit falschem `allPassed: true` (Tests nicht gelaufen) werden Bugs in Production gepusht!**
 
 

@@ -261,7 +261,8 @@ check_done() {
     3) ls backend/src/main/resources/db/migration/V*.sql > /dev/null 2>&1 ;;
     4) jq -e '.context.backendImpl | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 ;;
     5) jq -e '.context.frontendImpl | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 ;;
-    6) jq -e '.context.testResults | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 ;;
+    # Phase 6: Tests müssen explizit als "passed" markiert sein
+    6) jq -e '.context.testResults.allPassed == true' "$WORKFLOW_FILE" > /dev/null 2>&1 ;;
     7) jq -e '.context.securityAudit | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 ;;
     8) jq -e '.context.reviewFeedback.userApproved == true' "$WORKFLOW_FILE" > /dev/null 2>&1 ;;
     9) jq -e '.phases["9"].prUrl' "$WORKFLOW_FILE" > /dev/null 2>&1 ;;
@@ -558,7 +559,7 @@ else
     3) EXPECTED="V*.sql in backend/src/main/resources/db/migration/" ;;
     4) EXPECTED="context.backendImpl" ;;
     5) EXPECTED="context.frontendImpl" ;;
-    6) EXPECTED="context.testResults" ;;
+    6) EXPECTED="context.testResults.allPassed == true (Tests muessen erfolgreich sein!)" ;;
     7) EXPECTED="context.securityAudit" ;;
     8) EXPECTED="context.reviewFeedback.status = APPROVED" ;;
     9) EXPECTED="phases.9.prUrl" ;;
