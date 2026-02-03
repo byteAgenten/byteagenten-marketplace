@@ -17,7 +17,9 @@ Create Product Requirements Documents that focus on the **"What"** and **"Why"**
 3. Generate a user-focused PRD (no code references!)
 4. Save to `docs/prds/prd-[feature-name].md`
 5. Present the PRD to the user for approval
-6. On approval → Create a GitHub Issue with the PRD content
+6. On approval → Create a GitHub Epic Issue with the PRD content
+7. Ask if User Stories should be created as Sub-Issues
+8. On approval → Create Sub-Issues for each User Story
 
 **Important:**
 - Do NOT analyze the codebase — that's the Architect-Planner's job (Phase 0)
@@ -153,31 +155,32 @@ Remaining questions or areas needing clarification before implementation.
 
 ---
 
-## Step 3: User Approval & GitHub Issue
+## Step 3: User Approval & GitHub Epic Issue
 
 After saving the PRD file, present it to the user and ask:
 
 ```
 PRD gespeichert unter docs/prds/prd-[feature-name].md
 
-Soll ich ein GitHub Issue mit dieser PRD erstellen?
+Soll ich ein GitHub Issue (Epic) mit dieser PRD erstellen?
 ```
 
-### On Approval: Create GitHub Issue
+### On Approval: Create Epic Issue
 
-Use `gh issue create` to create the issue. The PRD content becomes the issue body.
+Use `gh issue create` to create the Epic issue. The PRD content becomes the issue body.
 
 **Rules:**
 - **Title:** `feat: [Feature Name]` (derived from the PRD title)
 - **Body:** The complete PRD markdown content (read from the saved file)
-- **Label:** `feature` (create if it doesn't exist)
+- **Labels:** `epic` and `feature` (create if they don't exist)
 - **No assignee** — the user assigns manually
 
 **Command pattern:**
 ```bash
 mkdir -p docs/prds
+gh label create "epic" --description "Epic - contains multiple user stories" --color "3E4B9E" --force
 gh label create "feature" --description "New feature" --color "0E8A16" --force
-gh issue create --title "feat: [Feature Name]" --label "feature" --body-file "docs/prds/prd-[feature-name].md"
+gh issue create --title "feat: [Feature Name]" --label "epic" --label "feature" --body-file "docs/prds/prd-[feature-name].md"
 ```
 
 **Important:**
@@ -187,12 +190,94 @@ gh issue create --title "feat: [Feature Name]" --label "feature" --body-file "do
 
 ---
 
+## Step 4: Sub-Issues for User Stories (Optional)
+
+After creating the Epic issue, ask the user:
+
+```
+Epic Issue #[N] erstellt: feat: [Feature Name]
+
+Das Epic enthält [X] User Stories. Soll ich diese als separate Sub-Issues anlegen?
+  A. Ja, Sub-Issues erstellen (empfohlen für größere Features)
+  B. Nein, als Checkliste im Epic behalten (für kleinere Features)
+```
+
+### On Approval: Create Sub-Issues
+
+For each User Story in the PRD, create a Sub-Issue linked to the Epic.
+
+**Rules:**
+- **Title:** `[US-00X] [User Story Title]` (e.g., `[US-001] Set task priority`)
+- **Body:** The User Story content from the PRD (Description + Acceptance Criteria)
+- **Labels:** `user-story` (create if it doesn't exist)
+- **Parent:** Link to Epic issue using `gh issue develop` or body reference
+
+**Command pattern for each User Story:**
+```bash
+gh label create "user-story" --description "User story - implementable unit of work" --color "C2E0C6" --force
+
+# Create Sub-Issue with reference to Epic
+gh issue create --title "[US-001] [Title]" --label "user-story" --body "$(cat <<'EOF'
+Parent Epic: #[EPIC_NUMBER]
+
+## [US-001]: [Title]
+
+**Description:** As a [user type], I want [action] so that [benefit].
+
+**Acceptance Criteria:**
+- [ ] [Criterion 1]
+- [ ] [Criterion 2]
+- [ ] [Criterion 3]
+EOF
+)"
+```
+
+**After creating all Sub-Issues:**
+1. Update the Epic issue body to replace the User Stories section with links to Sub-Issues
+2. Show summary to user:
+
+```
+Sub-Issues erstellt:
+- #[N1] [US-001] Set task priority
+- #[N2] [US-002] See priority at a glance
+- #[N3] [US-003] Filter by priority
+- #[N4] [US-004] Sort by priority
+
+Jede User Story kann jetzt einzeln mit /byt8:full-stack-feature #[N] implementiert werden.
+```
+
+### Update Epic with Sub-Issue Links
+
+After creating Sub-Issues, update the Epic's User Stories section:
+
+```bash
+# Read current Epic body, replace User Stories section with links
+gh issue edit [EPIC_NUMBER] --body "$(cat <<'EOF'
+[... PRD content until User Stories section ...]
+
+## User Stories
+
+> Die User Stories wurden als separate Issues angelegt:
+
+- #[N1] [US-001] Set task priority
+- #[N2] [US-002] See priority at a glance
+- #[N3] [US-003] Filter by priority
+- #[N4] [US-004] Sort by priority
+
+[... rest of PRD content ...]
+EOF
+)"
+```
+
+---
+
 ## Output
 
 - **Format:** Markdown (`.md`)
 - **Location:** `docs/prds/`
 - **Filename:** `prd-[feature-name].md` (kebab-case)
-- **GitHub Issue:** Created on approval with `feature` label
+- **GitHub Epic Issue:** Created on approval with `epic` + `feature` labels
+- **GitHub Sub-Issues:** Optional, one per User Story with `user-story` label
 
 ---
 
@@ -306,5 +391,8 @@ Before finishing:
 - [ ] No technical implementation details (that's the Architect-Planner's job)
 - [ ] Saved to `docs/prds/prd-[feature-name].md`
 - [ ] Presented PRD to user for approval
-- [ ] On approval: Created GitHub Issue with `feature` label
+- [ ] On approval: Created GitHub Epic Issue with `epic` + `feature` labels
+- [ ] Asked user about Sub-Issues for User Stories
+- [ ] On approval: Created Sub-Issues with `user-story` label and Epic reference
+- [ ] Updated Epic to link to Sub-Issues
 
