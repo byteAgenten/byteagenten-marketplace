@@ -119,10 +119,17 @@ byteagenten-marketplace/
 | 1. Welche Dateien liest das Script? | `grep -E '\$\{?[A-Z_]+\}?/' script.sh` |
 | 2. Wer schreibt diese Dateien? | `grep -r "PFAD" plugins/byt8/` |
 | 3. Existiert ein Schreiber? | Wenn NEIN → toter Code! |
+| 4. Was prüft der Consumer? | Nur Key-Existenz oder auch Werte? |
+| 5. Kann der Schreiber den Check umgehen? | Agent setzt `allPassed: true` ohne Tests → Bug! |
 
 **Beispiel für session_recovery.sh:**
 - Liest: `${CONTEXT_DIR}/phase-X-*.json`
 - Schreiber: NIEMAND! → Bug gefunden
+
+**Beispiel für wf_engine.sh check_done:**
+- Prüfte: `context.testResults | keys | length > 0` (nur Existenz!)
+- Problem: Agent konnte Key setzen ohne Tests auszuführen
+- Fix: `context.testResults.allPassed == true` (Wert prüfen!)
 
 **Nach Workflow-Durchlauf prüfen:**
 - `ls -la .workflow/` → Alle erwarteten Dateien vorhanden?
