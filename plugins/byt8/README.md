@@ -1,6 +1,6 @@
 # byt8 Plugin
 
-**Version 7.5.1** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 10-Phasen Workflow, Approval Gates und **deterministischem Auto-Advance via Context-Injection**.
+**Version 7.5.2** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 10-Phasen Workflow, Approval Gates und **deterministischem Auto-Advance via Context-Injection**.
 
 ## Philosophy
 
@@ -305,9 +305,8 @@ Der Zustand wird in `.workflow/` persistiert:
 │   ├── issue-N-ph00-architect-planner.md
 │   ├── issue-N-ph02-api-architect.md
 │   └── ...
-├── recovery/              # Recovery-Daten
-│   ├── retry-tracker.json
-│   └── last-checkpoint.json
+├── recovery/              # Retry-Tracking (nur bei Test-Retries)
+│   └── retry-tracker.json
 └── logs/                  # Audit-Logs
     ├── hooks.log
     └── transitions.jsonl

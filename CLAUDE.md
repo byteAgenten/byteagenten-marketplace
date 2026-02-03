@@ -110,6 +110,25 @@ byteagenten-marketplace/
 
 **Niemals Implementierung abschließen ohne README-Prüfung!**
 
+### Bei JEDER Script-Änderung (Hooks, Scripts):
+
+**Datenfluss-Verifikation (PFLICHT!):**
+
+| Prüfung | Wie |
+|---------|-----|
+| 1. Welche Dateien liest das Script? | `grep -E '\$\{?[A-Z_]+\}?/' script.sh` |
+| 2. Wer schreibt diese Dateien? | `grep -r "PFAD" plugins/byt8/` |
+| 3. Existiert ein Schreiber? | Wenn NEIN → toter Code! |
+
+**Beispiel für session_recovery.sh:**
+- Liest: `${CONTEXT_DIR}/phase-X-*.json`
+- Schreiber: NIEMAND! → Bug gefunden
+
+**Nach Workflow-Durchlauf prüfen:**
+- `ls -la .workflow/` → Alle erwarteten Dateien vorhanden?
+- Spec-Dateien in `specs/`?
+- Context in `workflow-state.json`?
+
 ## Development
 
 ### Testing Plugins Locally

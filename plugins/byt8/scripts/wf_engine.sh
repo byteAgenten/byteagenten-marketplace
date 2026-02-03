@@ -263,7 +263,7 @@ check_done() {
     5) jq -e '.context.frontendImpl | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 ;;
     6) jq -e '.context.testResults | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 ;;
     7) jq -e '.context.securityAudit | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 ;;
-    8) jq -e '.context.reviewFeedback.status == "APPROVED"' "$WORKFLOW_FILE" > /dev/null 2>&1 ;;
+    8) jq -e '.context.reviewFeedback.userApproved == true' "$WORKFLOW_FILE" > /dev/null 2>&1 ;;
     9) jq -e '.phases["9"].prUrl' "$WORKFLOW_FILE" > /dev/null 2>&1 ;;
     *) return 0 ;;
   esac
@@ -294,7 +294,7 @@ detect_skipped_phase() {
       5) jq -e '.context.frontendImpl | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || { echo $i; return; } ;;
       6) jq -e '.context.testResults | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || { echo $i; return; } ;;
       7) jq -e '.context.securityAudit | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || { echo $i; return; } ;;
-      8) jq -e '.context.reviewFeedback.status == "APPROVED"' "$WORKFLOW_FILE" > /dev/null 2>&1 || { echo $i; return; } ;;
+      8) jq -e '.context.reviewFeedback.userApproved == true' "$WORKFLOW_FILE" > /dev/null 2>&1 || { echo $i; return; } ;;
     esac
     i=$((i + 1))
   done

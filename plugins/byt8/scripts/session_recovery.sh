@@ -11,7 +11,6 @@ set -e
 
 WORKFLOW_DIR=".workflow"
 WORKFLOW_FILE="${WORKFLOW_DIR}/workflow-state.json"
-CONTEXT_DIR="${WORKFLOW_DIR}/context"
 RECOVERY_DIR="${WORKFLOW_DIR}/recovery"
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -74,99 +73,34 @@ fi
 echo ""
 
 # ═══════════════════════════════════════════════════════════════════════════
-# KONTEXT AUS ABGESCHLOSSENEN PHASEN
+# KONTEXT AUS workflow-state.json
 # ═══════════════════════════════════════════════════════════════════════════
 
 echo "═══════════════════════════════════════════════════════════════════════════════"
-echo "📚 KONTEXT AUS VORHERIGEN PHASEN"
+echo "📚 KONTEXT AUS WORKFLOW-STATE"
 echo "═══════════════════════════════════════════════════════════════════════════════"
 
-PHASE_NAMES=("Tech Spec" "Wireframes" "API Design" "Migrations" "Backend" "Frontend" "E2E Tests" "Security Audit" "Code Review" "Push & PR")
-PHASE_FILES=("spec" "wireframes" "api" "migrations" "backend" "frontend" "tests" "security" "review" "pr")
+# Spec-Dateien aus context.* Keys
+TECH_SPEC=$(jq -r '.context.technicalSpec.specFile // ""' "$WORKFLOW_FILE" 2>/dev/null)
+API_SPEC=$(jq -r '.context.apiDesign.apiDesignFile // ""' "$WORKFLOW_FILE" 2>/dev/null)
+DB_SPEC=$(jq -r '.context.migrations.databaseFile // ""' "$WORKFLOW_FILE" 2>/dev/null)
+REVIEW_SPEC=$(jq -r '.context.reviewFeedback.reviewFile // ""' "$WORKFLOW_FILE" 2>/dev/null)
 
-for i in $(seq 0 $((CURRENT_PHASE - 1))); do
-  PHASE_FILE="${CONTEXT_DIR}/phase-${i}-${PHASE_FILES[$i]}.json"
-  
-  if [ -f "$PHASE_FILE" ]; then
-    echo ""
-    echo "───────────────────────────────────────────────────────────────────────────────"
-    echo "Phase ${i} (${PHASE_NAMES[$i]}):"
-    echo "───────────────────────────────────────────────────────────────────────────────"
-    
-    # Phase-spezifische Summary extrahieren
-    case $i in
-      0) # Tech Spec
-        jq -r '
-          .summary |
-          "  Affected Layers: \(.affectedLayers | join(", "))",
-          "  New Entities: \(.newEntities | map(.name) | join(", "))",
-          "  Modified Entities: \(.modifiedEntities | join(", "))",
-          "  Risks: \(.risks | join("; "))",
-          "  Decisions: \(.decisions | join("; "))"
-        ' "$PHASE_FILE" 2>/dev/null || echo "  [Keine Details verfügbar]"
-        ;;
-      1) # Wireframes
-        jq -r '
-          .summary |
-          "  Wireframes: \(.wireframes | join(", "))",
-          "  Components: \(.components | join(", "))"
-        ' "$PHASE_FILE" 2>/dev/null || echo "  [Keine Details verfügbar]"
-        ;;
-      2) # API Design
-        echo "  Endpoints:"
-        jq -r '.summary.endpoints[] | "    \(.method) \(.path) → \(.responseDto)"' "$PHASE_FILE" 2>/dev/null || echo "    [Keine]"
-        echo "  DTOs:"
-        jq -r '.summary.dtos[] | "    \(.name): \(.fields | join(", "))"' "$PHASE_FILE" 2>/dev/null || echo "    [Keine]"
-        ;;
-      3) # Migrations
-        jq -r '
-          .summary |
-          "  Migration Files: \(.migrationFiles | join(", "))",
-          "  Tables: \(.tables | join(", "))"
-        ' "$PHASE_FILE" 2>/dev/null || echo "  [Keine Details verfügbar]"
-        ;;
-      4) # Backend
-        jq -r '
-          .summary |
-          "  Created Classes: \(.createdClasses | join(", "))",
-          "  Test Coverage: \(.testCoverage // "unbekannt")"
-        ' "$PHASE_FILE" 2>/dev/null || echo "  [Keine Details verfügbar]"
-        ;;
-      5) # Frontend
-        jq -r '
-          .summary |
-          "  Components: \(.components | join(", "))",
-          "  Services: \(.services | join(", "))"
-        ' "$PHASE_FILE" 2>/dev/null || echo "  [Keine Details verfügbar]"
-        ;;
-      6) # E2E Tests
-        jq -r '
-          .summary |
-          "  Test Status: \(.testStatus)",
-          "  Tests Passed: \(.testsPassed // "unbekannt")"
-        ' "$PHASE_FILE" 2>/dev/null || echo "  [Keine Details verfügbar]"
-        ;;
-      7) # Security Audit
-        jq -r '
-          .summary |
-          "  Findings: Critical=\(.severity.critical // 0) High=\(.severity.high // 0) Medium=\(.severity.medium // 0) Low=\(.severity.low // 0)",
-          "  Hotfix Required: \(.hotfixRequired // false)"
-        ' "$PHASE_FILE" 2>/dev/null || echo "  [Keine Details verfügbar]"
-        ;;
-      8) # Code Review
-        jq -r '
-          .summary |
-          "  Review Status: \(.status)",
-          "  Feedback: \(.feedback)"
-        ' "$PHASE_FILE" 2>/dev/null || echo "  [Keine Details verfügbar]"
-        ;;
-    esac
-    
-    # forNextPhases für aktuelle Phase
-    NEXT_HINT=$(jq -r ".forNextPhases[\"${CURRENT_PHASE}\"] // empty" "$PHASE_FILE" 2>/dev/null)
-    if [ -n "$NEXT_HINT" ]; then
-      echo "  → Für Phase ${CURRENT_PHASE}: ${NEXT_HINT}"
-    fi
+echo ""
+echo "  Spec-Dateien (lies diese fuer Details):"
+[ -n "$TECH_SPEC" ] && [ "$TECH_SPEC" != "null" ] && echo "    Tech Spec:  $TECH_SPEC"
+[ -n "$API_SPEC" ] && [ "$API_SPEC" != "null" ] && echo "    API Design: $API_SPEC"
+[ -n "$DB_SPEC" ] && [ "$DB_SPEC" != "null" ] && echo "    DB Schema:  $DB_SPEC"
+[ -n "$REVIEW_SPEC" ] && [ "$REVIEW_SPEC" != "null" ] && echo "    Review:     $REVIEW_SPEC"
+
+# Abgeschlossene Phasen mit Status
+echo ""
+echo "  Phasen-Status:"
+PHASE_NAMES=("Tech Spec" "Wireframes" "API Design" "Migrations" "Backend" "Frontend" "E2E Tests" "Security Audit" "Code Review" "Push & PR")
+for i in $(seq 0 9); do
+  PHASE_STATUS=$(jq -r ".phases[\"$i\"].status // \"pending\"" "$WORKFLOW_FILE" 2>/dev/null)
+  if [ "$PHASE_STATUS" != "pending" ] && [ "$PHASE_STATUS" != "null" ]; then
+    echo "    Phase $i (${PHASE_NAMES[$i]}): $PHASE_STATUS"
   fi
 done
 
