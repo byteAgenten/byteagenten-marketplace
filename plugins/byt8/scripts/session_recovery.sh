@@ -9,19 +9,6 @@
 
 set -e
 
-# ═══════════════════════════════════════════════════════════════════════════
-# LOGGING
-# ═══════════════════════════════════════════════════════════════════════════
-LOG_DIR=".workflow/logs"
-mkdir -p "$LOG_DIR" 2>/dev/null || true
-echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] SessionStart Hook fired" >> "$LOG_DIR/hooks.log" 2>/dev/null || true
-
-# ═══════════════════════════════════════════════════════════════════════════
-# NOTE: Hooks werden über die Plugin-hooks.json definiert (${CLAUDE_PLUGIN_ROOT}).
-# KEIN Auto-Setup mehr in Project-Settings um doppeltes Feuern zu vermeiden.
-# Manuelle Hook-Einrichtung via /byt8:setup-hooks falls nötig.
-# ═══════════════════════════════════════════════════════════════════════════
-
 WORKFLOW_DIR=".workflow"
 WORKFLOW_FILE="${WORKFLOW_DIR}/workflow-state.json"
 CONTEXT_DIR="${WORKFLOW_DIR}/context"

@@ -100,8 +100,8 @@ get_test_command() {
 
 # ═══════════════════════════════════════════════════════════════════════════
 # LOGGING (nur in Datei, NICHT auf stdout)
+# Verzeichnis wird erst nach Workflow-Prüfung erstellt (siehe unten)
 # ═══════════════════════════════════════════════════════════════════════════
-mkdir -p "$LOGS_DIR" 2>/dev/null || true
 
 log() {
   echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] $1" >> "$LOGS_DIR/hooks.log" 2>/dev/null || true
@@ -247,9 +247,11 @@ detect_skipped_phase() {
 # PRÜFUNG: Workflow vorhanden?
 # ═══════════════════════════════════════════════════════════════════════════
 if [ ! -f "$WORKFLOW_FILE" ]; then
-  log "Stop Hook fired (kein Workflow)"
   exit 0
 fi
+
+# Log-Verzeichnis erst jetzt erstellen (Workflow existiert)
+mkdir -p "$LOGS_DIR" 2>/dev/null || true
 
 # State lesen
 STATUS=$(jq -r '.status // "unknown"' "$WORKFLOW_FILE" 2>/dev/null || echo "unknown")

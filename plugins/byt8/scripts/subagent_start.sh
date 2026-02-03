@@ -27,15 +27,17 @@ WORKFLOW_FILE="${WORKFLOW_DIR}/workflow-state.json"
 LOG_DIR="${WORKFLOW_DIR}/logs"
 
 # ═══════════════════════════════════════════════════════════════════════════
-# LOGGING
+# PRÜFEN: Workflow vorhanden?
 # ═══════════════════════════════════════════════════════════════════════════
-mkdir -p "$LOG_DIR" 2>/dev/null || true
-echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] SubagentStart Hook fired: $AGENT_TYPE" >> "$LOG_DIR/hooks.log"
-
-# Prüfen ob Workflow aktiv
 if [ ! -f "$WORKFLOW_FILE" ]; then
   exit 0
 fi
+
+# ═══════════════════════════════════════════════════════════════════════════
+# LOGGING (nur wenn Workflow existiert)
+# ═══════════════════════════════════════════════════════════════════════════
+mkdir -p "$LOG_DIR" 2>/dev/null || true
+echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] SubagentStart Hook fired: $AGENT_TYPE" >> "$LOG_DIR/hooks.log"
 
 # Save agent type to workflow state for SubagentStop hook
 if [ "$AGENT_TYPE" != "unknown" ]; then
