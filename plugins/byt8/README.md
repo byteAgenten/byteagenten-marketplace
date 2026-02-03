@@ -1,6 +1,6 @@
 # byt8 Plugin
 
-**Version 7.5.4** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 10-Phasen Workflow, Approval Gates und **deterministischem Auto-Advance via Context-Injection**.
+**Version 7.5.5** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 10-Phasen Workflow, Approval Gates und **deterministischem Auto-Advance via Context-Injection**.
 
 ## Philosophy
 
@@ -188,6 +188,14 @@ flowchart TD
         A["/byt8:full-stack-feature"]
     end
 
+    subgraph CLEANUP["Schritt 1: Cleanup"]
+        A1["wf_cleanup.sh<br/>aufrufen"]
+        A2{"Exit Code?"}
+        A3["Aufgeräumt oder<br/>kein Workflow"]
+        A4["BLOCKED!<br/>Aktiver Workflow"]
+        A5["User entscheidet:<br/>resume oder abbrechen"]
+    end
+
     subgraph SESSION["SessionStart Hook"]
         B{".workflow/<br/>state.json<br/>existiert?"}
         C["Context Recovery<br/>Zeige Recovery-Prompt"]
@@ -217,7 +225,12 @@ flowchart TD
         U["Nächste Phase<br/>oder Approval Gate"]
     end
 
-    A --> B
+    A --> A1
+    A1 --> A2
+    A2 -->|"0 (OK)"| A3
+    A2 -->|"1 (BLOCKED)"| A4
+    A4 --> A5
+    A3 --> B
     B -->|Ja, status: active/paused| C
     B -->|Nein| D
     C --> H
@@ -235,6 +248,7 @@ flowchart TD
     S -->|"Fail"| R
 
     style TRIGGER fill:#1565c0,color:#fff
+    style CLEANUP fill:#7b1fa2,color:#fff
     style SESSION fill:#e65100,color:#fff
     style INIT fill:#2e7d32,color:#fff
     style NEW_WF fill:#c62828,color:#fff
@@ -285,7 +299,8 @@ flowchart TD
 - Gibt Recovery-Prompt mit Workflow-Status und nächstem Schritt aus
 
 **subagent_start.sh** (SubagentStart):
-- **Auto-Cleanup:** Löscht `.workflow/` wenn `status=completed` (deterministisch, vor jedem Task)
+- **Safety Net Cleanup:** Löscht `.workflow/` wenn `status=completed` (Backup falls Skill-Startup übersprungen wird)
+- Primärer Cleanup passiert explizit via `wf_cleanup.sh` am Skill-Startup
 - Speichert `currentAgent` in workflow-state.json (für WIP-Commit Safety Net)
 - Loggt welcher Agent gestartet wurde
 

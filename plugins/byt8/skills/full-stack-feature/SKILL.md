@@ -53,26 +53,31 @@ WIP-Commits werden automatisch vom SubagentStop Hook erstellt (Phasen 1, 3, 4, 5
 
 ## Startup
 
-### Auto-Cleanup (deterministisch via SubagentStart Hook)
+### Schritt 1: Cleanup prüfen (PFLICHT!)
 
-**Abgeschlossene Workflows werden automatisch aufgeräumt!**
+**ERSTER Befehl bei jedem Skill-Start:**
 
-Der `SubagentStart` Hook prüft bei jedem `Task()` Aufruf:
-- `status=completed` → löscht `.workflow/` automatisch
-- Andere Status → bleibt unverändert
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/wf_cleanup.sh
+```
 
-Das passiert BEVOR der erste Agent startet — kein manueller Cleanup nötig.
+| Exit Code | Bedeutung | Aktion |
+|-----------|-----------|--------|
+| 0 | OK (kein Workflow oder completed → aufgeräumt) | Weiter mit Schritt 2 |
+| 1 | BLOCKED (aktiver Workflow gefunden) | STOPP! User entscheidet: fortsetzen oder abbrechen |
 
-**Manueller Cleanup:** `/byt8:wf-cleanup` falls nötig.
+**Warum explizit?** Der SubagentStart Hook greift erst bei Task()-Aufrufen. Da der Startup mit Bash-Befehlen beginnt, muss Cleanup explizit passieren.
 
-### Prüfe ob Workflow existiert
+**Safety Net:** SubagentStart Hook räumt weiterhin bei `status=completed` auf — als Backup falls dieser Schritt übersprungen wird.
+
+### Schritt 2: Prüfe ob Workflow existiert
 
 ```bash
 cat .workflow/workflow-state.json 2>/dev/null || echo "NEW"
 ```
 
 - **Wenn existiert:** Lies `status` und `currentPhase`, handle entsprechend.
-- **Wenn neu:** Initialisiere (siehe unten).
+- **Wenn neu (oder gerade aufgeräumt):** Initialisiere (siehe unten).
 
 ### Initialisierung
 
