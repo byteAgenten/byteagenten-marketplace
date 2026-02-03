@@ -1,6 +1,6 @@
 # byt8 Plugin
 
-**Version 7.4.0** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 10-Phasen Workflow, Approval Gates und **deterministischem Auto-Advance via Context-Injection**.
+**Version 7.5.0** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 10-Phasen Workflow, Approval Gates und **deterministischem Auto-Advance via Context-Injection**.
 
 ## Philosophy
 
@@ -179,13 +179,6 @@ Das Plugin nutzt **zwei Ebenen** von Hooks:
 ### Setup
 
 Hooks werden automatisch über die Plugin-Konfiguration geladen — **kein manuelles Setup nötig**.
-
-Falls bereits Project-Hooks in `.claude/settings.json` existieren (aus älteren Versionen), sollten diese entfernt werden um doppeltes Feuern zu vermeiden:
-
-```bash
-# Alte Project-Hooks entfernen (falls vorhanden)
-/byt8:remove-hooks
-```
 
 ### Startup-Flow
 
