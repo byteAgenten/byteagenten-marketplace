@@ -5,8 +5,9 @@
 # Feuert wenn ein Subagent (Task tool) gestartet wird.
 #
 # Zweck:
-# 1. Sichtbarkeit - zeigt welcher Agent startet
-# 2. Logging - protokolliert Agent-Starts für Debugging
+# 1. AUTO-CLEANUP: Abgeschlossene Workflows deterministisch aufräumen
+# 2. Sichtbarkeit - zeigt welcher Agent startet
+# 3. Logging - protokolliert Agent-Starts für Debugging
 #
 # Input (stdin JSON): agent_id, agent_type
 # ═══════════════════════════════════════════════════════════════════════════
@@ -27,7 +28,24 @@ WORKFLOW_FILE="${WORKFLOW_DIR}/workflow-state.json"
 LOG_DIR="${WORKFLOW_DIR}/logs"
 
 # ═══════════════════════════════════════════════════════════════════════════
-# PRÜFEN: Workflow vorhanden?
+# AUTO-CLEANUP: Abgeschlossene Workflows aufräumen (DETERMINISTISCH)
+# ═══════════════════════════════════════════════════════════════════════════
+# Läuft bei JEDEM Task()-Aufruf, aber nur wenn status=completed.
+# Das stellt sicher, dass alte Workflows automatisch aufgeräumt werden,
+# bevor ein neuer Workflow oder Agent startet.
+# ═══════════════════════════════════════════════════════════════════════════
+if [ -f "$WORKFLOW_FILE" ]; then
+  CLEANUP_STATUS=$(jq -r '.status // "unknown"' "$WORKFLOW_FILE" 2>/dev/null || echo "unknown")
+  if [ "$CLEANUP_STATUS" = "completed" ]; then
+    # Abgeschlossener Workflow gefunden → aufräumen
+    rm -rf "$WORKFLOW_DIR"
+    # Kein weiterer Code nötig, exit 0
+    exit 0
+  fi
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PRÜFEN: Workflow vorhanden? (nach potentiellem Cleanup)
 # ═══════════════════════════════════════════════════════════════════════════
 if [ ! -f "$WORKFLOW_FILE" ]; then
   exit 0

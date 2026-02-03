@@ -1,6 +1,6 @@
 # byt8 Plugin
 
-**Version 7.5.2** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 10-Phasen Workflow, Approval Gates und **deterministischem Auto-Advance via Context-Injection**.
+**Version 7.5.3** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 10-Phasen Workflow, Approval Gates und **deterministischem Auto-Advance via Context-Injection**.
 
 ## Philosophy
 
@@ -285,6 +285,7 @@ flowchart TD
 - Gibt Recovery-Prompt mit Workflow-Status und nächstem Schritt aus
 
 **subagent_start.sh** (SubagentStart):
+- **Auto-Cleanup:** Löscht `.workflow/` wenn `status=completed` (deterministisch, vor jedem Task)
 - Speichert `currentAgent` in workflow-state.json (für WIP-Commit Safety Net)
 - Loggt welcher Agent gestartet wurde
 
@@ -321,6 +322,7 @@ Der Zustand wird in `.workflow/` persistiert:
 | `/byt8:wf-resume` | Pausierten Workflow fortsetzen |
 | `/byt8:wf-retry-reset` | Retry-Counter zurücksetzen |
 | `/byt8:wf-skip` | ⚠️ Phase überspringen (Notfall) |
+| `/byt8:wf-cleanup` | .workflow/ Folder löschen (nach Workflow-Abschluss) |
 
 ---
 

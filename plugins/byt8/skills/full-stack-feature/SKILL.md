@@ -53,6 +53,18 @@ WIP-Commits werden automatisch vom SubagentStop Hook erstellt (Phasen 1, 3, 4, 5
 
 ## Startup
 
+### Auto-Cleanup (deterministisch via SubagentStart Hook)
+
+**Abgeschlossene Workflows werden automatisch aufgeräumt!**
+
+Der `SubagentStart` Hook prüft bei jedem `Task()` Aufruf:
+- `status=completed` → löscht `.workflow/` automatisch
+- Andere Status → bleibt unverändert
+
+Das passiert BEVOR der erste Agent startet — kein manueller Cleanup nötig.
+
+**Manueller Cleanup:** `/byt8:wf-cleanup` falls nötig.
+
 ### Prüfe ob Workflow existiert
 
 ```bash
@@ -66,8 +78,7 @@ cat .workflow/workflow-state.json 2>/dev/null || echo "NEW"
 
 ```bash
 cat CLAUDE.md 2>/dev/null | head -10 || echo "No CLAUDE.md"
-# Alten Workflow komplett löschen und neu erstellen
-rm -rf .workflow
+# Workflow-Struktur erstellen
 mkdir -p .workflow/logs .workflow/specs .workflow/recovery
 grep -q "^\.workflow/" .gitignore 2>/dev/null || echo ".workflow/" >> .gitignore
 git fetch --prune
