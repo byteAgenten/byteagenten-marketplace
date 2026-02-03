@@ -101,47 +101,59 @@ get_test_command() {
 # ═══════════════════════════════════════════════════════════════════════════
 # SOUND NOTIFICATIONS (Cross-Platform: macOS, Linux, Windows)
 # ═══════════════════════════════════════════════════════════════════════════
+# Custom sounds in: ${CLAUDE_PLUGIN_ROOT}/assets/sounds/
+# Fallback to system sounds if custom files not found.
+# ═══════════════════════════════════════════════════════════════════════════
 
-play_notification_sound() {
-  # Sound für: Approval Gates, Workflow pausiert (User muss handeln)
+CUSTOM_SOUND_DIR="${CLAUDE_PLUGIN_ROOT:-}/assets/sounds"
+
+play_sound() {
+  local sound_file="$1"
+  local fallback_mac="$2"
+  local fallback_linux="$3"
+  local fallback_win="$4"
+
   case "$(uname -s)" in
     Darwin)
-      afplay /System/Library/Sounds/Glass.aiff 2>/dev/null &
+      if [ -f "$CUSTOM_SOUND_DIR/$sound_file" ]; then
+        afplay "$CUSTOM_SOUND_DIR/$sound_file" 2>/dev/null &
+      else
+        afplay "$fallback_mac" 2>/dev/null &
+      fi
       ;;
     Linux)
-      # PulseAudio (Ubuntu, Fedora, etc.) oder ALSA Fallback
-      if command -v paplay >/dev/null 2>&1; then
-        paplay /usr/share/sounds/freedesktop/stereo/bell.oga 2>/dev/null &
+      if [ -f "$CUSTOM_SOUND_DIR/$sound_file" ]; then
+        paplay "$CUSTOM_SOUND_DIR/$sound_file" 2>/dev/null &
+      elif command -v paplay >/dev/null 2>&1; then
+        paplay "$fallback_linux" 2>/dev/null &
       elif command -v aplay >/dev/null 2>&1; then
-        aplay /usr/share/sounds/sound-icons/bell.wav 2>/dev/null &
+        aplay "$fallback_linux" 2>/dev/null &
       fi
       ;;
     MINGW*|MSYS*|CYGWIN*)
-      # Windows via PowerShell
-      powershell -c "[System.Media.SystemSounds]::Exclamation.Play()" 2>/dev/null &
+      if [ -f "$CUSTOM_SOUND_DIR/$sound_file" ]; then
+        powershell -c "(New-Object Media.SoundPlayer '$CUSTOM_SOUND_DIR/$sound_file').Play()" 2>/dev/null &
+      else
+        powershell -c "[System.Media.SystemSounds]::$fallback_win.Play()" 2>/dev/null &
+      fi
       ;;
   esac
 }
 
+play_notification_sound() {
+  # Sound für: Approval Gates, Workflow pausiert (User muss handeln)
+  play_sound "notification.wav" \
+    "/System/Library/Sounds/Glass.aiff" \
+    "/usr/share/sounds/freedesktop/stereo/bell.oga" \
+    "Exclamation"
+}
+
 play_completion_sound() {
   # Sound für: Workflow erfolgreich abgeschlossen
-  case "$(uname -s)" in
-    Darwin)
-      afplay /System/Library/Sounds/Funk.aiff 2>/dev/null &
-      ;;
-    Linux)
-      # PulseAudio (Ubuntu, Fedora, etc.) oder ALSA Fallback
-      if command -v paplay >/dev/null 2>&1; then
-        paplay /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null &
-      elif command -v aplay >/dev/null 2>&1; then
-        aplay /usr/share/sounds/sound-icons/trumpet.wav 2>/dev/null &
-      fi
-      ;;
-    MINGW*|MSYS*|CYGWIN*)
-      # Windows via PowerShell
-      powershell -c "[System.Media.SystemSounds]::Asterisk.Play()" 2>/dev/null &
-      ;;
-  esac
+  play_sound "completion.wav" \
+    "/System/Library/Sounds/Funk.aiff" \
+    "/usr/share/sounds/freedesktop/stereo/complete.oga" \
+    "Asterisk"
 }
 
 # ═══════════════════════════════════════════════════════════════════════════

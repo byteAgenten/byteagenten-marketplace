@@ -256,6 +256,7 @@ flowchart TD
   - **Notification Sound** — Approval Gates, Workflow pausiert (User muss handeln)
   - **Completion Sound** — Workflow erfolgreich abgeschlossen
   - Unterstützt: macOS (afplay), Linux (paplay/aplay), Windows (PowerShell)
+  - Custom Sounds: Lege `notification.wav` und `completion.wav` in `assets/sounds/` ab
 
 **wf_user_prompt.sh** (UserPromptSubmit) — Context-Injection:
 - stdout wird in Claudes Kontext injiziert (UserPromptSubmit Spezial!)
@@ -386,6 +387,10 @@ Auto-Advance (5 Phasen) → ~15 KB Orchestrator-Kontext → kein Compaction ✅
 byt8/
 ├── .claude-plugin/
 │   └── plugin.json
+├── assets/                    # Plugin-Assets
+│   └── sounds/                # Custom workflow sounds (optional)
+│       ├── notification.wav   # Approval Gates, Workflow paused
+│       └── completion.wav     # Workflow completed
 ├── agents/                    # 10 spezialisierte Agents
 │   ├── architect-planner.md
 │   ├── angular-frontend-developer.md
