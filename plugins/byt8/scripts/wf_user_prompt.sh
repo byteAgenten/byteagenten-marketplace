@@ -156,7 +156,7 @@ if [ "$STATUS" = "awaiting_approval" ]; then
       echo "Der User antwortet auf das Code Review Ergebnis (Phase 8)."
       echo ""
       echo "BEI APPROVAL (Weiter/OK):"
-      echo "  1. jq '.status = \"active\" | .currentPhase = 9' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
+      echo "  1. jq '.status = \"awaiting_approval\" | .currentPhase = 9' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
       echo "  2. Phase 9: User fragen 'PR erstellen? Ziel-Branch?' (Default: fromBranch)"
       echo ""
       echo "BEI FEEDBACK (Aenderungswuensche an aktueller Phase):"

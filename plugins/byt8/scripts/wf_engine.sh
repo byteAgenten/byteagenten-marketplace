@@ -188,6 +188,14 @@ create_wip_commit() {
 }
 
 check_done() {
+  # Phase als completed/skipped markiert? → als done betrachten
+  local phase_status
+  phase_status=$(jq -r ".phases[\"$PHASE\"].status // \"pending\"" "$WORKFLOW_FILE" 2>/dev/null || echo "pending")
+  if [ "$phase_status" = "completed" ] || [ "$phase_status" = "skipped" ]; then
+    return 0
+  fi
+
+  # Context-basierte Done-Checks
   case $PHASE in
     0) jq -e '.context.technicalSpec | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 ;;
     1) ls wireframes/*.html > /dev/null 2>&1 || ls wireframes/*.svg > /dev/null 2>&1 ;;
@@ -204,11 +212,21 @@ check_done() {
 }
 
 # Phase-Skip Guard: Prüft ob ALLE Vorgänger-Phasen ihren Context geschrieben haben.
+# Respektiert phases[N].status: completed/skipped Phasen werden übersprungen.
 detect_skipped_phase() {
   local current=$1
   local i=0
 
   while [ $i -lt $current ]; do
+    # Phase bereits als completed/skipped markiert? → kein Context-Check nötig
+    local phase_status
+    phase_status=$(jq -r ".phases[\"$i\"].status // \"pending\"" "$WORKFLOW_FILE" 2>/dev/null || echo "pending")
+    if [ "$phase_status" = "completed" ] || [ "$phase_status" = "skipped" ]; then
+      i=$((i + 1))
+      continue
+    fi
+
+    # Context-Check für pending/unbekannte Phasen
     case $i in
       0) jq -e '.context.technicalSpec | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || { echo $i; return; } ;;
       1) jq -e '.context.wireframes | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || { echo $i; return; } ;;
@@ -267,7 +285,13 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════
 
 if [ "$STATUS" = "completed" ]; then
-  # Dauer berechnen und speichern
+  # Bereits geloggt? → sofort exit (verhindert wiederholtes Logging)
+  COMPLETED_AT_EXISTS=$(jq -r '.completedAt // ""' "$WORKFLOW_FILE" 2>/dev/null)
+  if [ -n "$COMPLETED_AT_EXISTS" ] && [ "$COMPLETED_AT_EXISTS" != "null" ]; then
+    exit 0
+  fi
+
+  # Dauer berechnen und speichern (nur beim ersten Mal)
   STARTED_AT=$(jq -r '.startedAt // ""' "$WORKFLOW_FILE" 2>/dev/null)
   COMPLETED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 

@@ -66,7 +66,9 @@ cat .workflow/workflow-state.json 2>/dev/null || echo "NEW"
 
 ```bash
 cat CLAUDE.md 2>/dev/null | head -10 || echo "No CLAUDE.md"
-mkdir -p .workflow/logs
+# Alten Workflow komplett löschen und neu erstellen
+rm -rf .workflow
+mkdir -p .workflow/logs .workflow/specs .workflow/recovery
 grep -q "^\.workflow/" .gitignore 2>/dev/null || echo ".workflow/" >> .gitignore
 git fetch --prune
 git branch -r | grep -v HEAD | sed 's/origin\///' | head -10
@@ -142,6 +144,29 @@ Phase [N]: [Name] for Issue #[NUM]
 
 ---
 
+## Phase Skipping
+
+Wenn eine Phase übersprungen wird (z.B. Backend-only Feature, keine DB-Änderungen):
+
+1. `phases[N].status = "skipped"` + `reason` setzen
+2. **Minimal-Context PFLICHT:** `context.CONTEXT_KEY = { "skipped": true, "reason": "..." }`
+
+Der Guard-Hook prüft sowohl `phases[N].status` als auch `context.*` Keys. Defense-in-Depth: beides setzen.
+
+Beispiel für Backend-only Feature (Phasen 1-3 überspringen):
+```bash
+jq '
+  .phases["1"] = {"name":"ui-designer","status":"skipped","reason":"Backend-only"}
+  | .context.wireframes = {"skipped":true,"reason":"Backend-only"}
+  | .phases["2"] = {"name":"api-architect","status":"skipped","reason":"No API changes"}
+  | .context.apiDesign = {"skipped":true,"reason":"No API changes"}
+  | .phases["3"] = {"name":"postgresql-architect","status":"skipped","reason":"No DB changes"}
+  | .context.migrations = {"skipped":true,"reason":"No DB changes"}
+' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
+```
+
+---
+
 ## Phase 7: Security Audit
 
 User entscheidet nach Findings:
@@ -150,23 +175,24 @@ User entscheidet nach Findings:
 
 ## Phase 8: Code Review
 
-- **APPROVED:** `currentPhase = 9`, User fragen: "PR erstellen?"
+- **APPROVED:** `currentPhase = 9` + `status = "awaiting_approval"`, User fragen: "PR erstellen?"
 - **CHANGES_REQUESTED:** Rückdelegation (siehe unten), max 3 Iterationen.
 
 ## Phase 9: Push & PR
 
-1. Ziel-Branch fragen (Default: `fromBranch`)
+_(Status ist bereits `awaiting_approval` aus Phase 8 Approval)_
+
+1. User fragen: "PR erstellen? Ziel-Branch?" (Default: `fromBranch`)
 2. PR-Body generieren aus `context.*` Keys
-3. User fragen: "Soll ich pushen?"
-4. Bei Ja:
+3. Bei Ja:
    ```bash
-   # ZUERST pushApproved setzen (Guard-Hook prüft!)
-   jq '.pushApproved = true' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
+   # Status auf active + pushApproved setzen (Guard-Hook prüft!)
+   jq '.status = "active" | .pushApproved = true' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
    git push -u origin $BRANCH
    gh pr create --base $INTO_BRANCH --title "feat(#N): Title" --body "$PR_BODY"
    ```
-5. State: `status = "completed"`
-6. Zusammenfassung mit Dauer anzeigen (`startedAt` bis jetzt)
+4. State: `status = "completed"`
+5. Zusammenfassung mit Dauer anzeigen (`startedAt` bis jetzt)
 
 ---
 

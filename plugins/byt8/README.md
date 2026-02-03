@@ -1,6 +1,6 @@
 # byt8 Plugin
 
-**Version 7.3.0** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 10-Phasen Workflow, Approval Gates und **deterministischem Auto-Advance via Context-Injection**.
+**Version 7.4.0** | Full-Stack Development Toolkit für Angular 21 + Spring Boot 4 Anwendungen mit 10-Phasen Workflow, Approval Gates und **deterministischem Auto-Advance via Context-Injection**.
 
 ## Philosophy
 
@@ -253,7 +253,9 @@ flowchart TD
 **wf_engine.sh** (Stop) — Zentrale Workflow-Steuerung:
 - **Auto-Advance via `decision:block`:** Bei Phasen 2-6 gibt JSON `{"decision":"block","reason":"..."}` zurück → Claude KANN NICHT stoppen und sieht die Anweisung für die nächste Phase
 - **Approval Gates:** Setzt `status = "awaiting_approval"`, kein JSON → Claude stoppt normal
-- **Phase-Skip Guard:** Erkennt übersprungene Phasen, korrigiert State, blockiert mit Anweisung
+- **Phase-Skip Guard:** Erkennt übersprungene Phasen via `phases[].status` und `context.*` Keys (Defense-in-Depth), korrigiert State, blockiert mit Anweisung
+- **Phase Done Check:** Prüft `phases[].status` (completed/skipped) vor Context-Keys — übersprungene Phasen werden korrekt als "done" erkannt
+- **Completed-State Guard:** Loggt Workflow-Completion nur einmal (dedupliziert via `completedAt`-Check)
 - **Test-Retries:** Max 3 Versuche, dann Workflow pausieren
 - **Phase 8 Rollback:** Deterministisch — bestimmt Rollback-Ziel aus `reviewFeedback.fixes[].type`
 - **Loop-Prevention:** Zählt consecutive blocks (`stopHookBlockCount`), pausiert bei >15
@@ -262,6 +264,7 @@ flowchart TD
 - stdout wird in Claudes Kontext injiziert (UserPromptSubmit Spezial!)
 - **Approval Gates:** Injiziert phase-spezifische Anweisungen (Approval, Feedback, Rollback-Regeln)
 - **Phase 7:** Vollständige Rollback-Regeln (Security-Fixes + allgemeine Änderungen + PFLICHT-Reihenfolge)
+- **Phase 8→9 Transition:** Setzt `status = "awaiting_approval"` bei Approval, damit Phase 9 korrekt als Approval Gate erkannt wird
 - **Loop-Prevention Reset:** Setzt `stopHookBlockCount` auf 0 bei jedem User-Prompt
 
 **guard_git_push.sh** (PreToolUse/Bash):
