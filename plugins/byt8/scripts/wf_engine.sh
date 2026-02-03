@@ -527,6 +527,17 @@ else
   fi
 
   # ─────────────────────────────────────────────────────────────────────────
+  # GUARD: Phase muss existieren bevor Tests getriggert werden
+  # Verhindert: Orchestrator ändert currentPhase zu früh → Hook triggert Tests für nicht-gestartete Phase
+  # ─────────────────────────────────────────────────────────────────────────
+  PHASE_EXISTS=$(jq -r ".phases[\"$PHASE\"] // \"null\"" "$WORKFLOW_FILE" 2>/dev/null)
+  if [ "$PHASE_EXISTS" = "null" ]; then
+    log "GUARD: Phase $PHASE nicht in phases[]. Orchestrator hat currentPhase zu frueh geaendert. Erlaube Stop fuer Approval Gate."
+    log_transition "phase_not_started_guard" "phase=$PHASE"
+    exit 0
+  fi
+
+  # ─────────────────────────────────────────────────────────────────────────
   # Test-Phasen: Retry bei Fehler
   # ─────────────────────────────────────────────────────────────────────────
   TEST_CMD=$(get_test_command $PHASE)

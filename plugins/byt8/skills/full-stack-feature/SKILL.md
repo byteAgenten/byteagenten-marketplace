@@ -120,6 +120,18 @@ git checkout -b feature/issue-ISSUE_NUM-kurzer-name
 
 Dann Phase 0 starten: `Task(byt8:architect-planner, "Create Technical Specification for Issue #N: Title")`
 
+### Nach Phase 0: APPROVAL GATE (PFLICHT!)
+
+**STOPP! Ändere currentPhase NICHT selbst!**
+
+1. Lies die erstellte Spec-Datei aus `context.technicalSpec.specFile`
+2. Zeige dem User eine Zusammenfassung der Spec
+3. Frage: "Spec OK? Soll ich fortfahren?"
+4. **WARTE auf User-Antwort** — der Stop-Hook setzt `status = "awaiting_approval"`
+5. ERST nach User-Approval: Phasen skippen und nächste Phase starten
+
+**NIEMALS:** `currentPhase` ändern bevor User approved hat!
+
 ---
 
 ## Agent-Aufruf (File Reference Protocol)
