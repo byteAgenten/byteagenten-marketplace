@@ -252,9 +252,10 @@ flowchart TD
 - **Test-Retries:** Max 3 Versuche, dann Workflow pausieren
 - **Phase 8 Rollback:** Deterministisch — bestimmt Rollback-Ziel aus `reviewFeedback.fixes[].type`
 - **Loop-Prevention:** Zählt consecutive blocks (`stopHookBlockCount`), pausiert bei >15
-- **Sound Notifications (macOS):** Akustische Benachrichtigungen bei Workflow-Events:
-  - `Glass.aiff` — Approval Gates, Workflow pausiert (User muss handeln)
-  - `Funk.aiff` — Workflow erfolgreich abgeschlossen
+- **Sound Notifications (Cross-Platform):** Akustische Benachrichtigungen bei Workflow-Events:
+  - **Notification Sound** — Approval Gates, Workflow pausiert (User muss handeln)
+  - **Completion Sound** — Workflow erfolgreich abgeschlossen
+  - Unterstützt: macOS (afplay), Linux (paplay/aplay), Windows (PowerShell)
 
 **wf_user_prompt.sh** (UserPromptSubmit) — Context-Injection:
 - stdout wird in Claudes Kontext injiziert (UserPromptSubmit Spezial!)

@@ -99,21 +99,49 @@ get_test_command() {
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
-# SOUND NOTIFICATIONS (nur macOS)
+# SOUND NOTIFICATIONS (Cross-Platform: macOS, Linux, Windows)
 # ═══════════════════════════════════════════════════════════════════════════
 
 play_notification_sound() {
   # Sound für: Approval Gates, Workflow pausiert (User muss handeln)
-  if [ "$(uname)" = "Darwin" ]; then
-    afplay /System/Library/Sounds/Glass.aiff 2>/dev/null &
-  fi
+  case "$(uname -s)" in
+    Darwin)
+      afplay /System/Library/Sounds/Glass.aiff 2>/dev/null &
+      ;;
+    Linux)
+      # PulseAudio (Ubuntu, Fedora, etc.) oder ALSA Fallback
+      if command -v paplay >/dev/null 2>&1; then
+        paplay /usr/share/sounds/freedesktop/stereo/bell.oga 2>/dev/null &
+      elif command -v aplay >/dev/null 2>&1; then
+        aplay /usr/share/sounds/sound-icons/bell.wav 2>/dev/null &
+      fi
+      ;;
+    MINGW*|MSYS*|CYGWIN*)
+      # Windows via PowerShell
+      powershell -c "[System.Media.SystemSounds]::Exclamation.Play()" 2>/dev/null &
+      ;;
+  esac
 }
 
 play_completion_sound() {
   # Sound für: Workflow erfolgreich abgeschlossen
-  if [ "$(uname)" = "Darwin" ]; then
-    afplay /System/Library/Sounds/Funk.aiff 2>/dev/null &
-  fi
+  case "$(uname -s)" in
+    Darwin)
+      afplay /System/Library/Sounds/Funk.aiff 2>/dev/null &
+      ;;
+    Linux)
+      # PulseAudio (Ubuntu, Fedora, etc.) oder ALSA Fallback
+      if command -v paplay >/dev/null 2>&1; then
+        paplay /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null &
+      elif command -v aplay >/dev/null 2>&1; then
+        aplay /usr/share/sounds/sound-icons/trumpet.wav 2>/dev/null &
+      fi
+      ;;
+    MINGW*|MSYS*|CYGWIN*)
+      # Windows via PowerShell
+      powershell -c "[System.Media.SystemSounds]::Asterisk.Play()" 2>/dev/null &
+      ;;
+  esac
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
