@@ -90,7 +90,7 @@ export CONTEXT7_API_KEY=ctx7sk-dein-key-hier
 | `/byt8:full-stack-feature` | 10-Phasen Feature Development Workflow |
 | `/byt8:ui-theming` | Einmalige Design System Initialisierung |
 | `/byt8:python-expert` | Python Development Support |
-| `/byt8:prd-generator` | PRD erstellen (Codebase-Analyse → Fragen → PRD → GitHub Issue) |
+| `/byt8:prd-generator` | PRD erstellen (User Stories + Requirements → GitHub Issue) |
 
 ### Beispiele
 
@@ -379,7 +379,7 @@ Auto-Advance (5 Phasen) → ~15 KB Orchestrator-Kontext → kein Compaction ✅
 | `full-stack-feature` | 10-Phasen Workflow mit State Management |
 | `ui-theming` | Design System Initialisierung (inkl. 10 vordefinierte Themes) |
 | `python-expert` | Async, Typing, Testing Patterns |
-| `prd-generator` | Product Requirements Documents mit Codebase-Analyse und GitHub Issue |
+| `prd-generator` | Product Requirements Documents (Was/Warum, keine technischen Details) |
 
 ---
 

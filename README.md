@@ -112,7 +112,7 @@ Falls du eine feste Version verwenden möchtest:
 | `/byt8:full-stack-feature` | 10-phase workflow for full-stack feature development |
 | `/byt8:ui-theming` | One-time design system initialization (theme, tokens, typography) |
 | `/byt8:python-expert` | Python development support |
-| `/byt8:prd-generator` | Generate PRDs with codebase analysis and GitHub Issue creation |
+| `/byt8:prd-generator` | Generate PRDs (user stories, requirements) and create GitHub Issues |
 
 → Details und Beispiele siehe [byt8 README](./plugins/byt8/README.md)
 
