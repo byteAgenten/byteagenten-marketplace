@@ -1,0 +1,17 @@
+{
+  "description": "bytA Workflow - Minimal Hooks (v0.1)",
+  "version": "1.0.0",
+  "hooks": {
+    "SubagentStop": [
+      {
+        "description": "WIP-Commit after implementation phases",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/wip_commit.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
