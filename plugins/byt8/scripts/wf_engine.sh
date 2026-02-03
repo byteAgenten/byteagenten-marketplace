@@ -99,6 +99,24 @@ get_test_command() {
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
+# SOUND NOTIFICATIONS (nur macOS)
+# ═══════════════════════════════════════════════════════════════════════════
+
+play_notification_sound() {
+  # Sound für: Approval Gates, Workflow pausiert (User muss handeln)
+  if [ "$(uname)" = "Darwin" ]; then
+    afplay /System/Library/Sounds/Glass.aiff 2>/dev/null &
+  fi
+}
+
+play_completion_sound() {
+  # Sound für: Workflow erfolgreich abgeschlossen
+  if [ "$(uname)" = "Darwin" ]; then
+    afplay /System/Library/Sounds/Funk.aiff 2>/dev/null &
+  fi
+}
+
+# ═══════════════════════════════════════════════════════════════════════════
 # LOGGING (nur in Datei, NICHT auf stdout)
 # Verzeichnis wird erst nach Workflow-Prüfung erstellt (siehe unten)
 # ═══════════════════════════════════════════════════════════════════════════
@@ -278,6 +296,7 @@ if [ "$STOP_HOOK_ACTIVE" = "true" ]; then
       "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
     log "LOOP DETECTED: $BLOCK_COUNT consecutive blocks. Pausing workflow."
     log_transition "loop_detected" "blockCount=$BLOCK_COUNT"
+    play_notification_sound
     exit 0  # Claude darf stoppen
   fi
 fi
@@ -311,6 +330,7 @@ if [ "$STATUS" = "completed" ]; then
         "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
 
       log "Workflow completed: #${ISSUE_NUM} - ${ISSUE_TITLE} (Duration: ${DURATION_MIN}m ${DURATION_REM_SEC}s)"
+      play_completion_sound
     fi
   fi
   exit 0
@@ -382,6 +402,7 @@ if check_done; then
 
     log "APPROVAL GATE: Phase $PHASE ($PHASE_NAME) done. awaiting_approval gesetzt."
     log_transition "approval_gate" "phase=$PHASE"
+    play_notification_sound
 
     # Kein JSON → exit 0 → Claude stoppt normal
     # SKILL.md im Context sagt Claude: User fragen
@@ -420,6 +441,7 @@ else
           "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
         log "MAX REVIEW ITERATIONS ($MAX_RETRIES). Pausing."
         log_transition "max_review_retries" "retry=$RETRY"
+        play_notification_sound
         exit 0  # Claude darf stoppen, User muss eingreifen
       fi
 
@@ -475,6 +497,7 @@ else
         "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
       log "MAX TEST RETRIES ($MAX_RETRIES). Phase $PHASE. Pausing."
       log_transition "max_test_retries" "phase=$PHASE retry=$RETRY"
+      play_notification_sound
       exit 0  # Claude darf stoppen
     fi
 
