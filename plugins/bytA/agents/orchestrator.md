@@ -31,11 +31,15 @@ Du koordinierst Full-Stack Feature-Entwicklung. Du schreibst KEINEN Code selbst 
 
 ## Workflow
 
-### 1. Start
+### 0. Orchestrator-Start markieren (PFLICHT, ERSTER BEFEHL!)
+```bash
+echo "$(date)" > .workflow/orchestrator-started
+```
+
+### 1. Issue laden + Branch
 ```bash
 gh issue view {N} --json title,body,labels
 git checkout -b feature/issue-{N}
-mkdir -p .workflow
 ```
 
 ### 2. Spec (APPROVAL)

@@ -1,6 +1,6 @@
 # bytA Plugin
 
-**Version 1.1.0** | Boomerang-Style mit permissionMode
+**Version 1.2.0** | Boomerang-Style mit permissionMode + Hook-Enforcement
 
 ## Philosophie
 
@@ -83,10 +83,29 @@ bytA/
 │   ├── auto-frontend-dev.md      # AUTO (bypassPermissions)
 │   └── auto-test-engineer.md     # AUTO (bypassPermissions)
 ├── commands/feature.md
-├── hooks/hooks.json              # LEER
+├── hooks/hooks.json              # Stop-Hook für Enforcement
+├── scripts/
+│   └── enforce_orchestrator.sh   # Erzwingt Orchestrator-Start
 ├── skills/feature/SKILL.md
 └── README.md
 ```
+
+## Hook-Enforcement (v1.2)
+
+Problem: Claude ignorierte manchmal das SKILL.md und machte "kleine Fixes" selbst.
+
+Lösung: Ein Stop-Hook der prüft ob der Orchestrator gestartet wurde:
+
+```
+.workflow/bytA-session        ← SKILL.md erstellt diese Datei
+.workflow/orchestrator-started ← Orchestrator erstellt diese Datei
+
+Stop-Hook prüft:
+- Wenn bytA-session existiert ABER orchestrator-started NICHT
+- → decision:block → "Du MUSST den Orchestrator starten!"
+```
+
+Das ist **deterministisch** - Claude kann es nicht umgehen.
 
 ## Der Trick: permissionMode
 
@@ -112,13 +131,12 @@ Das ist **deterministisch** - Claude Code erzwingt es technisch.
 
 ## Warum das funktioniert
 
-| Problem bei byt8 | Lösung bei bytA |
-|------------------|-----------------|
-| Hooks waren komplex | Keine Hooks |
-| State-Management fragil | Kein State-File |
-| Prompts wurden ignoriert | permissionMode ist technisch |
-| APPROVAL-Gates übersprungen | byt8: Agents = default permission |
+| Problem | Lösung |
+|---------|--------|
+| Claude ignoriert SKILL.md | Stop-Hook mit decision:block erzwingt Orchestrator |
+| APPROVAL-Gates übersprungen | byt8: Agents = default permission (User wird gefragt) |
 | AUTO sollte durchlaufen | bypassPermissions = deterministisch |
+| Prompts wurden ignoriert | Technische Mechanismen statt Prompts |
 
 ## Quellen
 

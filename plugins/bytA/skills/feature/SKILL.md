@@ -5,10 +5,16 @@ author: byteAgenten
 
 # bytA Feature
 
-Starte den Orchestrator-Agent.
+## SCHRITT 1: Session markieren (PFLICHT!)
+
+```bash
+mkdir -p .workflow && echo "$(date)" > .workflow/bytA-session
+```
+
+## SCHRITT 2: Orchestrator starten (PFLICHT!)
 
 ```
 Task(bytA-orchestrator, "Feature für Issue #{ISSUE_NUMBER} implementieren")
 ```
 
-Der Orchestrator übernimmt ab hier.
+**KEINE AUSNAHMEN!** Auch nicht für "kleine Fixes". Der Hook wird dich blockieren wenn du den Orchestrator nicht startest.

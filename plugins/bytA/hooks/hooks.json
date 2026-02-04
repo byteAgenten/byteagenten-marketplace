@@ -1,5 +1,17 @@
 {
-  "description": "bytA v1.0 - Boomerang Style - KEINE Hooks!",
-  "version": "1.0.0",
-  "hooks": {}
+  "description": "bytA v1.2 - Hook erzwingt Orchestrator-Start",
+  "version": "1.2.0",
+  "hooks": {
+    "Stop": [
+      {
+        "description": "Erzwinge Orchestrator-Start nach Skill-Load",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/enforce_orchestrator.sh"
+          }
+        ]
+      }
+    ]
+  }
 }
