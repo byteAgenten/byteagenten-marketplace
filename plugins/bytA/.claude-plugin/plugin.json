@@ -1,9 +1,9 @@
 {
   "name": "bytA",
-  "version": "1.0.0",
-  "description": "Boomerang-style workflow orchestration. One orchestrator, delegates to byt8 agents, user approves each task.",
+  "version": "1.1.0",
+  "description": "Boomerang-style workflow with permissionMode. APPROVAL phases ask user, AUTO phases run with bypassPermissions.",
   "author": {
     "name": "byteAgenten"
   },
-  "keywords": ["angular", "spring-boot", "fullstack", "workflow", "orchestrator", "boomerang"]
+  "keywords": ["angular", "spring-boot", "fullstack", "workflow", "orchestrator", "boomerang", "permissionMode"]
 }

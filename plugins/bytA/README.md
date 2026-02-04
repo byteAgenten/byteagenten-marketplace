@@ -1,25 +1,108 @@
 # bytA Plugin
 
-**Version 1.0.0** | Boomerang-Style Workflow Orchestration
+**Version 1.1.0** | Boomerang-Style mit permissionMode
 
 ## Philosophie
 
-Inspiriert von [Roo Code Boomerang](https://docs.roocode.com/features/boomerang-tasks):
+Inspiriert von [Roo Code Boomerang](https://docs.roocode.com/features/boomerang-tasks) + Claude Code's `permissionMode`:
 
-- **Ein Orchestrator** - delegiert, implementiert nichts
-- **Keine Hooks** - Claude Code's Task-Permission ist der Approval Gate
-- **Keine Scripts** - rein prompt-basiert
-- **User kontrolliert jeden Task** - "Allow?" bei jedem Agent-Start
+- **APPROVAL-Phasen**: Nutzen byt8: Agents → User wird gefragt
+- **AUTO-Phasen**: Nutzen bytA-auto-* Agents mit `permissionMode: bypassPermissions` → Laufen durch
 
-## Unterschied zu byt8
+## Wie es funktioniert
 
-| Aspekt | byt8 | bytA |
-|--------|------|------|
-| Dateien | ~20 Dateien (agents, hooks, scripts) | 6 Dateien total |
-| Hooks | Komplex (Stop, PreToolUse, etc.) | Keine |
-| Scripts | wf_engine.sh, agent_done.sh, etc. | Keine |
-| Approval | Hook erzwingt via decision:block | Claude Code built-in |
-| Agents | Eigene Agent-Definitionen | Nutzt byt8: Agents |
+```
+/bytA:feature #123
+         │
+         ▼
+┌─────────────────────────────────────────────────┐
+│ Orchestrator                                    │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│ APPROVAL: Task(byt8:architect-planner)          │
+│           → "Allow?" → User: Ja                 │
+│           → Spec erstellt                       │
+│                                                 │
+│ APPROVAL: Task(byt8:ui-designer)                │
+│           → "Allow?" → User: Ja                 │
+│           → Wireframes erstellt                 │
+│                                                 │
+│ AUTO:     Task(bytA-auto-api-architect)         │
+│           → bypassPermissions → läuft durch!    │
+│                                                 │
+│ AUTO:     Task(bytA-auto-db-architect)          │
+│           → bypassPermissions → läuft durch!    │
+│                                                 │
+│ AUTO:     Task(bytA-auto-backend-dev)           │
+│           → bypassPermissions → läuft durch!    │
+│                                                 │
+│ AUTO:     Task(bytA-auto-frontend-dev)          │
+│           → bypassPermissions → läuft durch!    │
+│                                                 │
+│ AUTO:     Task(bytA-auto-test-engineer)         │
+│           → bypassPermissions → läuft durch!    │
+│                                                 │
+│ APPROVAL: Task(byt8:security-auditor)           │
+│           → "Allow?" → User: Ja                 │
+│                                                 │
+│ APPROVAL: Task(byt8:code-reviewer)              │
+│           → "Allow?" → User: Ja                 │
+│                                                 │
+└─────────────────────────────────────────────────┘
+```
+
+## Agents
+
+### APPROVAL-Agents (byt8:, User wird gefragt)
+| Agent | Phase | Beschreibung |
+|-------|-------|--------------|
+| byt8:architect-planner | Spec | Technical Specification |
+| byt8:ui-designer | UI | Wireframes |
+| byt8:security-auditor | Security | Security Audit |
+| byt8:code-reviewer | Review | Code Review |
+
+### AUTO-Agents (bytA-auto-*, bypassPermissions)
+| Agent | Phase | Beschreibung |
+|-------|-------|--------------|
+| bytA-auto-api-architect | API | REST API Design |
+| bytA-auto-db-architect | DB | Flyway Migrations |
+| bytA-auto-backend-dev | Backend | Spring Boot |
+| bytA-auto-frontend-dev | Frontend | Angular |
+| bytA-auto-test-engineer | Tests | Playwright E2E |
+
+## Struktur
+
+```
+bytA/
+├── .claude-plugin/plugin.json
+├── agents/
+│   ├── orchestrator.md           # Koordiniert alles
+│   ├── auto-api-architect.md     # AUTO (bypassPermissions)
+│   ├── auto-db-architect.md      # AUTO (bypassPermissions)
+│   ├── auto-backend-dev.md       # AUTO (bypassPermissions)
+│   ├── auto-frontend-dev.md      # AUTO (bypassPermissions)
+│   └── auto-test-engineer.md     # AUTO (bypassPermissions)
+├── commands/feature.md
+├── hooks/hooks.json              # LEER
+├── skills/feature/SKILL.md
+└── README.md
+```
+
+## Der Trick: permissionMode
+
+Claude Code Agents unterstützen `permissionMode` im Frontmatter:
+
+```yaml
+---
+name: bytA-auto-backend-dev
+permissionMode: bypassPermissions  # ← Läuft ohne User-Frage!
+---
+```
+
+- `default` → User wird gefragt (APPROVAL)
+- `bypassPermissions` → Läuft durch (AUTO)
+
+Das ist **deterministisch** - Claude Code erzwingt es technisch.
 
 ## Verwendung
 
@@ -27,70 +110,17 @@ Inspiriert von [Roo Code Boomerang](https://docs.roocode.com/features/boomerang-
 /bytA:feature #123
 ```
 
-## Wie es funktioniert
+## Warum das funktioniert
 
-```
-User: /bytA:feature #123
-         │
-         ▼
-Claude Code: "Allow bytA-orchestrator?" ← User sagt Ja
-         │
-         ▼
-Orchestrator: Analysiert Issue, delegiert
-         │
-         ▼
-Claude Code: "Allow byt8:architect-planner?" ← User sagt Ja
-         │
-         ▼
-Architect: Erstellt Spec → .workflow/spec.md
-         │
-         ▼
-Orchestrator: Liest Spec, delegiert weiter
-         │
-         ▼
-Claude Code: "Allow byt8:spring-boot-developer?" ← User sagt Ja
-         │
-         ... usw.
-```
+| Problem bei byt8 | Lösung bei bytA |
+|------------------|-----------------|
+| Hooks waren komplex | Keine Hooks |
+| State-Management fragil | Kein State-File |
+| Prompts wurden ignoriert | permissionMode ist technisch |
+| APPROVAL-Gates übersprungen | byt8: Agents = default permission |
+| AUTO sollte durchlaufen | bypassPermissions = deterministisch |
 
-**Der User approved jeden Task** - das IST der Approval Gate.
+## Quellen
 
-## Struktur
-
-```
-bytA/
-├── .claude-plugin/plugin.json   # Metadata
-├── agents/orchestrator.md       # Der einzige Agent
-├── commands/feature.md          # Command → Skill
-├── hooks/hooks.json             # LEER
-├── skills/feature/SKILL.md      # Startet nur Orchestrator
-└── README.md
-```
-
-## Der Orchestrator
-
-Der Orchestrator:
-1. Lädt das GitHub Issue
-2. Entscheidet welche Agents nötig sind
-3. Delegiert via `Task(byt8:agent-name, ...)`
-4. Liest Ergebnisse, entscheidet nächsten Schritt
-
-Er nutzt die **byt8: Agents**:
-- `byt8:architect-planner`
-- `byt8:ui-designer`
-- `byt8:api-architect`
-- `byt8:postgresql-architect`
-- `byt8:spring-boot-developer`
-- `byt8:angular-frontend-developer`
-- `byt8:test-engineer`
-- `byt8:security-auditor`
-- `byt8:code-reviewer`
-
-## Warum so minimal?
-
-Wir haben gelernt dass komplexe Hook-Logik fragil ist. Das Boomerang-Muster ist einfacher:
-
-1. **Keine Hooks** = Keine Hook-Bugs
-2. **Ein Orchestrator** = Klare Verantwortung
-3. **Built-in Approval** = Deterministisch (Claude Code erzwingt es)
-4. **byt8 Agents wiederverwenden** = Keine Duplikation
+- [Claude Code Subagents - permissionMode](https://code.claude.com/docs/en/sub-agents)
+- [Roo Code Auto-Approving Actions](https://docs.roocode.com/features/auto-approving-actions)
