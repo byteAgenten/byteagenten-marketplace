@@ -1,17 +1,5 @@
 {
-  "description": "bytA Workflow Hooks - Approval Gates + WIP-Commits (v0.2)",
-  "version": "2.0.0",
-  "hooks": {
-    "SubagentStop": [
-      {
-        "description": "Approval Gates + WIP-Commits nach Agent-Completion",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/agent_done.sh"
-          }
-        ]
-      }
-    ]
-  }
+  "description": "bytA v1.0 - Boomerang Style - KEINE Hooks!",
+  "version": "1.0.0",
+  "hooks": {}
 }

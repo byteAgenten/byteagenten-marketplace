@@ -1,26 +1,25 @@
 # bytA Plugin
 
-**Version 0.2.0** | Agent-based Workflow Orchestration für Angular + Spring Boot
+**Version 1.0.0** | Boomerang-Style Workflow Orchestration
 
-## Philosophy
-
-> "Der Orchestrator delegiert, die Agents implementieren."
+## Philosophie
 
 Inspiriert von [Roo Code Boomerang](https://docs.roocode.com/features/boomerang-tasks):
-- **Fokussierter Orchestrator** - nur Delegation, keine Implementation
-- **Isolierte Agents** - jeder Agent hat seinen eigenen Kontext
-- **Dynamische Entscheidungen** - der Orchestrator entscheidet nach jedem Schritt
-- **Minimale Hooks** - nur das Nötigste (WIP-Commits)
+
+- **Ein Orchestrator** - delegiert, implementiert nichts
+- **Keine Hooks** - Claude Code's Task-Permission ist der Approval Gate
+- **Keine Scripts** - rein prompt-basiert
+- **User kontrolliert jeden Task** - "Allow?" bei jedem Agent-Start
 
 ## Unterschied zu byt8
 
-| Aspekt | byt8 (alt) | bytA (neu) |
-|--------|------------|------------|
-| Steuerung | 260-Zeilen SKILL.md | Fokussierter Orchestrator-Agent |
-| Hooks | Komplex (Stop, PreToolUse, etc.) | Minimal (nur WIP-Commit) |
-| State | workflow-state.json mit vielen Feldern | Einfaches state.json |
-| Phasen-Logic | In Hooks codiert | Orchestrator entscheidet dynamisch |
-| Approval Gates | Hook erzwingt via decision:block | Orchestrator fragt User direkt |
+| Aspekt | byt8 | bytA |
+|--------|------|------|
+| Dateien | ~20 Dateien (agents, hooks, scripts) | 6 Dateien total |
+| Hooks | Komplex (Stop, PreToolUse, etc.) | Keine |
+| Scripts | wf_engine.sh, agent_done.sh, etc. | Keine |
+| Approval | Hook erzwingt via decision:block | Claude Code built-in |
+| Agents | Eigene Agent-Definitionen | Nutzt byt8: Agents |
 
 ## Verwendung
 
@@ -28,140 +27,70 @@ Inspiriert von [Roo Code Boomerang](https://docs.roocode.com/features/boomerang-
 /bytA:feature #123
 ```
 
-Der Orchestrator-Agent wird gestartet und führt dich durch den Workflow.
-
-## Workflow-Phasen
-
-| Phase | Agent | Typ | Beschreibung |
-|-------|-------|-----|--------------|
-| 0 | bytA-architect | APPROVAL | Technical Specification |
-| 1 | bytA-ui-designer | APPROVAL | Wireframes (optional) |
-| 2 | bytA-api-architect | AUTO | API Design |
-| 3 | bytA-db-architect | AUTO | Database Migrations |
-| 4 | bytA-backend-dev | AUTO | Spring Boot Implementation |
-| 5 | bytA-frontend-dev | AUTO | Angular Implementation |
-| 6 | bytA-test-engineer | AUTO | E2E Tests |
-| 7 | bytA-security | APPROVAL | Security Audit |
-| 8 | bytA-reviewer | APPROVAL | Code Review |
-
-**APPROVAL** = User muss bestätigen bevor es weitergeht
-**AUTO** = Läuft automatisch durch
-
-## Architektur
+## Wie es funktioniert
 
 ```
-/bytA:feature #123
-       │
-       ▼
-┌──────────────────────────────────────┐
-│  bytA-orchestrator                   │
-│  - Lädt Issue                        │
-│  - Entscheidet nächste Phase         │
-│  - Fragt User bei APPROVAL-Phasen    │
-└──────────────────────────────────────┘
-       │
-       ├── Task(bytA-architect, "...")
-       │      └── Schreibt phase-0-result.md
-       │      └── Orchestrator liest Ergebnis
-       │      └── APPROVAL: Fragt User
-       │
-       ├── Task(bytA-frontend-dev, "...")
-       │      └── Schreibt phase-5-result.md
-       │      └── Orchestrator liest Ergebnis
-       │      └── AUTO: Nächste Phase
-       │
-       └── ...
+User: /bytA:feature #123
+         │
+         ▼
+Claude Code: "Allow bytA-orchestrator?" ← User sagt Ja
+         │
+         ▼
+Orchestrator: Analysiert Issue, delegiert
+         │
+         ▼
+Claude Code: "Allow byt8:architect-planner?" ← User sagt Ja
+         │
+         ▼
+Architect: Erstellt Spec → .workflow/spec.md
+         │
+         ▼
+Orchestrator: Liest Spec, delegiert weiter
+         │
+         ▼
+Claude Code: "Allow byt8:spring-boot-developer?" ← User sagt Ja
+         │
+         ... usw.
 ```
 
-## State Management
+**Der User approved jeden Task** - das IST der Approval Gate.
+
+## Struktur
 
 ```
-.workflow/
-├── state.json           # Einfacher State
-├── phase-0-result.md    # Architect Output
-├── phase-1-result.md    # UI Designer Output
-├── phase-2-result.md    # API Architect Output
-├── ...
+bytA/
+├── .claude-plugin/plugin.json   # Metadata
+├── agents/orchestrator.md       # Der einzige Agent
+├── commands/feature.md          # Command → Skill
+├── hooks/hooks.json             # LEER
+├── skills/feature/SKILL.md      # Startet nur Orchestrator
+└── README.md
 ```
 
-**state.json** (minimal):
-```json
-{
-  "issue": 123,
-  "title": "Feature Title",
-  "phase": 0,
-  "completedPhases": [],
-  "skippedPhases": []
-}
-```
+## Der Orchestrator
 
-## Agents
+Der Orchestrator:
+1. Lädt das GitHub Issue
+2. Entscheidet welche Agents nötig sind
+3. Delegiert via `Task(byt8:agent-name, ...)`
+4. Liest Ergebnisse, entscheidet nächsten Schritt
 
-| Agent | Beschreibung |
-|-------|--------------|
-| bytA-orchestrator | Workflow-Steuerung und User-Interaktion |
-| bytA-architect | Technical Specifications |
-| bytA-ui-designer | Wireframes und UI Layouts |
-| bytA-api-architect | REST API Design |
-| bytA-db-architect | Database Schema und Migrations |
-| bytA-backend-dev | Spring Boot Implementation |
-| bytA-frontend-dev | Angular Implementation |
-| bytA-test-engineer | E2E Tests mit Playwright |
-| bytA-security | Security Audit |
-| bytA-reviewer | Code Review |
+Er nutzt die **byt8: Agents**:
+- `byt8:architect-planner`
+- `byt8:ui-designer`
+- `byt8:api-architect`
+- `byt8:postgresql-architect`
+- `byt8:spring-boot-developer`
+- `byt8:angular-frontend-developer`
+- `byt8:test-engineer`
+- `byt8:security-auditor`
+- `byt8:code-reviewer`
 
-## Hooks
+## Warum so minimal?
 
-Ein Hook: **SubagentStop** (`agent_done.sh`)
+Wir haben gelernt dass komplexe Hook-Logik fragil ist. Das Boomerang-Muster ist einfacher:
 
-### Approval Gates (via decision:block)
-
-| Agent | Phase | Was passiert |
-|-------|-------|--------------|
-| bytA-architect | 0 | Hook erzwingt: "Zeige Spec, frage User" |
-| bytA-ui-designer | 1 | Hook erzwingt: "Zeige Wireframes, frage User" |
-| bytA-security | 7 | Hook erzwingt: "Zeige Findings, frage User" |
-| bytA-reviewer | 8 | Hook erzwingt: "Zeige Review, frage User" |
-
-### WIP-Commits (automatisch)
-
-| Agent | Phase | Was passiert |
-|-------|-------|--------------|
-| bytA-db-architect | 3 | WIP-Commit nach DB-Änderungen |
-| bytA-backend-dev | 4 | WIP-Commit nach Backend-Änderungen |
-| bytA-frontend-dev | 5 | WIP-Commit nach Frontend-Änderungen |
-| bytA-test-engineer | 6 | WIP-Commit nach Test-Änderungen |
-
-### Lektion gelernt
-
-v0.1 hatte keine Hook-Enforcement → Orchestrator ignorierte Approval-Regeln.
-v0.2 nutzt `decision:block` um Approvals zu erzwingen - wie byt8, aber fokussierter.
-
-## Entwicklung
-
-### Plugin lokal testen
-
-```bash
-# Cache löschen
-rm -rf ~/.claude/plugins/cache/byteagenten-marketplace/
-
-# Claude Code neu starten
-claude
-```
-
-### Debugging
-
-```bash
-# State prüfen
-cat .workflow/state.json
-
-# Agent-Ergebnisse prüfen
-ls -la .workflow/phase-*.md
-```
-
-## Roadmap
-
-- [ ] v0.1: Basis-Workflow mit allen Agents
-- [ ] v0.2: Rollback-Support bei Review-Änderungen
-- [ ] v0.3: Phase-Skipping Logik verbessern
-- [ ] v1.0: Stable Release
+1. **Keine Hooks** = Keine Hook-Bugs
+2. **Ein Orchestrator** = Klare Verantwortung
+3. **Built-in Approval** = Deterministisch (Claude Code erzwingt es)
+4. **byt8 Agents wiederverwenden** = Keine Duplikation

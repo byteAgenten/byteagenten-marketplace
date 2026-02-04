@@ -1,9 +1,9 @@
 {
   "name": "bytA",
-  "version": "0.2.0",
-  "description": "Agent-based workflow orchestration for Angular + Spring Boot development. Inspired by Roo Code Boomerang.",
+  "version": "1.0.0",
+  "description": "Boomerang-style workflow orchestration. One orchestrator, delegates to byt8 agents, user approves each task.",
   "author": {
     "name": "byteAgenten"
   },
-  "keywords": ["angular", "spring-boot", "fullstack", "workflow", "orchestrator", "agent-based"]
+  "keywords": ["angular", "spring-boot", "fullstack", "workflow", "orchestrator", "boomerang"]
 }

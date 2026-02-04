@@ -1,29 +1,14 @@
 ---
-description: Start a full-stack feature workflow with agent-based orchestration.
+description: Starte den Orchestrator für Full-Stack Feature Development
 author: byteAgenten
 ---
 
-# Feature Workflow
+# bytA Feature
 
-Starte den Orchestrator-Agent für das angegebene GitHub Issue.
-
-## Verwendung
+Starte den Orchestrator-Agent.
 
 ```
-/bytA:feature #123
-/bytA:feature 123
+Task(bytA-orchestrator, "Feature für Issue #{ISSUE_NUMBER} implementieren")
 ```
 
-## Was passiert
-
-1. Der `bytA-orchestrator` Agent wird gestartet
-2. Er lädt das Issue von GitHub
-3. Er führt dich durch den Workflow mit Approval Gates
-
-## Starten
-
-```
-Task(bytA-orchestrator, "Start feature workflow for Issue #{ISSUE_NUMBER}")
-```
-
-Ersetze `{ISSUE_NUMBER}` mit der Issue-Nummer aus dem User-Input.
+Der Orchestrator übernimmt ab hier.
