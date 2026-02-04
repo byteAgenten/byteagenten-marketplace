@@ -1,6 +1,6 @@
 # bytA Plugin
 
-**Version 0.1.0** | Agent-based Workflow Orchestration für Angular + Spring Boot
+**Version 0.2.0** | Agent-based Workflow Orchestration für Angular + Spring Boot
 
 ## Philosophy
 
@@ -112,9 +112,30 @@ Der Orchestrator-Agent wird gestartet und führt dich durch den Workflow.
 
 ## Hooks
 
-Nur ein Hook: **SubagentStop** für WIP-Commits
+Ein Hook: **SubagentStop** (`agent_done.sh`)
 
-Der Hook erstellt automatisch WIP-Commits nach Implementation-Phasen (backend-dev, frontend-dev, db-architect, test-engineer).
+### Approval Gates (via decision:block)
+
+| Agent | Phase | Was passiert |
+|-------|-------|--------------|
+| bytA-architect | 0 | Hook erzwingt: "Zeige Spec, frage User" |
+| bytA-ui-designer | 1 | Hook erzwingt: "Zeige Wireframes, frage User" |
+| bytA-security | 7 | Hook erzwingt: "Zeige Findings, frage User" |
+| bytA-reviewer | 8 | Hook erzwingt: "Zeige Review, frage User" |
+
+### WIP-Commits (automatisch)
+
+| Agent | Phase | Was passiert |
+|-------|-------|--------------|
+| bytA-db-architect | 3 | WIP-Commit nach DB-Änderungen |
+| bytA-backend-dev | 4 | WIP-Commit nach Backend-Änderungen |
+| bytA-frontend-dev | 5 | WIP-Commit nach Frontend-Änderungen |
+| bytA-test-engineer | 6 | WIP-Commit nach Test-Änderungen |
+
+### Lektion gelernt
+
+v0.1 hatte keine Hook-Enforcement → Orchestrator ignorierte Approval-Regeln.
+v0.2 nutzt `decision:block` um Approvals zu erzwingen - wie byt8, aber fokussierter.
 
 ## Entwicklung
 
