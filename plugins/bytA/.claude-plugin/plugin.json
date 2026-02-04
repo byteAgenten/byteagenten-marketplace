@@ -1,9 +1,9 @@
 {
   "name": "bytA",
-  "version": "1.2.0",
-  "description": "Boomerang-style workflow with permissionMode. APPROVAL phases ask user, AUTO phases run with bypassPermissions.",
+  "version": "2.0.0",
+  "description": "Hybrid workflow combining Boomerang (specialized agents) + Ralph (loop structure, PLAN.md, backpressure).",
   "author": {
     "name": "byteAgenten"
   },
-  "keywords": ["angular", "spring-boot", "fullstack", "workflow", "orchestrator", "boomerang", "permissionMode"]
+  "keywords": ["angular", "spring-boot", "fullstack", "workflow", "boomerang", "ralph", "hybrid", "loop"]
 }
