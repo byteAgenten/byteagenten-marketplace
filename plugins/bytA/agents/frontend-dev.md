@@ -3,6 +3,7 @@ name: bytA-frontend-dev
 description: Implement Angular frontend components, services, and features.
 tools: Read, Write, Edit, Bash, Glob, Grep
 model: inherit
+color: "#d32f2f"
 ---
 
 # Frontend Developer Agent

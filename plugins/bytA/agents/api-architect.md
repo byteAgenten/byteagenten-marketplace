@@ -3,6 +3,7 @@ name: bytA-api-architect
 description: Design REST APIs, define endpoints and contracts.
 tools: Read, Write, Glob, Grep
 model: inherit
+color: "#00897b"
 ---
 
 # API Architect Agent

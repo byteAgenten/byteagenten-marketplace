@@ -3,6 +3,7 @@ name: bytA-security
 description: Security audit, check for vulnerabilities, OWASP compliance.
 tools: Read, Bash, Glob, Grep
 model: inherit
+color: "#bf360c"
 ---
 
 # Security Auditor Agent

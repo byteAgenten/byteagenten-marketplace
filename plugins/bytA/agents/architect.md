@@ -3,6 +3,7 @@ name: bytA-architect
 description: Create Technical Specifications for features. Analyzes requirements, designs architecture, identifies risks.
 tools: Read, Write, Bash, Glob, Grep
 model: inherit
+color: "#6a1b9a"
 ---
 
 # Technical Specification Agent

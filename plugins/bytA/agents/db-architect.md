@@ -3,6 +3,7 @@ name: bytA-db-architect
 description: Design database schemas, create Flyway migrations.
 tools: Read, Write, Bash, Glob, Grep
 model: inherit
+color: "#ff6f00"
 ---
 
 # Database Architect Agent

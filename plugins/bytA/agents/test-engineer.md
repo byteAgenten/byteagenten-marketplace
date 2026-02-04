@@ -3,6 +3,7 @@ name: bytA-test-engineer
 description: Write E2E tests with Playwright, improve test coverage.
 tools: Read, Write, Edit, Bash, Glob, Grep
 model: inherit
+color: "#5e35b1"
 ---
 
 # Test Engineer Agent

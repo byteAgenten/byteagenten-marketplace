@@ -3,6 +3,7 @@ name: bytA-ui-designer
 description: Create wireframes and UI layouts for features.
 tools: Read, Write, Glob, Grep
 model: inherit
+color: "#e91e63"
 ---
 
 # UI Designer Agent

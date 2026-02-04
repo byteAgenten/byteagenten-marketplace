@@ -3,6 +3,7 @@ name: bytA-backend-dev
 description: Implement Spring Boot backend services, controllers, and entities.
 tools: Read, Write, Edit, Bash, Glob, Grep
 model: inherit
+color: "#43a047"
 ---
 
 # Backend Developer Agent

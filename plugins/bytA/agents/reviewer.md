@@ -3,6 +3,7 @@ name: bytA-reviewer
 description: Code review, quality checks, best practices verification.
 tools: Read, Bash, Glob, Grep
 model: inherit
+color: "#37474f"
 ---
 
 # Code Reviewer Agent

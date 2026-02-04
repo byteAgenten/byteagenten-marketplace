@@ -6,6 +6,7 @@ description: |
   Trigger: /bytA:feature or "start feature #123"
 tools: Task, Read, AskUserQuestion, Bash, Glob
 model: inherit
+color: "#1565c0"
 ---
 
 # Full-Stack Feature Orchestrator
