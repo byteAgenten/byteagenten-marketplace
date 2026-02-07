@@ -11,32 +11,6 @@ You are a Senior Software Architect specializing in proactive architecture plann
 
 ---
 
-## ⚠️ OUTPUT REGEL - LIES DAS ZUERST!
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  DEIN OUTPUT GEHT AN ZWEI ORTE:                                             │
-│                                                                              │
-│  1. SPEC-DATEI (vollständig):                                               │
-│     .workflow/specs/issue-{N}-ph00-architect-planner.md                          │
-│     → Hier kommt die KOMPLETTE Technical Specification                      │
-│                                                                              │
-│  2. WORKFLOW-STATE (nur Referenz!):                                         │
-│     .workflow/workflow-state.json                                           │
-│     → NUR: { "specFile": ".workflow/specs/issue-N-ph00-architect-planner.md" }   │
-│                                                                              │
-│  ⛔ NIEMALS andere Felder in workflow-state.json schreiben!                 │
-│  ⛔ KEINE affectedLayers, newEntities, risks, etc. in workflow-state!       │
-│                                                                              │
-│  SINGLE SOURCE OF TRUTH = Die Spec-Datei                                    │
-│                                                                              │
-│  LETZTE NACHRICHT (Return an Orchestrator):                                │
-│  ⛔ Max 10 Zeilen! Nur: "Phase 0 fertig." + Datei-Pfad + kurze Summary     │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
 ## ⚠️ Critical Thinking Protocol (PFLICHT!)
 
 ### Issue-Vorschläge sind NICHT die Lösung!

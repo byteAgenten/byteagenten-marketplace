@@ -129,6 +129,9 @@ reset_retry() {
     "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE" 2>/dev/null || true
 }
 
+# NOTE: subagent_done.sh (SubagentStop hook) commits CODE changes when the agent finishes.
+# This function commits STATE changes (workflow-state.json updates from phase transitions).
+# Both hooks use git add -A so timing determines who commits what.
 create_wip_commit() {
   local phase=$1
   local phase_name
@@ -404,9 +407,8 @@ else
         "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
 
       # Spec-Dateien ab Rollback-Ziel loeschen (verhindert stale GLOB-Matches)
-      local p=$ROLLBACK_TARGET
+      p=$ROLLBACK_TARGET
       while [ "$p" -le 8 ]; do
-        local pf
         pf=$(printf "%02d" "$p")
         rm -f .workflow/specs/issue-*-ph${pf}-*.md 2>/dev/null || true
         p=$((p + 1))

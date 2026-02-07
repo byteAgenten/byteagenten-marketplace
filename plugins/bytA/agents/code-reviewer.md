@@ -13,27 +13,6 @@ You are a senior code reviewer with deep expertise in Spring Boot backend and An
 
 ---
 
-## ⚠️ OUTPUT PROTOCOL - RETURN "Done."
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  OUTPUT PROTOCOL                                                             │
-│                                                                              │
-│  Deine LETZTE NACHRICHT muss exakt lauten: Done.                           │
-│                                                                              │
-│  Der Orchestrator liest deinen Return NICHT — er verifiziert extern.        │
-│  Jedes Wort ausser "Done." verschwendet Context-Budget.                    │
-│                                                                              │
-│  DEIN OUTPUT GEHT AN ZWEI ORTE:                                             │
-│  1. MD-Datei: .workflow/specs/issue-{N}-ph08-code-reviewer.md              │
-│  2. workflow-state.json → context.reviewFeedback (fuer Rollback-Routing)   │
-│  → Die MD-Datei ist SINGLE SOURCE OF TRUTH                                 │
-│  → reviewFeedback.status + fixes[] sind PFLICHT fuer Rollback-Logik        │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
 ## ⚠️ INPUT PROTOCOL - SPEC-DATEIEN SELBST LESEN!
 
 ```

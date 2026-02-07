@@ -84,9 +84,11 @@ print_rollback_instructions() {
   echo "     Wenn ZIEL <= 3: zusaetzlich del(.context.migrations)"
   echo "     Wenn ZIEL <= 2: zusaetzlich del(.context.apiDesign)"
   echo "     Wenn ZIEL <= 1: zusaetzlich del(.context.wireframes)"
-  echo "  3. DANN Agent starten mit User-Feedback im Prompt:"
+  echo "  3. DANN Spec-Dateien ab Rollback-Ziel loeschen (PFLICHT — verhindert stale GLOB-Matches!):"
+  echo "     for p in \$(seq ZIEL 8); do pf=\$(printf '%02d' \$p); rm -f .workflow/specs/issue-*-ph\${pf}-*.md; done"
+  echo "  4. DANN Agent starten mit User-Feedback im Prompt:"
   echo "     Task(bytA:AGENT, 'Phase ZIEL (Hotfix): {USER_FEEDBACK}')"
-  echo "  4. Auto-Advance laeuft automatisch bis zum naechsten Approval Gate"
+  echo "  5. Auto-Advance laeuft automatisch bis zum naechsten Approval Gate"
   echo "  NIEMALS Agent aufrufen OHNE vorher currentPhase zu setzen!"
 }
 
@@ -146,10 +148,12 @@ if [ "$STATUS" = "awaiting_approval" ]; then
       echo "  1. ZUERST State updaten:"
       echo "     jq '.currentPhase = 6 | .status = \"active\" | del(.context.securityAudit) | del(.context.testResults)' \\"
       echo "       .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
-      echo "  2. DANN Fix-Agent starten:"
+      echo "  2. Spec-Dateien ab Phase 6 loeschen (PFLICHT — verhindert stale GLOB-Matches!):"
+      echo "     for p in \$(seq 6 8); do pf=\$(printf '%02d' \$p); rm -f .workflow/specs/issue-*-ph\${pf}-*.md; done"
+      echo "  3. DANN Fix-Agent starten:"
       echo "     Backend (.java) → Task(bytA:spring-boot-developer, 'Security Fix: {FINDINGS}')"
       echo "     Frontend (.ts/.html) → Task(bytA:angular-frontend-developer, 'Security Fix: {FINDINGS}')"
-      echo "  3. Auto-Advance: Phase 6 (Tests) → Phase 7 (Re-Audit)"
+      echo "  4. Auto-Advance: Phase 6 (Tests) → Phase 7 (Re-Audit)"
       print_rollback_instructions 7
       ;;
 

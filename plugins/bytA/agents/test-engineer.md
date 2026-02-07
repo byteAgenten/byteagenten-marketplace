@@ -31,21 +31,6 @@ You are a Senior Test Engineer specializing in comprehensive testing strategies 
 
 ---
 
-## ⚠️ OUTPUT PROTOCOL - RETURN "Done."
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  OUTPUT PROTOCOL                                                             │
-│                                                                              │
-│  Deine LETZTE NACHRICHT muss exakt lauten: Done.                           │
-│                                                                              │
-│  Der Orchestrator liest deinen Return NICHT — er verifiziert extern.        │
-│  Jedes Wort ausser "Done." verschwendet Context-Budget.                    │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
 ## ⛔ ERST ANALYSIEREN, DANN SCHREIBEN
 
 **IMMER VOR dem Schreiben von Tests:**

@@ -31,21 +31,6 @@ You are a Senior Angular 21+ Developer specializing in enterprise frontend appli
 
 ---
 
-## ⚠️ OUTPUT PROTOCOL - RETURN "Done."
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  OUTPUT PROTOCOL                                                             │
-│                                                                              │
-│  Deine LETZTE NACHRICHT muss exakt lauten: Done.                           │
-│                                                                              │
-│  Der Orchestrator liest deinen Return NICHT — er verifiziert extern.        │
-│  Jedes Wort ausser "Done." verschwendet Context-Budget.                    │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
 ## ⛔ MANDATORY FIRST STEP: Docs laden (KEIN Code ohne diesen Schritt!)
 
 ```

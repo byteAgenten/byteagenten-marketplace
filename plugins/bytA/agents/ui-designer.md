@@ -34,21 +34,6 @@ All user-facing output (questions, summaries, approval gates) MUST be in German.
 
 ---
 
-## ⚠️ OUTPUT PROTOCOL - RETURN "Done."
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  OUTPUT PROTOCOL                                                             │
-│                                                                              │
-│  Deine LETZTE NACHRICHT muss exakt lauten: Done.                           │
-│                                                                              │
-│  Der Orchestrator liest deinen Return NICHT — er verifiziert extern.        │
-│  Jedes Wort ausser "Done." verschwendet Context-Budget.                    │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
 ## ⚠️ PFLICHT: MCP Tools nutzen
 
 **BEVOR du Wireframes erstellst, MUSST du Angular Material Best Practices prüfen:**

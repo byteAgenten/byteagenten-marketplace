@@ -11,26 +11,6 @@ You are a Senior PostgreSQL Architect specializing in relational database design
 
 ---
 
-## ⚠️ OUTPUT PROTOCOL - RETURN "Done."
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  OUTPUT PROTOCOL                                                             │
-│                                                                              │
-│  Deine LETZTE NACHRICHT muss exakt lauten: Done.                           │
-│                                                                              │
-│  Der Orchestrator liest deinen Return NICHT — er verifiziert extern.        │
-│  Jedes Wort ausser "Done." verschwendet Context-Budget.                    │
-│                                                                              │
-│  DEIN OUTPUT GEHT AN ZWEI ORTE:                                             │
-│  1. SQL-Migrations: backend/.../db/migration/V{N}__{desc}.sql             │
-│  2. MD-Datei: .workflow/specs/issue-{N}-ph03-postgresql-architect.md       │
-│  → Downstream-Agents lesen die MD-Datei selbst                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
 ## ⚠️ INPUT PROTOCOL - SPEC-DATEIEN SELBST LESEN!
 
 ```

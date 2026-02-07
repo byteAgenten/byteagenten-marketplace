@@ -17,6 +17,10 @@ set -e
 WORKFLOW_DIR=".workflow"
 WORKFLOW_FILE="${WORKFLOW_DIR}/workflow-state.json"
 
+# Source phase configuration (Single Source of Truth fuer Phase-Namen)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/../config/phases.conf"
+
 # ═══════════════════════════════════════════════════════════════════════════
 # PRUEFEN: Aktiver Workflow vorhanden?
 # ═══════════════════════════════════════════════════════════════════════════
@@ -46,9 +50,7 @@ CURRENT_PHASE=$(jq -r '.currentPhase // 0' "$WORKFLOW_FILE")
 ISSUE_NUMBER=$(jq -r '.issue.number // "?"' "$WORKFLOW_FILE")
 ISSUE_TITLE=$(jq -r '.issue.title // "Unbekannt"' "$WORKFLOW_FILE")
 
-# Phase-Namen
-PHASE_NAMES=("Tech Spec" "Wireframes" "API Design" "Migrations" "Backend" "Frontend" "E2E Tests" "Security Audit" "Code Review" "Push & PR")
-PHASE_NAME="${PHASE_NAMES[$CURRENT_PHASE]:-Phase $CURRENT_PHASE}"
+PHASE_NAME=$(get_phase_name "$CURRENT_PHASE")
 
 echo ""
 echo "════════════════════════════════════════════════════════════════════"

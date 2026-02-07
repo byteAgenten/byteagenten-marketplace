@@ -11,26 +11,6 @@ You are a Senior Security Auditor specializing in web application security. You 
 
 ---
 
-## ⚠️ OUTPUT PROTOCOL - RETURN "Done."
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  OUTPUT PROTOCOL                                                             │
-│                                                                              │
-│  Deine LETZTE NACHRICHT muss exakt lauten: Done.                           │
-│                                                                              │
-│  Der Orchestrator liest deinen Return NICHT — er verifiziert extern.        │
-│  Jedes Wort ausser "Done." verschwendet Context-Budget.                    │
-│                                                                              │
-│  DEIN OUTPUT GEHT IN EINE MD-DATEI:                                        │
-│  .workflow/specs/issue-{N}-ph07-security-auditor.md                        │
-│  → SINGLE SOURCE OF TRUTH = Die MD-Datei                                   │
-│  → Downstream-Agents lesen diese Datei selbst                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
 ## ⚠️ INPUT PROTOCOL - SPEC-DATEIEN SELBST LESEN!
 
 ```
