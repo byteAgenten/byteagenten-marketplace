@@ -44,8 +44,8 @@ Du bist ein **Transport-Layer**. Du fuehrst aus, was die Hooks dir sagen.
 | 1 | `bytA:ui-designer` | APPROVAL | Wireframe HTML existiert |
 | 2 | `bytA:api-architect` | AUTO | API-Spec existiert |
 | 3 | `bytA:postgresql-architect` | AUTO | Migration SQL existiert |
-| 4 | `bytA:spring-boot-developer` | AUTO | backendImpl in State |
-| 5 | `bytA:angular-frontend-developer` | AUTO | frontendImpl in State |
+| 4 | `bytA:spring-boot-developer` | AUTO | Backend-Report MD existiert |
+| 5 | `bytA:angular-frontend-developer` | AUTO | Frontend-Report MD existiert |
 | 6 | `bytA:test-engineer` | AUTO | allPassed == true |
 | 7 | `bytA:security-auditor` | APPROVAL | Audit-Datei existiert |
 | 8 | `bytA:code-reviewer` | APPROVAL | userApproved == true |

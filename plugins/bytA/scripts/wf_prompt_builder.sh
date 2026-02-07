@@ -28,11 +28,15 @@ ISSUE_NUM=$(jq -r '.issue.number // "?"' "$WORKFLOW_FILE")
 ISSUE_TITLE=$(jq -r '.issue.title // "Feature"' "$WORKFLOW_FILE")
 TARGET_COV=$(jq -r '.targetCoverage // 70' "$WORKFLOW_FILE")
 
-# Spec-Pfade extrahieren (File Reference Protocol)
+# Spec-Pfade extrahieren (File Reference Protocol — alle Agents schreiben MD-Dateien)
 TECH_SPEC=$(jq -r '.context.technicalSpec.specFile // ""' "$WORKFLOW_FILE")
 API_SPEC=$(jq -r '.context.apiDesign.apiDesignFile // ""' "$WORKFLOW_FILE")
 DB_SPEC=$(jq -r '.context.migrations.databaseFile // ""' "$WORKFLOW_FILE")
 WIREFRAMES=$(jq -r '.context.wireframes.paths // [] | join(", ")' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+BACKEND_SPEC=$(jq -r '.context.backendImpl.specFile // ""' "$WORKFLOW_FILE")
+FRONTEND_SPEC=$(jq -r '.context.frontendImpl.specFile // ""' "$WORKFLOW_FILE")
+TEST_REPORT=$(jq -r '.context.testResults.reportFile // ""' "$WORKFLOW_FILE")
+SECURITY_REPORT=$(jq -r '.context.securityAudit.specFile // ""' "$WORKFLOW_FILE")
 
 PHASE_NAME=$(get_phase_name "$PHASE")
 RETRY_COUNT=$(jq -r ".recovery.phase_${PHASE}_attempts // 0" "$WORKFLOW_FILE" 2>/dev/null || echo "0")
@@ -174,6 +178,8 @@ Phase 6: Write E2E and Integration Tests for Issue #$ISSUE_NUM: $ISSUE_TITLE
 
 ## SPEC FILES (LIES DIESE ZUERST mit dem Read-Tool!)
 - Technical Spec: $TECH_SPEC
+$([ -n "$BACKEND_SPEC" ] && echo "- Backend Report: $BACKEND_SPEC")
+$([ -n "$FRONTEND_SPEC" ] && echo "- Frontend Report: $FRONTEND_SPEC")
 
 ## WORKFLOW CONTEXT
 - Issue: #$ISSUE_NUM - $ISSUE_TITLE
@@ -191,6 +197,8 @@ Phase 7: Security Audit for Issue #$ISSUE_NUM: $ISSUE_TITLE
 
 ## SPEC FILES (LIES DIESE ZUERST mit dem Read-Tool!)
 - Technical Spec: $TECH_SPEC
+$([ -n "$BACKEND_SPEC" ] && echo "- Backend Report: $BACKEND_SPEC")
+$([ -n "$FRONTEND_SPEC" ] && echo "- Frontend Report: $FRONTEND_SPEC")
 
 ## WORKFLOW CONTEXT
 - Issue: #$ISSUE_NUM - $ISSUE_TITLE
@@ -208,6 +216,10 @@ Phase 8: Code Review for Issue #$ISSUE_NUM: $ISSUE_TITLE
 ## SPEC FILES (LIES DIESE ZUERST mit dem Read-Tool!)
 - Technical Spec: $TECH_SPEC
 - API Design: $API_SPEC
+$([ -n "$BACKEND_SPEC" ] && echo "- Backend Report: $BACKEND_SPEC")
+$([ -n "$FRONTEND_SPEC" ] && echo "- Frontend Report: $FRONTEND_SPEC")
+$([ -n "$TEST_REPORT" ] && echo "- Test Report: $TEST_REPORT")
+$([ -n "$SECURITY_REPORT" ] && echo "- Security Audit: $SECURITY_REPORT")
 
 ## WORKFLOW CONTEXT
 - Issue: #$ISSUE_NUM - $ISSUE_TITLE

@@ -11,24 +11,21 @@ You are a Senior API Architect specializing in REST API design. You create **con
 
 ---
 
-## ⚠️ OUTPUT REGEL - LIES DAS ZUERST!
+## ⚠️ OUTPUT PROTOCOL - RETURN "Done."
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  DEIN OUTPUT GEHT AN ZWEI ORTE:                                             │
+│  OUTPUT PROTOCOL                                                             │
 │                                                                              │
-│  1. API-DESIGN-DATEI (vollständig):                                         │
-│     .workflow/specs/issue-{N}-ph02-api-architect.md                              │
-│     → Hier kommt das KOMPLETTE API Design als Markdown                     │
+│  Deine LETZTE NACHRICHT muss exakt lauten: Done.                           │
 │                                                                              │
-│  2. WORKFLOW-STATE (strukturierter Auszug + Referenz!):                     │
-│     .workflow/workflow-state.json → context.apiDesign                       │
-│     → Endpoints, DataModel, BusinessRules + apiDesignFile Referenz          │
+│  Der Orchestrator liest deinen Return NICHT — er verifiziert extern.        │
+│  Jedes Wort ausser "Done." verschwendet Context-Budget.                    │
 │                                                                              │
-│  SINGLE SOURCE OF TRUTH = Die API-Design-Datei                              │
-│                                                                              │
-│  LETZTE NACHRICHT (Return an Orchestrator):                                │
-│  ⛔ Max 10 Zeilen! Nur: "Phase N fertig." + Datei-Pfad + kurze Summary     │
+│  DEIN OUTPUT GEHT IN EINE MD-DATEI:                                        │
+│  .workflow/specs/issue-{N}-ph02-api-architect.md                           │
+│  → SINGLE SOURCE OF TRUTH = Die MD-Datei                                   │
+│  → Downstream-Agents lesen diese Datei selbst                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -192,34 +189,6 @@ PENDING → APPROVED
 
 ---
 
-## OUTPUT: Save to Workflow State
-
-After creating the sketch, save it to `workflow-state.json`:
-
-```json
-{
-  "workflow": "full-stack-feature",
-  "status": "active",
-  "apiDesign": {
-    "featureName": "Vacation Requests",
-    "overview": "Users can request vacation, managers approve/reject",
-    "endpoints": [
-      { "method": "POST", "path": "/vacation-requests", "description": "Create request" },
-      { "method": "GET", "path": "/vacation-requests", "description": "List user's requests" }
-    ],
-    "dataModel": {
-      "entity": "VacationRequest",
-      "fields": ["id", "userId", "startDate", "endDate", "status", "requestedDays"]
-    },
-    "businessRules": [
-      "Cannot request before entry date",
-      "No overlap with approved requests"
-    ]
-  },
-  "currentPhase": 1
-}
-```
-
 ---
 
 ## APPROVAL GATE OUTPUT
@@ -260,17 +229,12 @@ Focus on clear, concise API sketches. The spring-boot-developer will implement f
 
 ### Input (vom Orchestrator via Prompt)
 
-**Die Technical Specification wird dir im Task()-Prompt übergeben.**
+Du erhältst vom Orchestrator **DATEIPFADE** zu Spec-Dateien. LIES SIE SELBST!
 
-Du erhältst:
-1. **Vollständige Spec**: Der komplette Inhalt der Technical Specification
-2. **Workflow Context**: Relevante Felder (wireframes, etc.)
+Typische Spec-Dateien:
+- **Technical Spec**: `.workflow/specs/issue-*-ph00-architect-planner.md`
 
-**Du musst die Spec NICHT selbst lesen** - sie ist bereits in deinem Prompt.
-
-Nutze den Kontext aus dem Prompt:
-- **Technical Spec**: Code-Snippets, JPQL-Queries, Architektur-Begründungen, Risiko-Mitigationen
-- **wireframes**: UI-Komponenten die API-Endpoints brauchen
+Metadaten direkt im Prompt: Issue-Nr.
 
 ### Output (API Design speichern) - MUSS ausgeführt werden!
 
@@ -282,41 +246,17 @@ mkdir -p .workflow/specs
 # Inhalt: Vollständiges API Design (Endpoints, DataModel, BusinessRules, etc.)
 ```
 
-**Schritt 2: Context in workflow-state.json schreiben (strukturierter Auszug + Referenz)**
+Die MD-Datei ist SINGLE SOURCE OF TRUTH. Downstream-Agents (postgresql-architect, spring-boot-developer, etc.) lesen diese Datei selbst via Read-Tool.
+
+**Schritt 2: Minimalen Context in workflow-state.json schreiben**
 
 ```bash
-# Context in workflow-state.json schreiben
 jq '.context.apiDesign = {
-  "apiDesignFile": ".workflow/specs/issue-42-ph02-api-architect.md",
-  "featureName": "Feature Name",
-  "overview": "1-2 Sätze Übersicht",
-  "endpoints": [
-    { "method": "POST", "path": "/resource", "description": "Create" },
-    { "method": "GET", "path": "/resource", "description": "List" }
-  ],
-  "dataModel": {
-    "entity": "EntityName",
-    "fields": ["id", "userId", "field1", "field2", "status"]
-  },
-  "businessRules": [
-    "Rule 1",
-    "Rule 2"
-  ],
-  "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+  "apiDesignFile": ".workflow/specs/issue-42-ph02-api-architect.md"
 }' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
 mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```
 
-**⚠️ OHNE diesen Schritt schlägt die Phase-Validierung fehl!**
+**⚠️ OHNE die MD-Datei schlägt die Phase-Validierung fehl!**
 
-Der Stop-Hook prüft: `jq -e '.context.apiDesign | keys | length > 0'`
-
-
----
-
-## ⚡ Output Format (Token-Optimierung)
-
-- **MAX 300 Zeilen** Output (API-Skizzen sind kompakt)
-- **NUR Endpoints, Entities, Business Rules** - keine Prosa
-- **Markdown-Tabellen** bevorzugen
-- **Kompakte Zusammenfassung** am Ende
+Der Stop-Hook prüft: `ls .workflow/specs/issue-*-ph02-api-architect.md`

@@ -403,6 +403,16 @@ else
       jq "$CLEAR_CMD | .currentPhase = $ROLLBACK_TARGET | .status = \"active\"" \
         "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
 
+      # Spec-Dateien ab Rollback-Ziel loeschen (verhindert stale GLOB-Matches)
+      local p=$ROLLBACK_TARGET
+      while [ "$p" -le 8 ]; do
+        local pf
+        pf=$(printf "%02d" "$p")
+        rm -f .workflow/specs/issue-*-ph${pf}-*.md 2>/dev/null || true
+        p=$((p + 1))
+      done
+      log "Spec files cleaned: phases $ROLLBACK_TARGET-8"
+
       log "REVIEW ROLLBACK: Phase 8 → Phase $ROLLBACK_TARGET ($ROLLBACK_NAME). Retry $RETRY/$MAX_RETRIES"
       log_transition "review_rollback" "target=$ROLLBACK_TARGET retry=$RETRY"
 

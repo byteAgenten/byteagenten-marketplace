@@ -34,20 +34,16 @@ All user-facing output (questions, summaries, approval gates) MUST be in German.
 
 ---
 
-## ⚠️ OUTPUT PROTOCOL - MINIMALER RETURN!
+## ⚠️ OUTPUT PROTOCOL - RETURN "Done."
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  OUTPUT PROTOCOL                                                             │
 │                                                                              │
-│  Deine LETZTE NACHRICHT (Return an den Orchestrator) muss KURZ sein:       │
+│  Deine LETZTE NACHRICHT muss exakt lauten: Done.                           │
 │                                                                              │
-│  ⛔ Max 10 Zeilen! Format:                                                   │
-│  - "Phase [N] abgeschlossen."                                               │
-│  - 3-5 Bullet Points als Summary                                            │
-│                                                                              │
-│  ⛔ KEIN vollständiger Output in der letzten Nachricht!                      │
-│  Nur die KURZE Summary kommt zurück zum Orchestrator.                      │
+│  Der Orchestrator liest deinen Return NICHT — er verifiziert extern.        │
+│  Jedes Wort ausser "Done." verschwendet Context-Budget.                    │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -357,42 +353,32 @@ When creating wireframes, provide:
 
 ### Input (vom Orchestrator via Prompt)
 
-**Die Technical Specification wird dir im Task()-Prompt übergeben.**
+Du erhältst vom Orchestrator **DATEIPFADE** zu Spec-Dateien. LIES SIE SELBST!
 
-Du erhältst:
-1. **Vollständige Spec**: Der komplette Inhalt der Technical Specification
-2. **Workflow Context**: Relevante Felder für UI-Design
+Typische Spec-Dateien:
+- **Technical Spec**: `.workflow/specs/issue-*-ph00-architect-planner.md`
 
-**Du musst die Spec NICHT selbst lesen** - sie ist bereits in deinem Prompt.
-
-Nutze den Kontext aus dem Prompt:
-- **Technical Spec**: UI-Constraints, Komponenten-Anforderungen, User Flows
-- **affectedLayers**: Welche Layer betroffen sind
-- **uiConstraints**: Was die UI anzeigen/unterstützen muss
+Metadaten direkt im Prompt: Issue-Nr, Coverage-Ziel.
 
 ### Output (Wireframes speichern) - MUSS ausgeführt werden!
 
-**Nach Erstellung der Wireframes MUSST du den Context speichern:**
+**Schritt 1: Wireframe HTML-Datei erstellen**
 
 ```bash
-# Context in workflow-state.json schreiben
+# Dateiname: wireframes/issue-{N}-{feature-name}.html
+# Inhalt: Vollständiger HTML-Wireframe mit Angular Material Components + data-testid
+```
+
+**Schritt 2: Minimalen Context in workflow-state.json schreiben**
+
+```bash
 jq '.context.wireframes = {
-  "paths": ["wireframes/issue-42-feature-name.html"],
-  "components": ["mat-card", "mat-table", "mat-form-field"],
-  "layout": "grid-3",
-  "responsiveBreakpoints": ["mobile", "tablet", "desktop"],
-  "accessibilityNotes": "WCAG 2.1 AA compliant",
-  "testIdCoverage": true,
-  "designSystem": {
-    "initialized": true,
-    "theme": "ocean-blue"
-  },
-  "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+  "paths": ["wireframes/issue-42-feature-name.html"]
 }' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
 mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```
 
-**⚠️ OHNE diesen Schritt schlägt die Phase-Validierung fehl!**
+**⚠️ OHNE HTML-Wireframe schlägt die Phase-Validierung fehl!**
 
 Der Stop-Hook prüft: `ls wireframes/*.html`
 

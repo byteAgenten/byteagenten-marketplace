@@ -1,6 +1,6 @@
 # bytA Plugin
 
-**Version 3.0.0** | Deterministic Orchestration: Boomerang + Ralph-Loop
+**Version 3.1.0** | Deterministic Orchestration: Boomerang + Ralph-Loop
 
 Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 10-Phasen-Workflow.
 
@@ -51,8 +51,8 @@ Der Orchestrator ist ein **Bash-Script**, kein LLM. Claude dient nur als Transpo
 | 1 | ui-designer | APPROVAL | Wireframe HTML existiert |
 | 2 | api-architect | AUTO | API-Spec existiert |
 | 3 | postgresql-architect | AUTO | Migration SQL existiert |
-| 4 | spring-boot-developer | AUTO | backendImpl in State |
-| 5 | angular-frontend-developer | AUTO | frontendImpl in State |
+| 4 | spring-boot-developer | AUTO | Backend-Report MD existiert |
+| 5 | angular-frontend-developer | AUTO | Frontend-Report MD existiert |
 | 6 | test-engineer | AUTO | allPassed == true |
 | 7 | security-auditor | APPROVAL | Audit-Datei existiert |
 | 8 | code-reviewer | APPROVAL | userApproved == true |
@@ -125,12 +125,30 @@ Done-Kriterien werden von `wf_verify.sh` extern geprueft:
 | 1 | Wireframe | `ls wireframes/*.html` |
 | 2 | API-Spec | `ls .workflow/specs/*-ph02-*.md` |
 | 3 | Migration | `ls backend/.../V*.sql` |
-| 4 | Backend State | `jq .context.backendImpl` |
-| 5 | Frontend State | `jq .context.frontendImpl` |
+| 4 | Backend-Report | `ls .workflow/specs/*-ph04-*.md` |
+| 5 | Frontend-Report | `ls .workflow/specs/*-ph05-*.md` |
 | 6 | Tests bestanden | `jq .context.testResults.allPassed` |
 | 7 | Audit-Datei | `ls .workflow/specs/*-ph07-*.md` |
 | 8 | User approved | `jq .context.reviewFeedback.userApproved` |
 | 9 | PR URL | `jq .phases["9"].prUrl` |
+
+### Agent-Reports (MD-Dateien)
+
+Jeder Agent schreibt eine MD-Datei in `.workflow/specs/` mit seinem vollstaendigen Report.
+Downstream-Agents lesen diese Dateien selbst via Read-Tool (Boomerang: isolierter Context).
+Der Orchestrator sieht nur den **Dateipfad** (wenige Bytes) — kein Context-Wachstum.
+
+```
+.workflow/specs/
+├── issue-42-ph00-architect-planner.md     ← Technical Spec
+├── issue-42-ph02-api-architect.md         ← API Design
+├── issue-42-ph03-postgresql-architect.md   ← Database Design
+├── issue-42-ph04-spring-boot-developer.md  ← Backend Report
+├── issue-42-ph05-angular-frontend-developer.md ← Frontend Report
+├── issue-42-ph06-test-engineer.md         ← Test Report
+├── issue-42-ph07-security-auditor.md      ← Security Audit
+└── issue-42-ph08-code-reviewer.md         ← Code Review
+```
 
 ## Struktur
 

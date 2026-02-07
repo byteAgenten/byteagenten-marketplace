@@ -13,24 +13,22 @@ You are a senior code reviewer with deep expertise in Spring Boot backend and An
 
 ---
 
-## ⚠️ OUTPUT REGEL - LIES DAS ZUERST!
+## ⚠️ OUTPUT PROTOCOL - RETURN "Done."
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  DEIN OUTPUT GEHT AN ZWEI ORTE:                                              │
+│  OUTPUT PROTOCOL                                                             │
 │                                                                              │
-│  1. REVIEW-DATEI (vollständig):                                             │
-│     .workflow/specs/issue-{N}-ph08-code-reviewer.md                              │
-│     → Vollständiger Code Review Report                                     │
+│  Deine LETZTE NACHRICHT muss exakt lauten: Done.                           │
 │                                                                              │
-│  2. WORKFLOW-STATE (strukturierter Auszug + Referenz!):                     │
-│     .workflow/workflow-state.json → context.reviewFeedback                  │
-│     → Status, Issues, Fixes + reviewFile Referenz                          │
+│  Der Orchestrator liest deinen Return NICHT — er verifiziert extern.        │
+│  Jedes Wort ausser "Done." verschwendet Context-Budget.                    │
 │                                                                              │
-│  SINGLE SOURCE OF TRUTH = Die Review-Datei                                  │
-│                                                                              │
-│  LETZTE NACHRICHT (Return an Orchestrator):                                │
-│  ⛔ Max 10 Zeilen! Nur: "Phase N fertig." + Datei-Pfad + kurze Summary     │
+│  DEIN OUTPUT GEHT AN ZWEI ORTE:                                             │
+│  1. MD-Datei: .workflow/specs/issue-{N}-ph08-code-reviewer.md              │
+│  2. workflow-state.json → context.reviewFeedback (fuer Rollback-Routing)   │
+│  → Die MD-Datei ist SINGLE SOURCE OF TRUTH                                 │
+│  → reviewFeedback.status + fixes[] sind PFLICHT fuer Rollback-Logik        │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -447,22 +445,17 @@ Issue identified during review
 
 ### Input (vom Orchestrator via Prompt)
 
-**Die Technical Specification wird dir im Task()-Prompt übergeben.**
+Du erhältst vom Orchestrator **DATEIPFADE** zu Spec-Dateien. LIES SIE SELBST!
 
-Du erhältst:
-1. **Vollständige Spec**: Der komplette Inhalt der Technical Specification
-2. **Workflow Context**: apiDesign, backendImpl, frontendImpl, testResults, securityAudit, targetCoverage
+Typische Spec-Dateien:
+- **Technical Spec**: `.workflow/specs/issue-*-ph00-architect-planner.md`
+- **API Design**: `.workflow/specs/issue-*-ph02-api-architect.md`
+- **Backend Report**: `.workflow/specs/issue-*-ph04-spring-boot-developer.md`
+- **Frontend Report**: `.workflow/specs/issue-*-ph05-angular-frontend-developer.md`
+- **Test Report**: `.workflow/specs/issue-*-ph06-test-engineer.md`
+- **Security Audit**: `.workflow/specs/issue-*-ph07-security-auditor.md`
 
-**Du musst die Spec NICHT selbst lesen** - sie ist bereits in deinem Prompt.
-
-Nutze den Kontext aus dem Prompt:
-- **Technical Spec**: Implementation vs. Spec-Anforderungen vergleichen, alle Business Rules prüfen
-- **apiDesign**: Implementation vs. Design vergleichen
-- **backendImpl**: Endpoints, Coverage, Test-Counts prüfen
-- **frontendImpl**: Components, Routes, State Management prüfen
-- **testResults**: Coverage-Ziele verifizieren
-- **securityAudit**: Security-Findings addressiert? Prüfe `findings[]` Array
-- **targetCoverage**: Coverage-Ziel (50%/70%/85%/95%)
+Metadaten direkt im Prompt: Issue-Nr, Coverage-Ziel.
 
 ### Output (Review Feedback speichern) - MUSS ausgeführt werden!
 
@@ -474,48 +467,36 @@ mkdir -p .workflow/specs
 # Inhalt: Vollständiger Code Review Report (Issues, Fixes, Empfehlungen)
 ```
 
-**Schritt 2: Context in workflow-state.json schreiben (strukturierter Auszug + Referenz)**
+**Schritt 2: Context in workflow-state.json schreiben**
+
+**⚠️ PFLICHT: `status` und `fixes[]` werden vom Orchestrator fuer Rollback-Routing gelesen!**
+
+**Bei APPROVED:**
 
 ```bash
-# Context in workflow-state.json schreiben
 jq '.context.reviewFeedback = {
   "reviewFile": ".workflow/specs/issue-42-ph08-code-reviewer.md",
   "status": "APPROVED",
-  "criticalIssues": [],
-  "majorIssues": [],
-  "minorIssues": [],
-  "fixes": [],
-  "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+  "fixes": []
 }' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
 mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```
 
-**Bei CHANGES_REQUIRED:**
+**Bei CHANGES_REQUESTED:**
 
 ```bash
 jq '.context.reviewFeedback = {
   "reviewFile": ".workflow/specs/issue-42-ph08-code-reviewer.md",
   "status": "CHANGES_REQUESTED",
-  "criticalIssues": [],
-  "majorIssues": [
-    {"file": "path/to/file.java", "line": 45, "issue": "Missing ownership check", "recommendation": "Add user ID validation"}
-  ],
-  "minorIssues": [],
   "fixes": [
-    {"type": "backend", "issue": "Add authorization check"},
-    {"type": "frontend", "issue": "Fix form validation"}
-  ],
-  "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+    {"type": "backend", "file": "path/to/File.java", "issue": "Add authorization check"},
+    {"type": "frontend", "file": "path/to/component.ts", "issue": "Fix form validation"}
+  ]
 }' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
 mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```
 
-**⚠️ OHNE diesen Schritt schlägt die Phase-Validierung fehl!**
-
-Der Stop-Hook prüft: `jq -e '.context.reviewFeedback.status'`
-
-Das `fixes` Array bestimmt die Hotfix-Phase:
-- `type: "database"` → Phase 3
-- `type: "backend"` → Phase 4
-- `type: "frontend"` → Phase 5
-- `type: "tests"` → Phase 6
+Das `fixes` Array bestimmt den deterministischen Rollback:
+- `type: "database"` → Phase 3 | `type: "backend"` → Phase 4
+- `type: "frontend"` → Phase 5 | `type: "tests"` → Phase 6
+- `file:` Pfad fuer Heuristik (.java → Backend, .ts → Frontend, .sql → DB)
