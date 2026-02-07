@@ -26,10 +26,12 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/../config/phases.conf"
 
 # ═══════════════════════════════════════════════════════════════════════════
-# GUARD: Phase als completed/skipped markiert? → done
+# GUARD: Phase als skipped markiert? → done
+# NOTE: "completed" ist KEIN Guard mehr! LLM konnte frueh "completed" setzen
+# und damit die externe Verifikation umgehen. Jetzt wird IMMER geprueft.
 # ═══════════════════════════════════════════════════════════════════════════
 PHASE_STATUS=$(jq -r ".phases[\"$PHASE\"].status // \"pending\"" "$WORKFLOW_FILE" 2>/dev/null || echo "pending")
-if [ "$PHASE_STATUS" = "completed" ] || [ "$PHASE_STATUS" = "skipped" ]; then
+if [ "$PHASE_STATUS" = "skipped" ]; then
   exit 0
 fi
 
@@ -44,7 +46,43 @@ if [ -z "$CRITERION" ]; then
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
-# VERIFICATION DISPATCH
+# COMPOUND CRITERIA: criterion1+criterion2 (ALL must pass)
+# Bash 3.x kompatibel: IFS-Split mit set --
+# ═══════════════════════════════════════════════════════════════════════════
+if echo "$CRITERION" | grep -q '+'; then
+  OLD_IFS="$IFS"
+  IFS='+'
+  set -- $CRITERION
+  IFS="$OLD_IFS"
+
+  for PART; do
+    case "$PART" in
+      STATE:*)
+        JQ_EXPR="${PART#STATE:}"
+        if echo "$JQ_EXPR" | grep -q '=='; then
+          JQ_PATH=$(echo "$JQ_EXPR" | cut -d'=' -f1)
+          JQ_VALUE=$(echo "$JQ_EXPR" | sed 's/.*==//')
+          jq -e ".$JQ_PATH == $JQ_VALUE" "$WORKFLOW_FILE" > /dev/null 2>&1 || exit 1
+        else
+          jq -e ".$JQ_EXPR" "$WORKFLOW_FILE" > /dev/null 2>&1 || exit 1
+        fi
+        ;;
+      GLOB:*)
+        PATTERN="${PART#GLOB:}"
+        ls $PATTERN > /dev/null 2>&1 || exit 1
+        ;;
+      VERIFY:*)
+        CMD="${PART#VERIFY:}"
+        eval "$CMD" > /dev/null 2>&1 || exit 1
+        ;;
+      *) exit 1 ;;
+    esac
+  done
+  exit 0
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════
+# VERIFICATION DISPATCH (single criterion)
 # ═══════════════════════════════════════════════════════════════════════════
 case "$CRITERION" in
   STATE:*)
