@@ -36,6 +36,17 @@
         ]
       }
     ],
+    "SessionStart": [
+      {
+        "description": "Context Recovery after Overflow - instructs Claude to reload skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/session_recovery.sh"
+          }
+        ]
+      }
+    ],
     "SubagentStop": [
       {
         "description": "Deterministic WIP Commits (no LLM)",
