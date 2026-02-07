@@ -78,6 +78,12 @@ Phase 0: Create Technical Specification for Issue #$ISSUE_NUM: $ISSUE_TITLE
 - Issue: #$ISSUE_NUM - $ISSUE_TITLE
 - Target Coverage: ${TARGET_COV}%
 
+## OUTPUT FILE (EXAKTER PFAD — NICHT AENDERN!)
+.workflow/specs/issue-${ISSUE_NUM}-ph00-architect-planner.md
+
+## CONTEXT KEY (workflow-state.json — EXAKT SO SETZEN!)
+context.technicalSpec = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-ph00-architect-planner.md"}
+
 ## YOUR TASK
 Create a Technical Specification. Apply 5x Warum root cause analysis. Use MCP tools for current docs.
 $RETRY_SECTION$HOTFIX_SECTION
@@ -95,6 +101,14 @@ Phase 1: Create Wireframes for Issue #$ISSUE_NUM: $ISSUE_TITLE
 - Issue: #$ISSUE_NUM - $ISSUE_TITLE
 - Target Coverage: ${TARGET_COV}%
 
+## OUTPUT FILE (EXAKTER PFAD — NICHT AENDERN!)
+wireframes/issue-${ISSUE_NUM}-[slug].html
+(Ersetze [slug] durch einen kurzen Slug des Issue-Titels, z.B. issue-${ISSUE_NUM}-login-form.html)
+WICHTIG: Die Datei MUSS eine .html Datei sein, KEIN Markdown!
+
+## CONTEXT KEY (workflow-state.json — EXAKT SO SETZEN!)
+context.wireframes = {"paths":["wireframes/issue-${ISSUE_NUM}-[slug].html"]}
+
 ## YOUR TASK
 Create HTML wireframes with Angular Material components. Include data-testid on ALL interactive elements.
 $RETRY_SECTION$HOTFIX_SECTION
@@ -111,8 +125,14 @@ Phase 2: Design API for Issue #$ISSUE_NUM: $ISSUE_TITLE
 ## WORKFLOW CONTEXT
 - Issue: #$ISSUE_NUM - $ISSUE_TITLE
 
+## OUTPUT FILE (EXAKTER PFAD — NICHT AENDERN!)
+.workflow/specs/issue-${ISSUE_NUM}-ph02-api-architect.md
+
+## CONTEXT KEY (workflow-state.json — EXAKT SO SETZEN!)
+context.apiDesign = {"apiDesignFile":".workflow/specs/issue-${ISSUE_NUM}-ph02-api-architect.md"}
+
 ## YOUR TASK
-Design REST API endpoints. Create concise API sketch (no full OpenAPI YAML). Save to .workflow/specs/ and update workflow-state.json.
+Design REST API endpoints. Create concise API sketch (no full OpenAPI YAML).
 $RETRY_SECTION$HOTFIX_SECTION
 EOF
     ;;
@@ -127,6 +147,12 @@ Phase 3: Create Database Migrations for Issue #$ISSUE_NUM: $ISSUE_TITLE
 
 ## WORKFLOW CONTEXT
 - Issue: #$ISSUE_NUM - $ISSUE_TITLE
+
+## OUTPUT FILE (Flyway-Migration — Namensformat beachten!)
+backend/src/main/resources/db/migration/V[timestamp]__[description].sql
+
+## CONTEXT KEY (workflow-state.json — EXAKT SO SETZEN!)
+context.migrations = {"databaseFile":"backend/src/main/resources/db/migration/V[timestamp]__[description].sql"}
 
 ## YOUR TASK
 Create Flyway SQL migrations. Normalize schema (3NF). Add indexes and constraints.
@@ -147,6 +173,12 @@ Phase 4: Implement Backend for Issue #$ISSUE_NUM: $ISSUE_TITLE
 - Issue: #$ISSUE_NUM - $ISSUE_TITLE
 - Target Coverage: ${TARGET_COV}%
 
+## OUTPUT FILE (EXAKTER PFAD — NICHT AENDERN!)
+.workflow/specs/issue-${ISSUE_NUM}-ph04-spring-boot-developer.md
+
+## CONTEXT KEY (workflow-state.json — EXAKT SO SETZEN!)
+context.backendImpl = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-ph04-spring-boot-developer.md"}
+
 ## YOUR TASK
 Implement Spring Boot 4 REST controllers, services, repositories. Add Swagger annotations. Run mvn verify before completing. MANDATORY: Load current docs via Context7 BEFORE coding.
 $RETRY_SECTION$HOTFIX_SECTION
@@ -165,6 +197,12 @@ Phase 5: Implement Frontend for Issue #$ISSUE_NUM: $ISSUE_TITLE
 ## WORKFLOW CONTEXT
 - Issue: #$ISSUE_NUM - $ISSUE_TITLE
 - Target Coverage: ${TARGET_COV}%
+
+## OUTPUT FILE (EXAKTER PFAD — NICHT AENDERN!)
+.workflow/specs/issue-${ISSUE_NUM}-ph05-angular-frontend-developer.md
+
+## CONTEXT KEY (workflow-state.json — EXAKT SO SETZEN!)
+context.frontendImpl = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-ph05-angular-frontend-developer.md"}
 
 ## YOUR TASK
 Implement Angular 21+ components, services, routing. Use Signals, inject(). Add data-testid on ALL interactive elements. Run npm test before completing. MANDATORY: Load current docs via Context7 + Angular CLI MCP BEFORE coding.
@@ -185,8 +223,15 @@ $([ -n "$FRONTEND_SPEC" ] && echo "- Frontend Report: $FRONTEND_SPEC")
 - Issue: #$ISSUE_NUM - $ISSUE_TITLE
 - Target Coverage: ${TARGET_COV}%
 
+## OUTPUT FILE (EXAKTER PFAD — NICHT AENDERN!)
+.workflow/specs/issue-${ISSUE_NUM}-ph06-test-engineer.md
+
+## CONTEXT KEY (workflow-state.json — EXAKT SO SETZEN!)
+context.testResults = {"reportFile":".workflow/specs/issue-${ISSUE_NUM}-ph06-test-engineer.md","allPassed":true}
+WICHTIG: allPassed MUSS true sein! NUR setzen wenn ALLE Tests bestanden haben!
+
 ## YOUR TASK
-Write comprehensive tests: JUnit 5 + Mockito (backend), Jasmine + TestBed (frontend), Playwright E2E. Set context.testResults.allPassed = true ONLY if ALL tests pass. Run mvn verify + npm test + npx playwright test.
+Write comprehensive tests: JUnit 5 + Mockito (backend), Jasmine + TestBed (frontend), Playwright E2E. Run mvn verify + npm test + npx playwright test.
 $RETRY_SECTION$HOTFIX_SECTION
 EOF
     ;;
@@ -203,8 +248,14 @@ $([ -n "$FRONTEND_SPEC" ] && echo "- Frontend Report: $FRONTEND_SPEC")
 ## WORKFLOW CONTEXT
 - Issue: #$ISSUE_NUM - $ISSUE_TITLE
 
+## OUTPUT FILE (EXAKTER PFAD — NICHT AENDERN!)
+.workflow/specs/issue-${ISSUE_NUM}-ph07-security-auditor.md
+
+## CONTEXT KEY (workflow-state.json — EXAKT SO SETZEN!)
+context.securityAudit = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-ph07-security-auditor.md"}
+
 ## YOUR TASK
-Perform OWASP Top 10 (2021) security audit. Check A01-A10. Report findings with severity levels. Save audit report to .workflow/specs/.
+Perform OWASP Top 10 (2021) security audit. Check A01-A10. Report findings with severity levels.
 $RETRY_SECTION$HOTFIX_SECTION
 EOF
     ;;
@@ -225,8 +276,15 @@ $([ -n "$SECURITY_REPORT" ] && echo "- Security Audit: $SECURITY_REPORT")
 - Issue: #$ISSUE_NUM - $ISSUE_TITLE
 - Target Coverage: ${TARGET_COV}%
 
+## OUTPUT FILE (EXAKTER PFAD — NICHT AENDERN!)
+.workflow/specs/issue-${ISSUE_NUM}-ph08-code-reviewer.md
+
+## CONTEXT KEY (workflow-state.json — EXAKT SO SETZEN!)
+context.reviewFeedback = {"reviewFile":".workflow/specs/issue-${ISSUE_NUM}-ph08-code-reviewer.md","status":"APPROVED"}
+(Oder "CHANGES_REQUESTED" bei Aenderungswuenschen. Bei CHANGES_REQUESTED: fixes[].file mit betroffenen Dateipfaden fuer deterministisches Rollback-Routing.)
+
 ## YOUR TASK
-Independent code quality review. Verify coverage targets. Check SOLID, DRY, KISS. Set context.reviewFeedback with status (APPROVED/CHANGES_REQUESTED). Include affected file paths in fixes[].file for deterministic rollback routing.
+Independent code quality review. Verify coverage targets. Check SOLID, DRY, KISS.
 $RETRY_SECTION$HOTFIX_SECTION
 EOF
     ;;
@@ -248,6 +306,23 @@ CRITERION=$(get_phase_criterion "$PHASE")
 
 # Akzeptanzkriterium menschenlesbar aufbereiten
 case "$CRITERION" in
+  *+*)
+    # Compound-Kriterium: criterion1+criterion2 (ALL must pass)
+    HUMAN_CRITERION="ALL of these must be true:"
+    OLD_IFS="$IFS"
+    IFS='+'
+    for PART in $CRITERION; do
+      case "$PART" in
+        GLOB:*) HUMAN_CRITERION="$HUMAN_CRITERION
+  - File must exist: ${PART#GLOB:}" ;;
+        STATE:*) HUMAN_CRITERION="$HUMAN_CRITERION
+  - workflow-state.json must have: ${PART#STATE:}" ;;
+        VERIFY:*) HUMAN_CRITERION="$HUMAN_CRITERION
+  - Command must succeed: ${PART#VERIFY:}" ;;
+      esac
+    done
+    IFS="$OLD_IFS"
+    ;;
   GLOB:*)
     HUMAN_CRITERION="File must exist: ${CRITERION#GLOB:}"
     ;;

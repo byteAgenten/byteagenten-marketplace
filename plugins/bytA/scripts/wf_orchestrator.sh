@@ -229,7 +229,53 @@ if [ "$STATUS" = "paused" ] || [ "$STATUS" = "idle" ]; then
 fi
 
 if [ "$STATUS" = "awaiting_approval" ]; then
-  log "Stop allowed: awaiting_approval (Phase $PHASE)"
+  # ═══════════════════════════════════════════════════════════════════════
+  # GUARD: Verify GLOB criteria even in awaiting_approval
+  # GLOB = "Agent produced output" (must always be verified)
+  # STATE = "Advance condition" (skipped here, checked by normal flow)
+  # Without this guard, LLM can set awaiting_approval and skip verify!
+  # ═══════════════════════════════════════════════════════════════════════
+  CRITERION=$(get_phase_criterion "$PHASE")
+  GLOB_FAILED=false
+
+  if echo "$CRITERION" | grep -q "GLOB:"; then
+    OLD_IFS="$IFS"
+    IFS='+'
+    for PART in $CRITERION; do
+      case "$PART" in
+        GLOB:*)
+          PATTERN="${PART#GLOB:}"
+          if ! ls $PATTERN > /dev/null 2>&1; then
+            GLOB_FAILED=true
+          fi
+          ;;
+      esac
+    done
+    IFS="$OLD_IFS"
+  fi
+
+  if [ "$GLOB_FAILED" = "true" ]; then
+    log "GUARD: awaiting_approval but GLOB criterion NOT met for Phase $PHASE ($PHASE_NAME). Resetting to active."
+    log_transition "criterion_bypass_blocked" "phase=$PHASE"
+
+    jq '.status = "active"' \
+      "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+
+    RETRY=$(increment_retry "$PHASE")
+    if [ "$RETRY" -ge "$MAX_RETRIES" ]; then
+      jq --arg reason "criterion_bypass_phase_${PHASE}" \
+        '.status = "paused" | .pauseReason = $reason' \
+        "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+      log "MAX RETRIES ($MAX_RETRIES) for Phase $PHASE (criterion bypass). Pausing."
+      play_notification
+      exit 0
+    fi
+
+    PROMPT=$("${SCRIPT_DIR}/wf_prompt_builder.sh" "$PHASE")
+    output_block "GUARD: Phase $PHASE ($PHASE_NAME) als awaiting_approval markiert, aber GLOB-Kriterium NICHT erfuellt (Versuch $RETRY/$MAX_RETRIES). Starte: Task(bytA:$PHASE_AGENT, '$PROMPT')"
+  fi
+
+  log "Stop allowed: awaiting_approval (Phase $PHASE, GLOB verified)"
   exit 0
 fi
 
@@ -304,6 +350,78 @@ if "${SCRIPT_DIR}/wf_verify.sh" "$PHASE"; then
   # PHASE DONE — Transition
   # ═════════════════════════════════════════════════════════════════════════
 
+  # ─────────────────────────────────────────────────────────────────────────
+  # Phase 8 Spezial: CHANGES_REQUESTED → Deterministischer Rollback
+  # GLOB passed (Review-Datei existiert), aber Review hat Aenderungswuensche.
+  # Muss VOR mark_phase_completed stehen, damit Phase 8 NICHT completed wird.
+  # ─────────────────────────────────────────────────────────────────────────
+  if [ "$PHASE" = "8" ]; then
+    REVIEW_STATUS=$(jq -r '.context.reviewFeedback.status // "PENDING"' "$WORKFLOW_FILE" 2>/dev/null)
+
+    if [ "$REVIEW_STATUS" = "CHANGES_REQUESTED" ]; then
+      RETRY=$(increment_retry "$PHASE")
+
+      if [ "$RETRY" -ge "$MAX_RETRIES" ]; then
+        jq '.status = "paused" | .pauseReason = "max_review_iterations"' \
+          "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+        log "MAX REVIEW ITERATIONS ($MAX_RETRIES). Pausing."
+        play_notification
+        exit 0
+      fi
+
+      # Rollback-Ziel DETERMINISTISCH aus Dateipfaden bestimmen
+      ROLLBACK_TARGET=6  # Default: Tests
+      FIX_FILES=$(jq -r '.context.reviewFeedback.fixes[]?.file // empty' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+
+      if [ -n "$FIX_FILES" ]; then
+        if echo "$FIX_FILES" | grep -q '\.sql'; then
+          ROLLBACK_TARGET=3
+        elif echo "$FIX_FILES" | grep -q '\.java'; then
+          ROLLBACK_TARGET=4
+        elif echo "$FIX_FILES" | grep -q -E '\.(ts|html|scss)'; then
+          ROLLBACK_TARGET=5
+        fi
+      else
+        if jq -e '.context.reviewFeedback.fixes[]? | select(.type == "database")' "$WORKFLOW_FILE" > /dev/null 2>&1; then
+          ROLLBACK_TARGET=3
+        elif jq -e '.context.reviewFeedback.fixes[]? | select(.type == "backend")' "$WORKFLOW_FILE" > /dev/null 2>&1; then
+          ROLLBACK_TARGET=4
+        elif jq -e '.context.reviewFeedback.fixes[]? | select(.type == "frontend")' "$WORKFLOW_FILE" > /dev/null 2>&1; then
+          ROLLBACK_TARGET=5
+        fi
+      fi
+
+      ROLLBACK_NAME=$(get_phase_name "$ROLLBACK_TARGET")
+      ROLLBACK_AGENT=$(get_phase_agent "$ROLLBACK_TARGET")
+
+      FIXES_TEXT=$(jq -r '[.context.reviewFeedback.fixes[]? | "[\(.type // "unknown")] \(.issue // "fix needed")"] | join("; ")' "$WORKFLOW_FILE" 2>/dev/null || echo "Review changes requested")
+
+      # Context ab Rollback-Ziel aufraeumen
+      CLEAR_CMD="del(.context.reviewFeedback) | del(.context.securityAudit) | del(.context.testResults)"
+      [ "$ROLLBACK_TARGET" -le 5 ] && CLEAR_CMD="$CLEAR_CMD | del(.context.frontendImpl)"
+      [ "$ROLLBACK_TARGET" -le 4 ] && CLEAR_CMD="$CLEAR_CMD | del(.context.backendImpl)"
+      [ "$ROLLBACK_TARGET" -le 3 ] && CLEAR_CMD="$CLEAR_CMD | del(.context.migrations)"
+
+      jq "$CLEAR_CMD | .currentPhase = $ROLLBACK_TARGET | .status = \"active\"" \
+        "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+
+      # Spec-Dateien ab Rollback-Ziel loeschen (verhindert stale GLOB-Matches)
+      p=$ROLLBACK_TARGET
+      while [ "$p" -le 8 ]; do
+        pf=$(printf "%02d" "$p")
+        rm -f .workflow/specs/issue-*-ph${pf}-*.md 2>/dev/null || true
+        p=$((p + 1))
+      done
+      log "Spec files cleaned: phases $ROLLBACK_TARGET-8"
+
+      log "REVIEW ROLLBACK: Phase 8 → Phase $ROLLBACK_TARGET ($ROLLBACK_NAME). Retry $RETRY/$MAX_RETRIES"
+      log_transition "review_rollback" "target=$ROLLBACK_TARGET retry=$RETRY"
+
+      PROMPT=$("${SCRIPT_DIR}/wf_prompt_builder.sh" "$ROLLBACK_TARGET" "$FIXES_TEXT")
+      output_block "Phase 8 Code Review: CHANGES_REQUESTED ($RETRY/$MAX_RETRIES). Rollback zu Phase $ROLLBACK_TARGET ($ROLLBACK_NAME). State korrigiert. Starte sofort: Task(bytA:$ROLLBACK_AGENT, '$PROMPT')"
+    fi
+  fi
+
   reset_retry "$PHASE"
   mark_phase_completed "$PHASE"
 
@@ -349,79 +467,6 @@ else
   # ═════════════════════════════════════════════════════════════════════════
   # PHASE NICHT FERTIG — Ralph-Loop: Re-spawn oder Pause
   # ═════════════════════════════════════════════════════════════════════════
-
-  # ─────────────────────────────────────────────────────────────────────────
-  # Phase 8 Spezial: CHANGES_REQUESTED → Deterministischer Rollback
-  # ─────────────────────────────────────────────────────────────────────────
-  if [ "$PHASE" = "8" ]; then
-    REVIEW_STATUS=$(jq -r '.context.reviewFeedback.status // "PENDING"' "$WORKFLOW_FILE" 2>/dev/null)
-
-    if [ "$REVIEW_STATUS" = "CHANGES_REQUESTED" ]; then
-      RETRY=$(increment_retry "$PHASE")
-
-      if [ "$RETRY" -ge "$MAX_RETRIES" ]; then
-        jq '.status = "paused" | .pauseReason = "max_review_iterations"' \
-          "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
-        log "MAX REVIEW ITERATIONS ($MAX_RETRIES). Pausing."
-        play_notification
-        exit 0
-      fi
-
-      # Rollback-Ziel DETERMINISTISCH aus Dateipfaden bestimmen (Option C)
-      ROLLBACK_TARGET=6  # Default: Tests
-      FIX_FILES=$(jq -r '.context.reviewFeedback.fixes[]?.file // empty' "$WORKFLOW_FILE" 2>/dev/null || echo "")
-
-      if [ -n "$FIX_FILES" ]; then
-        # Dateipfad-basierte Heuristik
-        if echo "$FIX_FILES" | grep -q '\.sql'; then
-          ROLLBACK_TARGET=3
-        elif echo "$FIX_FILES" | grep -q '\.java'; then
-          ROLLBACK_TARGET=4
-        elif echo "$FIX_FILES" | grep -q -E '\.(ts|html|scss)'; then
-          ROLLBACK_TARGET=5
-        fi
-      else
-        # Fallback: type-basierte Heuristik (wie byt8)
-        if jq -e '.context.reviewFeedback.fixes[]? | select(.type == "database")' "$WORKFLOW_FILE" > /dev/null 2>&1; then
-          ROLLBACK_TARGET=3
-        elif jq -e '.context.reviewFeedback.fixes[]? | select(.type == "backend")' "$WORKFLOW_FILE" > /dev/null 2>&1; then
-          ROLLBACK_TARGET=4
-        elif jq -e '.context.reviewFeedback.fixes[]? | select(.type == "frontend")' "$WORKFLOW_FILE" > /dev/null 2>&1; then
-          ROLLBACK_TARGET=5
-        fi
-      fi
-
-      ROLLBACK_NAME=$(get_phase_name "$ROLLBACK_TARGET")
-      ROLLBACK_AGENT=$(get_phase_agent "$ROLLBACK_TARGET")
-
-      # Fixes-Text lesen
-      FIXES_TEXT=$(jq -r '[.context.reviewFeedback.fixes[]? | "[\(.type // "unknown")] \(.issue // "fix needed")"] | join("; ")' "$WORKFLOW_FILE" 2>/dev/null || echo "Review changes requested")
-
-      # Context ab Rollback-Ziel aufraeumen
-      CLEAR_CMD="del(.context.reviewFeedback) | del(.context.securityAudit) | del(.context.testResults)"
-      [ "$ROLLBACK_TARGET" -le 5 ] && CLEAR_CMD="$CLEAR_CMD | del(.context.frontendImpl)"
-      [ "$ROLLBACK_TARGET" -le 4 ] && CLEAR_CMD="$CLEAR_CMD | del(.context.backendImpl)"
-      [ "$ROLLBACK_TARGET" -le 3 ] && CLEAR_CMD="$CLEAR_CMD | del(.context.migrations)"
-
-      jq "$CLEAR_CMD | .currentPhase = $ROLLBACK_TARGET | .status = \"active\"" \
-        "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
-
-      # Spec-Dateien ab Rollback-Ziel loeschen (verhindert stale GLOB-Matches)
-      p=$ROLLBACK_TARGET
-      while [ "$p" -le 8 ]; do
-        pf=$(printf "%02d" "$p")
-        rm -f .workflow/specs/issue-*-ph${pf}-*.md 2>/dev/null || true
-        p=$((p + 1))
-      done
-      log "Spec files cleaned: phases $ROLLBACK_TARGET-8"
-
-      log "REVIEW ROLLBACK: Phase 8 → Phase $ROLLBACK_TARGET ($ROLLBACK_NAME). Retry $RETRY/$MAX_RETRIES"
-      log_transition "review_rollback" "target=$ROLLBACK_TARGET retry=$RETRY"
-
-      PROMPT=$("${SCRIPT_DIR}/wf_prompt_builder.sh" "$ROLLBACK_TARGET" "$FIXES_TEXT")
-      output_block "Phase 8 Code Review: CHANGES_REQUESTED ($RETRY/$MAX_RETRIES). Rollback zu Phase $ROLLBACK_TARGET ($ROLLBACK_NAME). State korrigiert. Starte sofort: Task(bytA:$ROLLBACK_AGENT, '$PROMPT')"
-    fi
-  fi
 
   # ─────────────────────────────────────────────────────────────────────────
   # GUARD: Phase muss existieren (Orchestrator hat zu frueh transitioned)

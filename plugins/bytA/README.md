@@ -1,6 +1,6 @@
 # bytA Plugin
 
-**Version 3.2.0** | Deterministic Orchestration: Boomerang + Ralph-Loop
+**Version 3.3.0** | Deterministic Orchestration: Boomerang + Ralph-Loop
 
 Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 10-Phasen-Workflow.
 
@@ -48,14 +48,14 @@ Der Orchestrator ist ein **Bash-Script**, kein LLM. Claude dient nur als Transpo
 | Phase | Agent | Typ | Done-Kriterium |
 |-------|-------|-----|----------------|
 | 0 | architect-planner | APPROVAL | Spec-Datei existiert |
-| 1 | ui-designer | APPROVAL | Wireframe HTML existiert |
+| 1 | ui-designer | APPROVAL | Issue-prefixed Wireframe HTML existiert |
 | 2 | api-architect | AUTO | API-Spec existiert |
 | 3 | postgresql-architect | AUTO | Migration SQL existiert |
 | 4 | spring-boot-developer | AUTO | Backend-Report MD existiert |
 | 5 | angular-frontend-developer | AUTO | Frontend-Report MD existiert |
-| 6 | test-engineer | AUTO | allPassed == true |
+| 6 | test-engineer | AUTO | allPassed == true + Report-Datei existiert |
 | 7 | security-auditor | APPROVAL | Audit-Datei existiert |
-| 8 | code-reviewer | APPROVAL | userApproved == true |
+| 8 | code-reviewer | APPROVAL | Review-Datei existiert |
 | 9 | Push & PR | APPROVAL | PR URL in State |
 
 **APPROVAL** = User muss approven (Workflow pausiert)
@@ -124,15 +124,26 @@ Done-Kriterien werden von `wf_verify.sh` extern geprueft:
 | Phase | Pruefung | Methode |
 |-------|----------|---------|
 | 0 | Spec-Datei | `ls .workflow/specs/*-ph00-*.md` |
-| 1 | Wireframe | `ls wireframes/*.html` |
+| 1 | Wireframe | `ls wireframes/issue-*.html` |
 | 2 | API-Spec | `ls .workflow/specs/*-ph02-*.md` |
 | 3 | Migration | `ls backend/.../V*.sql` |
 | 4 | Backend-Report | `ls .workflow/specs/*-ph04-*.md` |
 | 5 | Frontend-Report | `ls .workflow/specs/*-ph05-*.md` |
-| 6 | Tests bestanden | `jq .context.testResults.allPassed` |
+| 6 | Tests bestanden | `jq .context.testResults.allPassed` + `ls .workflow/specs/*-ph06-*.md` |
 | 7 | Audit-Datei | `ls .workflow/specs/*-ph07-*.md` |
-| 8 | User approved | `jq .context.reviewFeedback.userApproved` |
+| 8 | Review-Datei | `ls .workflow/specs/*-ph08-*.md` |
 | 9 | PR URL | `jq .phases["9"].prUrl` |
+
+### Compound-Kriterien (v3.3.0)
+
+Phase 6 nutzt ein Compound-Kriterium (`+` Separator): STATE und GLOB muessen BEIDE bestanden werden.
+`wf_verify.sh` unterstuetzt beliebige Kombinationen: `STATE:...+GLOB:...+VERIFY:...`
+
+### Status-Bypass Guard (v3.3.0)
+
+Der Stop-Hook (`wf_orchestrator.sh`) prueft GLOB-Kriterien auch im `awaiting_approval` Status.
+Verhindert, dass ein LLM die externe Verifikation umgeht, indem es `status = "awaiting_approval"` setzt,
+bevor der Shell-Orchestrator verifizieren kann. Bei fehlgeschlagenem GLOB → Reset auf `active` → Ralph-Loop.
 
 ### Agent-Reports (MD-Dateien)
 
