@@ -225,17 +225,44 @@ EOF
 esac
 
 # ═══════════════════════════════════════════════════════════════════════════
-# RETURN PROTOCOL (an JEDEN Prompt angehängt)
+# ACCEPTANCE CRITERIA + RETURN PROTOCOL (an JEDEN Prompt angehaengt)
 # ═══════════════════════════════════════════════════════════════════════════
-# Der Orchestrator verifiziert extern via wf_verify.sh (Dateien, State).
-# Er liest deine Summary NICHT. Minimaler Return = weniger Context-Verbrauch.
+# Die Akzeptanzkriterien werden DIREKT aus phases.conf gelesen.
+# Single Source of Truth: phases.conf definiert, Prompt transportiert,
+# wf_verify.sh prueft. Keine Drift moeglich.
 # ═══════════════════════════════════════════════════════════════════════════
-cat << 'RETURN_EOF'
+
+CRITERION=$(get_phase_criterion "$PHASE")
+
+# Akzeptanzkriterium menschenlesbar aufbereiten
+case "$CRITERION" in
+  GLOB:*)
+    HUMAN_CRITERION="File must exist: ${CRITERION#GLOB:}"
+    ;;
+  STATE:*)
+    EXPR="${CRITERION#STATE:}"
+    if echo "$EXPR" | grep -q '=='; then
+      HUMAN_CRITERION="workflow-state.json must have: $EXPR"
+    else
+      HUMAN_CRITERION="workflow-state.json must contain key: $EXPR"
+    fi
+    ;;
+  VERIFY:*)
+    HUMAN_CRITERION="Command must succeed: ${CRITERION#VERIFY:}"
+    ;;
+  *)
+    HUMAN_CRITERION="Phase must be marked completed"
+    ;;
+esac
+
+cat << ACCEPTANCE_EOF
+
+## ACCEPTANCE CRITERIA (auto-generated from phases.conf)
+Your work is verified EXTERNALLY. You are done when:
+  $HUMAN_CRITERION
+This is checked automatically. If this criterion is not met, you will be re-spawned.
 
 ## RETURN PROTOCOL
-Your last message to the orchestrator MUST be exactly one line:
-  Done.
-All your output goes to disk (spec files, workflow-state.json, code).
+Your last message MUST be exactly: Done.
 The orchestrator does NOT read your summary — it verifies externally.
-Do NOT include a detailed summary. Just: Done.
-RETURN_EOF
+ACCEPTANCE_EOF
