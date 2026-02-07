@@ -1,0 +1,429 @@
+#!/bin/bash
+# ═══════════════════════════════════════════════════════════════════════════
+# bytA Workflow Orchestrator (Stop Hook) — Boomerang + Ralph-Loop
+# ═══════════════════════════════════════════════════════════════════════════
+# Deterministischer Workflow-Controller. KEIN LLM trifft Entscheidungen.
+#
+# Architektur-Prinzipien:
+#   1. RALPH LOOP: while !verify_done; do spawn_agent; done
+#   2. BOOMERANG:  Agents laufen isoliert, Orchestrator prueft extern
+#   3. DETERMINISMUS: Alle Transitions in Shell, nie im LLM
+#
+# Output-Kanaele:
+#   stdout JSON {"decision":"block","reason":"..."}  → Claude MUSS weitermachen
+#   stdout (kein JSON, exit 0)                       → Claude darf stoppen
+#   Log-Datei (.workflow/logs/hooks.log)             → Debugging
+#   State (jq auf workflow-state.json)               → Direkte Modifikation
+#
+# ═══════════════════════════════════════════════════════════════════════════
+# BASH 3.x KOMPATIBEL (macOS default)
+# ═══════════════════════════════════════════════════════════════════════════
+
+set -e
+
+# ═══════════════════════════════════════════════════════════════════════════
+# KONFIGURATION
+# ═══════════════════════════════════════════════════════════════════════════
+WORKFLOW_DIR=".workflow"
+WORKFLOW_FILE="${WORKFLOW_DIR}/workflow-state.json"
+LOGS_DIR="${WORKFLOW_DIR}/logs"
+
+# Source phase configuration
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/../config/phases.conf"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STDIN LESEN (stop_hook_active fuer Loop-Prevention)
+# ═══════════════════════════════════════════════════════════════════════════
+INPUT=$(cat)
+STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // false' 2>/dev/null || echo "false")
+
+# ═══════════════════════════════════════════════════════════════════════════
+# LOGGING (nur in Datei, NICHT auf stdout)
+# ═══════════════════════════════════════════════════════════════════════════
+log() {
+  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] $1" >> "$LOGS_DIR/hooks.log" 2>/dev/null || true
+}
+
+log_transition() {
+  local event="$1"
+  local detail="$2"
+  echo "{\"timestamp\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\",\"event\":\"$event\",\"detail\":\"$detail\"}" >> "$LOGS_DIR/transitions.jsonl" 2>/dev/null || true
+}
+
+# ═══════════════════════════════════════════════════════════════════════════
+# JSON OUTPUT: Claude sieht "reason" und MUSS weitermachen
+# ═══════════════════════════════════════════════════════════════════════════
+output_block() {
+  local reason="$1"
+
+  # Block-Counter inkrementieren
+  local count
+  count=$(jq -r '.stopHookBlockCount // 0' "$WORKFLOW_FILE" 2>/dev/null || echo "0")
+  count=$((count + 1))
+  jq --argjson c "$count" '.stopHookBlockCount = $c' \
+    "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+
+  log "BLOCK ($count/$MAX_STOP_HOOK_BLOCKS): ${reason:0:200}"
+  log_transition "stop_hook_block" "count=$count"
+
+  jq -n --arg r "$reason" '{"decision":"block","reason":$r}'
+  exit 0
+}
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SOUND NOTIFICATIONS
+# ═══════════════════════════════════════════════════════════════════════════
+CUSTOM_SOUND_DIR="${CLAUDE_PLUGIN_ROOT:-}/assets/sounds"
+
+play_sound() {
+  local sound_file="$1"
+  local fallback_mac="$2"
+  local fallback_linux="$3"
+  case "$(uname -s)" in
+    Darwin)
+      if [ -f "$CUSTOM_SOUND_DIR/$sound_file" ]; then
+        afplay "$CUSTOM_SOUND_DIR/$sound_file" 2>/dev/null &
+      else
+        afplay "$fallback_mac" 2>/dev/null &
+      fi
+      ;;
+    Linux)
+      if [ -f "$CUSTOM_SOUND_DIR/$sound_file" ]; then
+        paplay "$CUSTOM_SOUND_DIR/$sound_file" 2>/dev/null &
+      elif command -v paplay >/dev/null 2>&1; then
+        paplay "$fallback_linux" 2>/dev/null &
+      fi
+      ;;
+  esac
+}
+
+play_notification() {
+  play_sound "notification.wav" "/System/Library/Sounds/Glass.aiff" "/usr/share/sounds/freedesktop/stereo/bell.oga"
+}
+
+play_completion() {
+  play_sound "completion.wav" "/System/Library/Sounds/Funk.aiff" "/usr/share/sounds/freedesktop/stereo/complete.oga"
+}
+
+# ═══════════════════════════════════════════════════════════════════════════
+# HILFSFUNKTIONEN
+# ═══════════════════════════════════════════════════════════════════════════
+
+get_retry_count() {
+  jq -r ".recovery.phase_${1}_attempts // 0" "$WORKFLOW_FILE" 2>/dev/null || echo "0"
+}
+
+increment_retry() {
+  local phase=$1
+  local current=$(get_retry_count "$phase")
+  local new=$((current + 1))
+  jq ".recovery.phase_${phase}_attempts = ${new}" \
+    "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+  echo "$new"
+}
+
+reset_retry() {
+  local phase=$1
+  jq "del(.recovery.phase_${phase}_attempts)" \
+    "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE" 2>/dev/null || true
+}
+
+create_wip_commit() {
+  local phase=$1
+  local phase_name
+  phase_name=$(get_phase_name "$phase")
+
+  git add -A 2>/dev/null || true
+  if ! git diff --cached --quiet 2>/dev/null; then
+    local msg="wip(#${ISSUE_NUM}/phase-${phase}): ${phase_name} - ${ISSUE_TITLE:0:50}"
+    git commit -m "$msg" 2>/dev/null && log "WIP-Commit: $msg" || true
+  fi
+}
+
+mark_phase_completed() {
+  local phase=$1
+  local phase_name
+  phase_name=$(get_phase_name "$phase")
+
+  jq --argjson p "$phase" --arg name "$phase_name" --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+    '.phases[($p | tostring)] = {"name": $name, "status": "completed", "completedAt": $ts}' \
+    "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+
+  log "Phase $phase ($phase_name) marked completed"
+}
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PRÜFUNG: Workflow vorhanden?
+# ═══════════════════════════════════════════════════════════════════════════
+if [ ! -f "$WORKFLOW_FILE" ]; then
+  exit 0
+fi
+
+mkdir -p "$LOGS_DIR" 2>/dev/null || true
+
+# State lesen
+STATUS=$(jq -r '.status // "unknown"' "$WORKFLOW_FILE" 2>/dev/null || echo "unknown")
+PHASE=$(jq -r '.currentPhase // 0' "$WORKFLOW_FILE" 2>/dev/null || echo "0")
+ISSUE_NUM=$(jq -r '.issue.number // "?"' "$WORKFLOW_FILE" 2>/dev/null || echo "?")
+ISSUE_TITLE=$(jq -r '.issue.title // "Feature"' "$WORKFLOW_FILE" 2>/dev/null || echo "Feature")
+
+PHASE_NAME=$(get_phase_name "$PHASE")
+PHASE_AGENT=$(get_phase_agent "$PHASE")
+
+log "Stop Hook: Phase $PHASE ($PHASE_NAME) | Status: $STATUS | stop_hook_active: $STOP_HOOK_ACTIVE"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# LOOP-PREVENTION: Zu viele consecutive blocks → Workflow pausieren
+# ═══════════════════════════════════════════════════════════════════════════
+if [ "$STOP_HOOK_ACTIVE" = "true" ]; then
+  BLOCK_COUNT=$(jq -r '.stopHookBlockCount // 0' "$WORKFLOW_FILE" 2>/dev/null || echo "0")
+  if [ "$BLOCK_COUNT" -ge "$MAX_STOP_HOOK_BLOCKS" ]; then
+    jq '.status = "paused" | .pauseReason = "stop_hook_loop_detected"' \
+      "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+    log "LOOP DETECTED: $BLOCK_COUNT blocks. Pausing."
+    log_transition "loop_detected" "blockCount=$BLOCK_COUNT"
+    play_notification
+    exit 0
+  fi
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STATUS-HANDLING: Nicht-aktive Zustaende → Claude darf stoppen
+# ═══════════════════════════════════════════════════════════════════════════
+
+if [ "$STATUS" = "completed" ]; then
+  # Dauer berechnen (nur einmal)
+  COMPLETED_AT_EXISTS=$(jq -r '.completedAt // ""' "$WORKFLOW_FILE" 2>/dev/null)
+  if [ -z "$COMPLETED_AT_EXISTS" ] || [ "$COMPLETED_AT_EXISTS" = "null" ]; then
+    COMPLETED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    jq --arg ca "$COMPLETED_AT" '.completedAt = $ca' \
+      "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+    log "Workflow completed: #${ISSUE_NUM} - ${ISSUE_TITLE}"
+    play_completion
+  fi
+  exit 0
+fi
+
+if [ "$STATUS" = "paused" ] || [ "$STATUS" = "idle" ]; then
+  log "Stop allowed: Status=$STATUS"
+  exit 0
+fi
+
+if [ "$STATUS" = "awaiting_approval" ]; then
+  log "Stop allowed: awaiting_approval (Phase $PHASE)"
+  exit 0
+fi
+
+# Nur active weiterverarbeiten
+if [ "$STATUS" != "active" ]; then
+  exit 0
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════
+# AB HIER: status = active → RALPH LOOP
+# ═══════════════════════════════════════════════════════════════════════════
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PHASE-SKIP GUARD: Fehlende Vorgaenger-Phasen abfangen
+# ═══════════════════════════════════════════════════════════════════════════
+detect_skipped_phase() {
+  local current=$1
+  local i=0
+
+  while [ $i -lt $current ]; do
+    local ps
+    ps=$(jq -r ".phases[\"$i\"].status // \"pending\"" "$WORKFLOW_FILE" 2>/dev/null || echo "pending")
+    if [ "$ps" = "completed" ] || [ "$ps" = "skipped" ]; then
+      i=$((i + 1))
+      continue
+    fi
+
+    # Context-Check fuer pending Phasen
+    local has_context=true
+    case $i in
+      0) jq -e '.context.technicalSpec | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
+      1) jq -e '.context.wireframes | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
+      2) jq -e '.context.apiDesign | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
+      3) jq -e '.context.migrations | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
+      4) jq -e '.context.backendImpl | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
+      5) jq -e '.context.frontendImpl | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
+      6) jq -e '.context.testResults | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
+      7) jq -e '.context.securityAudit | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
+      8) jq -e '.context.reviewFeedback.userApproved == true' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
+    esac
+
+    if [ "$has_context" = "false" ]; then
+      echo "$i"
+      return
+    fi
+    i=$((i + 1))
+  done
+  echo ""
+}
+
+SKIPPED_TO=$(detect_skipped_phase "$PHASE")
+if [ -n "$SKIPPED_TO" ]; then
+  SKIP_NAME=$(get_phase_name "$SKIPPED_TO")
+  SKIP_AGENT=$(get_phase_agent "$SKIPPED_TO")
+
+  log "PHASE SKIP DETECTED: Phase $PHASE requires Phase $SKIPPED_TO ($SKIP_NAME). Auto-correcting."
+  log_transition "phase_skip_corrected" "from=$PHASE to=$SKIPPED_TO"
+
+  jq --argjson sp "$SKIPPED_TO" '.currentPhase = $sp | .status = "active"' \
+    "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+
+  # Build prompt for skipped phase
+  PROMPT=$("${SCRIPT_DIR}/wf_prompt_builder.sh" "$SKIPPED_TO")
+  output_block "PHASE-SKIP KORRIGIERT: Phase $SKIPPED_TO ($SKIP_NAME) fehlt. State korrigiert. Starte sofort: Task(bytA:$SKIP_AGENT, '$PROMPT')"
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════
+# VERIFY: Ist die aktuelle Phase fertig? (EXTERNE Pruefung!)
+# ═══════════════════════════════════════════════════════════════════════════
+if "${SCRIPT_DIR}/wf_verify.sh" "$PHASE"; then
+  # ═════════════════════════════════════════════════════════════════════════
+  # PHASE DONE — Transition
+  # ═════════════════════════════════════════════════════════════════════════
+
+  reset_retry "$PHASE"
+  mark_phase_completed "$PHASE"
+
+  # WIP-Commit (silent)
+  if needs_commit "$PHASE"; then
+    create_wip_commit "$PHASE"
+  fi
+
+  if needs_approval "$PHASE"; then
+    # ═══════════════════════════════════════════════════════════════════════
+    # APPROVAL GATE → Claude darf stoppen, User antwortet
+    # ═══════════════════════════════════════════════════════════════════════
+    jq '.status = "awaiting_approval" | .awaitingApprovalFor = .currentPhase' \
+      "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+
+    log "APPROVAL GATE: Phase $PHASE ($PHASE_NAME) done."
+    log_transition "approval_gate" "phase=$PHASE"
+    play_notification
+
+    # Kein JSON → exit 0 → Claude stoppt
+    exit 0
+
+  else
+    # ═══════════════════════════════════════════════════════════════════════
+    # AUTO-ADVANCE → Naechste Phase (deterministisch)
+    # ═══════════════════════════════════════════════════════════════════════
+    NEXT_PHASE=$((PHASE + 1))
+    NEXT_NAME=$(get_phase_name "$NEXT_PHASE")
+    NEXT_AGENT=$(get_phase_agent "$NEXT_PHASE")
+
+    jq --argjson np "$NEXT_PHASE" '.currentPhase = $np | .status = "active"' \
+      "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+
+    log "AUTO-ADVANCE: Phase $PHASE ($PHASE_NAME) → Phase $NEXT_PHASE ($NEXT_NAME)"
+    log_transition "auto_advance" "from=$PHASE to=$NEXT_PHASE"
+
+    # Build prompt for next phase
+    PROMPT=$("${SCRIPT_DIR}/wf_prompt_builder.sh" "$NEXT_PHASE")
+    output_block "Phase $PHASE ($PHASE_NAME) DONE. Auto-Advance zu Phase $NEXT_PHASE ($NEXT_NAME). Starte sofort: Task(bytA:$NEXT_AGENT, '$PROMPT')"
+  fi
+
+else
+  # ═════════════════════════════════════════════════════════════════════════
+  # PHASE NICHT FERTIG — Ralph-Loop: Re-spawn oder Pause
+  # ═════════════════════════════════════════════════════════════════════════
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Phase 8 Spezial: CHANGES_REQUESTED → Deterministischer Rollback
+  # ─────────────────────────────────────────────────────────────────────────
+  if [ "$PHASE" = "8" ]; then
+    REVIEW_STATUS=$(jq -r '.context.reviewFeedback.status // "PENDING"' "$WORKFLOW_FILE" 2>/dev/null)
+
+    if [ "$REVIEW_STATUS" = "CHANGES_REQUESTED" ]; then
+      RETRY=$(increment_retry "$PHASE")
+
+      if [ "$RETRY" -ge "$MAX_RETRIES" ]; then
+        jq '.status = "paused" | .pauseReason = "max_review_iterations"' \
+          "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+        log "MAX REVIEW ITERATIONS ($MAX_RETRIES). Pausing."
+        play_notification
+        exit 0
+      fi
+
+      # Rollback-Ziel DETERMINISTISCH aus Dateipfaden bestimmen (Option C)
+      ROLLBACK_TARGET=6  # Default: Tests
+      FIX_FILES=$(jq -r '.context.reviewFeedback.fixes[]?.file // empty' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+
+      if [ -n "$FIX_FILES" ]; then
+        # Dateipfad-basierte Heuristik
+        if echo "$FIX_FILES" | grep -q '\.sql'; then
+          ROLLBACK_TARGET=3
+        elif echo "$FIX_FILES" | grep -q '\.java'; then
+          ROLLBACK_TARGET=4
+        elif echo "$FIX_FILES" | grep -q -E '\.(ts|html|scss)'; then
+          ROLLBACK_TARGET=5
+        fi
+      else
+        # Fallback: type-basierte Heuristik (wie byt8)
+        if jq -e '.context.reviewFeedback.fixes[]? | select(.type == "database")' "$WORKFLOW_FILE" > /dev/null 2>&1; then
+          ROLLBACK_TARGET=3
+        elif jq -e '.context.reviewFeedback.fixes[]? | select(.type == "backend")' "$WORKFLOW_FILE" > /dev/null 2>&1; then
+          ROLLBACK_TARGET=4
+        elif jq -e '.context.reviewFeedback.fixes[]? | select(.type == "frontend")' "$WORKFLOW_FILE" > /dev/null 2>&1; then
+          ROLLBACK_TARGET=5
+        fi
+      fi
+
+      ROLLBACK_NAME=$(get_phase_name "$ROLLBACK_TARGET")
+      ROLLBACK_AGENT=$(get_phase_agent "$ROLLBACK_TARGET")
+
+      # Fixes-Text lesen
+      FIXES_TEXT=$(jq -r '[.context.reviewFeedback.fixes[]? | "[\(.type // "unknown")] \(.issue // "fix needed")"] | join("; ")' "$WORKFLOW_FILE" 2>/dev/null || echo "Review changes requested")
+
+      # Context ab Rollback-Ziel aufraeumen
+      CLEAR_CMD="del(.context.reviewFeedback) | del(.context.securityAudit) | del(.context.testResults)"
+      [ "$ROLLBACK_TARGET" -le 5 ] && CLEAR_CMD="$CLEAR_CMD | del(.context.frontendImpl)"
+      [ "$ROLLBACK_TARGET" -le 4 ] && CLEAR_CMD="$CLEAR_CMD | del(.context.backendImpl)"
+      [ "$ROLLBACK_TARGET" -le 3 ] && CLEAR_CMD="$CLEAR_CMD | del(.context.migrations)"
+
+      jq "$CLEAR_CMD | .currentPhase = $ROLLBACK_TARGET | .status = \"active\"" \
+        "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+
+      log "REVIEW ROLLBACK: Phase 8 → Phase $ROLLBACK_TARGET ($ROLLBACK_NAME). Retry $RETRY/$MAX_RETRIES"
+      log_transition "review_rollback" "target=$ROLLBACK_TARGET retry=$RETRY"
+
+      PROMPT=$("${SCRIPT_DIR}/wf_prompt_builder.sh" "$ROLLBACK_TARGET" "$FIXES_TEXT")
+      output_block "Phase 8 Code Review: CHANGES_REQUESTED ($RETRY/$MAX_RETRIES). Rollback zu Phase $ROLLBACK_TARGET ($ROLLBACK_NAME). State korrigiert. Starte sofort: Task(bytA:$ROLLBACK_AGENT, '$PROMPT')"
+    fi
+  fi
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # GUARD: Phase muss existieren (Orchestrator hat zu frueh transitioned)
+  # ─────────────────────────────────────────────────────────────────────────
+  PHASE_EXISTS=$(jq -r ".phases[\"$PHASE\"] // \"null\"" "$WORKFLOW_FILE" 2>/dev/null)
+  if [ "$PHASE_EXISTS" = "null" ]; then
+    log "GUARD: Phase $PHASE not in phases[]. Allowing stop for approval."
+    exit 0
+  fi
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # RALPH LOOP: Retry-Counter pruefen, Agent re-spawnen
+  # ─────────────────────────────────────────────────────────────────────────
+  RETRY=$(increment_retry "$PHASE")
+
+  if [ "$RETRY" -ge "$MAX_RETRIES" ]; then
+    jq --arg reason "max_retries_phase_${PHASE}" \
+      '.status = "paused" | .pauseReason = $reason' \
+      "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+    log "MAX RETRIES ($MAX_RETRIES) for Phase $PHASE. Pausing."
+    log_transition "max_retries" "phase=$PHASE retry=$RETRY"
+    play_notification
+    exit 0
+  fi
+
+  log "RALPH-LOOP: Phase $PHASE ($PHASE_NAME), attempt $RETRY/$MAX_RETRIES"
+  log_transition "ralph_loop_retry" "phase=$PHASE retry=$RETRY"
+
+  # Build prompt with retry context
+  PROMPT=$("${SCRIPT_DIR}/wf_prompt_builder.sh" "$PHASE")
+  output_block "RALPH-LOOP Phase $PHASE ($PHASE_NAME) nicht fertig (Versuch $RETRY/$MAX_RETRIES). Starte: Task(bytA:$PHASE_AGENT, '$PROMPT')"
+fi

@@ -1,140 +1,170 @@
 ---
-description: Hybrid Workflow - Boomerang + Ralph Style
-author: byteAgenten
+description: Deterministic full-stack feature orchestration with Boomerang + Ralph-Loop automation.
+author: byteagent - Hans Pickelmann
+hooks:
+  PreToolUse:
+    - matcher: "Edit|Write"
+      hooks:
+        - type: command
+          command: "${CLAUDE_PLUGIN_ROOT}/scripts/block_orchestrator_code_edit.sh"
+    - matcher: "Task"
+      hooks:
+        - type: command
+          command: "${CLAUDE_PLUGIN_ROOT}/scripts/block_orchestrator_explore.sh"
 ---
 
-# bytA Feature (Hybrid v2.0)
+# Full-Stack Feature Development (bytA — Boomerang + Ralph-Loop)
 
-Kombiniert Boomerang (spezialisierte Agents) + Ralph (Loop-Struktur, PLAN.md).
+## Deine Rolle
 
-## Zwei Modi
+Du bist ein **Transport-Layer**. Du fuehrst aus, was die Hooks dir sagen.
 
-### Modus 1: Interaktiv (in Claude Code)
-Du bist jetzt im interaktiven Modus. Folge dem Workflow unten.
+## Regeln
 
-### Modus 2: Autonom (Terminal)
-```bash
-# Externes Script für autonomen Loop
-${CLAUDE_PLUGIN_ROOT}/scripts/loop.sh plan 391   # Planning
-${CLAUDE_PLUGIN_ROOT}/scripts/loop.sh build      # Building Loop
-```
+1. **Du triffst KEINE inhaltlichen Entscheidungen.** Der Stop Hook sagt dir, was zu tun ist.
+2. **Du schreibst KEINEN Code.** Hooks blockieren Edit/Write auf Code-Dateien.
+3. **Du aenderst NICHT den Workflow-State** (ausser bei Startup und Approval Gates per Hook-Anweisung).
+4. **Du liest NUR workflow-state.json.** Keine Spec-Dateien — Agents lesen diese selbst.
+5. **Du explorierst NICHT.** Hook blockiert Task(Explore) und Task(general-purpose).
 
----
+### Hook-Steuerung (Deterministisch)
 
-## INTERAKTIVER WORKFLOW
-
-### PHASE 1: Setup
-
-```bash
-mkdir -p .workflow
-echo "$(date)" > .workflow/bytA-session
-```
-
-### PHASE 2: Planning (APPROVAL)
-
-```
-Task(byt8:architect-planner, "
-Erstelle Implementation Plan für Issue #{ISSUE_NUMBER}.
-
-Schreibe nach .workflow/PLAN.md im Format:
-
-# Implementation Plan: Issue #{NUMBER} - [TITLE]
-
-## Status: IN_PROGRESS
-
-## Tasks
-
-### API Design
-- [ ] Task 1
-- [ ] Task 2
-
-### Database
-- [ ] Task 1
-
-### Backend
-- [ ] Task 1
-
-### Frontend
-- [ ] Task 1
-
-### E2E Tests
-- [ ] Task 1
-
-## Completion Criteria
-- [ ] All tasks checked
-- [ ] All tests pass
-")
-```
-
-**→ ZEIGE dem User den Plan und frage: "Plan OK? Soll ich mit Building starten?"**
-
-### PHASE 3: Building Loop
-
-Für JEDEN offenen Task in `.workflow/PLAN.md`:
-
-1. **Lies PLAN.md**, finde ersten `- [ ]` Task
-2. **Route zum Agent** basierend auf Kategorie:
-
-| Kategorie | Agent | Mode |
-|-----------|-------|------|
-| API Design | byt8:api-architect | APPROVAL |
-| Database | bytA-auto-db-architect | AUTO |
-| Backend | bytA-auto-backend-dev | AUTO |
-| Frontend | bytA-auto-frontend-dev | AUTO |
-| E2E Tests | bytA-auto-test-engineer | AUTO |
-
-3. **Führe Task aus**:
-```
-Task(AGENT, "Implementiere: [TASK_DESCRIPTION]. Update .workflow/PLAN.md wenn fertig.")
-```
-
-4. **Backpressure** - Tests laufen lassen:
-```bash
-# Backend
-cd backend && ./mvnw test -q
-
-# Frontend
-cd frontend && npm test -- --watch=false
-
-# Wenn Tests fehlschlagen → Fix in nächster Iteration
-```
-
-5. **Wenn Tests OK**:
-   - Task in PLAN.md als `[x]` markieren
-   - Commit erstellen
-
-6. **Wiederholen** bis alle Tasks `[x]` sind
-
-### PHASE 4: Review (APPROVAL)
-
-Wenn alle Tasks erledigt:
-
-```
-Task(byt8:security-auditor, "Security Audit. Prüfe alle Änderungen.")
-```
-→ User Approval
-
-```
-Task(byt8:code-reviewer, "Code Review. Prüfe alle Änderungen.")
-```
-→ User Approval
-
-### PHASE 5: Abschluss
-
-```bash
-# Finaler Commit
-git add -A && git commit -m "feat(#ISSUE): [Feature Description]"
-
-# PR erstellen?
-gh pr create --title "..." --body "..."
-```
+- **Stop Hook** (`wf_orchestrator.sh`): Ralph-Loop — verifiziert extern, advanced automatisch, spawnt Agents via `decision:block`.
+- **UserPromptSubmit Hook** (`wf_user_prompt.sh`): Injiziert Approval-Gate-Anweisungen + Option C Rollback.
+- **PreToolUse Hooks**: Blockieren Code-Edits und Exploration durch Orchestrator.
+- **SubagentStop Hook** (`subagent_done.sh`): Erstellt WIP-Commits deterministisch.
 
 ---
 
-## REGELN
+## Phasen
 
-1. **PLAN.md ist die Wahrheit** - Lies es vor jeder Aktion
-2. **1 Task pro Agent-Aufruf** - Nicht mehrere auf einmal
-3. **Tests sind Pflicht** - Kein Commit ohne grüne Tests
-4. **AUTO-Agents laufen durch** - bytA-auto-* haben bypassPermissions
-5. **APPROVAL-Agents fragen** - byt8:* haben default permission
+| Phase | Agent | Typ | Done-Kriterium |
+|-------|-------|-----|----------------|
+| 0 | `bytA:architect-planner` | APPROVAL | Spec-Datei existiert |
+| 1 | `bytA:ui-designer` | APPROVAL | Wireframe HTML existiert |
+| 2 | `bytA:api-architect` | AUTO | API-Spec existiert |
+| 3 | `bytA:postgresql-architect` | AUTO | Migration SQL existiert |
+| 4 | `bytA:spring-boot-developer` | AUTO | backendImpl in State |
+| 5 | `bytA:angular-frontend-developer` | AUTO | frontendImpl in State |
+| 6 | `bytA:test-engineer` | AUTO | allPassed == true |
+| 7 | `bytA:security-auditor` | APPROVAL | Audit-Datei existiert |
+| 8 | `bytA:code-reviewer` | APPROVAL | userApproved == true |
+| 9 | Orchestrator direkt (Push & PR) | APPROVAL | PR URL in State |
+
+---
+
+## Startup
+
+### Schritt 1: Cleanup (PFLICHT!)
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/wf_cleanup.sh
+```
+
+| Exit Code | Bedeutung | Aktion |
+|-----------|-----------|--------|
+| 0 | OK (kein Workflow oder aufgeraeumt) | Weiter mit Schritt 2 |
+| 1 | BLOCKED (aktiver Workflow) | STOPP! User entscheidet |
+
+### Schritt 2: Prüfe ob Workflow existiert
+
+```bash
+cat .workflow/workflow-state.json 2>/dev/null || echo "NEW"
+```
+
+- **Existiert:** Lies `status` und `currentPhase`, handle entsprechend.
+- **Neu:** Initialisiere.
+
+### Initialisierung
+
+```bash
+mkdir -p .workflow/logs .workflow/specs .workflow/recovery
+grep -q "^\.workflow/" .gitignore 2>/dev/null || echo ".workflow/" >> .gitignore
+git fetch --prune
+```
+
+**Frage User:**
+1. "Von welchem Branch starten?" (Default: main/develop)
+2. "Welches Coverage-Ziel?" (50% / 70% / 85% / 95%)
+
+### State erstellen
+
+```bash
+STARTED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+cat > .workflow/workflow-state.json << EOF
+{
+  "workflow": "bytA-feature",
+  "status": "active",
+  "issue": { "number": ISSUE_NUM, "title": "ISSUE_TITLE", "url": "..." },
+  "branch": "feature/issue-ISSUE_NUM-...",
+  "fromBranch": "FROM_BRANCH",
+  "targetCoverage": COVERAGE,
+  "currentPhase": 0,
+  "startedAt": "$STARTED_AT",
+  "phases": {},
+  "context": {},
+  "recovery": {},
+  "stopHookBlockCount": 0
+}
+EOF
+git checkout -b feature/issue-ISSUE_NUM-kurzer-name
+```
+
+Phase 0 starten: `Task(bytA:architect-planner, "Phase 0: Create Technical Specification for Issue #N: Title")`
+
+### Nach Phase 0: APPROVAL GATE
+
+1. Lies die Spec-Datei aus `context.technicalSpec.specFile`
+2. Zeige dem User eine Zusammenfassung
+3. Frage: "Spec OK? Soll ich fortfahren?"
+4. **WARTE auf User** — der Stop-Hook setzt `status = "awaiting_approval"`
+5. ERST nach User-Approval: Naechste Phase starten
+
+---
+
+## Was bei Auto-Advance passiert
+
+Der Stop Hook gibt `decision:block` mit einer `reason`.
+Die `reason` sagt dir exakt welchen Task() du starten sollst.
+**Fuehre ihn aus. Interpretiere NICHTS.**
+
+## Was bei Approval Gates passiert
+
+Der UserPromptSubmit Hook injiziert dir Anweisungen.
+**Befolge sie woertlich. Interpretiere NICHTS.**
+
+## Phase Skipping
+
+Wenn eine Phase uebersprungen wird (z.B. Backend-only, keine DB):
+
+```bash
+jq '
+  .phases["1"] = {"name":"ui-designer","status":"skipped","reason":"Backend-only"}
+  | .context.wireframes = {"skipped":true,"reason":"Backend-only"}
+' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
+```
+
+## Phase 9: Push & PR
+
+_(Status ist bereits `awaiting_approval` aus Phase 8)_
+
+1. User fragen: "PR erstellen? Ziel-Branch?" (Default: `fromBranch`)
+2. Bei Ja:
+   ```bash
+   jq '.status = "active" | .pushApproved = true' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
+   git push -u origin $BRANCH
+   gh pr create --base $INTO_BRANCH --title "feat(#N): Title" --body "$PR_BODY"
+   jq '.status = "completed"' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
+   ```
+
+---
+
+## Escape Commands
+
+| Command | Funktion |
+|---------|----------|
+| `/bytA:wf-status` | Status anzeigen |
+| `/bytA:wf-pause` | Pausieren |
+| `/bytA:wf-resume` | Fortsetzen |
+| `/bytA:wf-retry-reset` | Retry-Counter zuruecksetzen |
+| `/bytA:wf-skip` | Phase ueberspringen (Notfall) |

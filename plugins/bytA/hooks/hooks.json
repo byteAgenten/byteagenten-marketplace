@@ -1,14 +1,48 @@
 {
-  "description": "bytA v1.2 - Hook erzwingt Orchestrator-Start",
-  "version": "1.2.0",
+  "description": "bytA Workflow Engine - Boomerang + Ralph-Loop (v3.0)",
+  "version": "3.0.0",
   "hooks": {
-    "Stop": [
+    "UserPromptSubmit": [
       {
-        "description": "Erzwinge Orchestrator-Start nach Skill-Load",
+        "description": "Approval Gate Context Injection + Loop-Prevention Reset",
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/enforce_orchestrator.sh"
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/wf_user_prompt.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "description": "Guard: Block git push/PR without pushApproved flag",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/guard_git_push.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "description": "Deterministic Orchestrator (Ralph-Loop + External Verify)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/wf_orchestrator.sh"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "description": "Deterministic WIP Commits (no LLM)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/subagent_done.sh"
           }
         ]
       }
