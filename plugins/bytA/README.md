@@ -1,6 +1,6 @@
 # bytA Plugin
 
-**Version 3.1.0** | Deterministic Orchestration: Boomerang + Ralph-Loop
+**Version 3.2.0** | Deterministic Orchestration: Boomerang + Ralph-Loop
 
 Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 10-Phasen-Workflow.
 
@@ -97,7 +97,9 @@ Bei Phase 7/8 kann der User aendern lassen:
 
 | Hook | Script | Funktion |
 |------|--------|----------|
+| **PreToolUse/Bash** | `once: true` (inline) | Session-Marker automatisch setzen |
 | **PreToolUse/Edit\|Write** | `block_orchestrator_code_edit.sh` | Orchestrator darf keinen Code aendern |
+| **PreToolUse/Read** | `block_orchestrator_code_read.sh` | Orchestrator darf keinen Code lesen |
 | **PreToolUse/Task** | `block_orchestrator_explore.sh` | Orchestrator darf nicht explorieren |
 
 ## Agents
@@ -183,6 +185,7 @@ bytA/
 │   ├── wf_cleanup.sh                  # Startup: Workflow aufraumen
 │   ├── guard_git_push.sh              # PreToolUse: Push Guard
 │   ├── block_orchestrator_code_edit.sh # PreToolUse: Code-Edit Blocker
+│   ├── block_orchestrator_code_read.sh # PreToolUse: Code-Read Blocker
 │   ├── block_orchestrator_explore.sh  # PreToolUse: Explore Blocker
 │   └── subagent_done.sh              # SubagentStop: WIP Commits
 ├── skills/
@@ -201,6 +204,38 @@ bytA/
 | Retry-Logik | Stop Hook + Block Counter | Ralph-Loop (explicit retry) |
 | Rollback | LLM fuehrt jq-Befehle aus | Shell-Script (deterministisch) |
 | SKILL.md | ~270 Zeilen Orchestrator-Logik | ~170 Zeilen (Transport-Layer) |
+
+## Troubleshooting
+
+### Plugin pruefen
+
+```bash
+# 1. Cache leeren
+rm -rf ~/.claude/plugins/cache/byteagenten-marketplace/
+
+# 2. Claude starten, Hooks pruefen
+claude
+/hooks   # bytA-Hooks muessen sichtbar sein!
+```
+
+### Workflow laeuft nicht (Claude ignoriert SKILL.md)
+
+Moegliche Ursachen:
+1. **Plugin nicht installiert** → `/hooks` zeigt keine bytA-Hooks → Plugin neu installieren
+2. **Plugin-Cache veraltet** → Cache leeren (siehe oben)
+3. **Skill-Hooks laden nicht** → PreToolUse auf Edit muss `.html` blockieren
+
+### Hooks pruefen
+
+Wenn `/bytA:feature` ausgefuehrt wird, muessen diese Hooks aktiv sein:
+- Stop Hook: `wf_orchestrator.sh` (plugin-level)
+- PreToolUse/Bash: Session-Marker `once:true` (skill-level)
+- PreToolUse/Edit|Write: `block_orchestrator_code_edit.sh` (skill-level)
+- PreToolUse/Read: `block_orchestrator_code_read.sh` (skill-level)
+- PreToolUse/Task: `block_orchestrator_explore.sh` (skill-level)
+
+Verbose-Modus: `Ctrl+O` in Claude Code zeigt Hook-Ausgaben.
+Debug-Modus: `claude --debug` zeigt detaillierte Hook-Ausfuehrung.
 
 ## Quellen
 

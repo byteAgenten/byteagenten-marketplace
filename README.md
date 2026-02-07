@@ -7,7 +7,7 @@ Private Claude Code Plugins for byteAgenten team members.
 | Plugin | Description | Version |
 |--------|-------------|---------|
 | [byt8](./plugins/byt8) | Full-stack development toolkit for Angular 21 + Spring Boot 4 | 7.5.6 |
-| [bytA](./plugins/bytA) | Deterministic full-stack workflow (Boomerang + Ralph-Loop) | 3.1.0 |
+| [bytA](./plugins/bytA) | Deterministic full-stack workflow (Boomerang + Ralph-Loop) | 3.2.0 |
 
 ## Prerequisites
 
