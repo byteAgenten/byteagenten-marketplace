@@ -156,7 +156,20 @@ mark_phase_completed() {
 # ═══════════════════════════════════════════════════════════════════════════
 # PRÜFUNG: Workflow vorhanden?
 # ═══════════════════════════════════════════════════════════════════════════
+
+# Skill-Session-Marker: Wird vom SKILL.md Startup gesetzt.
+# Wenn Marker existiert aber kein Workflow → Startup wurde nicht abgeschlossen.
+SESSION_MARKER="${WORKFLOW_DIR}/bytA-session"
+
 if [ ! -f "$WORKFLOW_FILE" ]; then
+  if [ -f "$SESSION_MARKER" ]; then
+    # Skill ist aktiv, aber Workflow nicht initialisiert → BLOCK
+    # Claude MUSS den Startup-Prozess abschliessen
+    jq -n --arg r "STARTUP UNVOLLSTAENDIG: Skill aktiv aber kein workflow-state.json gefunden. Fuehre den SKILL.md Startup-Prozess aus: 1. wf_cleanup.sh 2. mkdir -p .workflow/logs .workflow/specs .workflow/recovery 3. User nach Issue/Branch fragen 4. workflow-state.json erstellen 5. Phase 0 starten mit Task(bytA:architect-planner, ...)" \
+      '{"decision":"block","reason":$r}'
+    exit 0
+  fi
+  # Kein Skill aktiv, kein Workflow → nichts zu tun
   exit 0
 fi
 
@@ -200,6 +213,8 @@ if [ "$STATUS" = "completed" ]; then
     jq --arg ca "$COMPLETED_AT" '.completedAt = $ca' \
       "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
     log "Workflow completed: #${ISSUE_NUM} - ${ISSUE_TITLE}"
+    # Session-Marker entfernen (Skill nicht mehr aktiv)
+    rm -f "${WORKFLOW_DIR}/bytA-session"
     play_completion
   fi
   exit 0

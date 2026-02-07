@@ -55,6 +55,14 @@ Du bist ein **Transport-Layer**. Du fuehrst aus, was die Hooks dir sagen.
 
 ## Startup
 
+### Schritt 0: Session-Marker setzen (ALLERERSTER Befehl!)
+
+```bash
+mkdir -p .workflow && echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" > .workflow/bytA-session
+```
+
+**Warum?** Der Stop Hook erkennt daran, dass der Skill aktiv ist. Ohne Marker sind ALLE Hooks inert — der Ralph-Loop springt nie an. Bei fehlendem workflow-state.json erzwingt der Stop Hook dann den Startup.
+
 ### Schritt 1: Cleanup (PFLICHT!)
 
 ```bash
