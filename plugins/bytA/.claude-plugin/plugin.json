@@ -1,9 +1,9 @@
 {
   "name": "bytA",
-  "version": "2.0.0",
-  "description": "Hybrid workflow combining Boomerang (specialized agents) + Ralph (loop structure, PLAN.md, backpressure).",
+  "version": "3.1.0",
+  "description": "Deterministic full-stack development workflow for Angular 21 + Spring Boot 4. Boomerang (agent isolation) + Ralph-Loop (external verification).",
   "author": {
     "name": "byteAgenten"
   },
-  "keywords": ["angular", "spring-boot", "fullstack", "workflow", "boomerang", "ralph", "hybrid", "loop"]
+  "keywords": ["angular", "spring-boot", "fullstack", "workflow", "boomerang", "ralph-loop", "deterministic", "orchestrator"]
 }

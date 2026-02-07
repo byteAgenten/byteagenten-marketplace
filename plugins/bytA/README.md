@@ -1,179 +1,210 @@
 # bytA Plugin
 
-**Version 2.0.0** | Hybrid: Boomerang + Ralph
+**Version 3.1.0** | Deterministic Orchestration: Boomerang + Ralph-Loop
 
-## Philosophie
+Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 10-Phasen-Workflow.
 
-Kombiniert das Beste aus zwei Welten:
+## Architektur
 
-| Von Ralph | Von Boomerang |
-|-----------|---------------|
-| Loop-Struktur | Spezialisierte Agents |
-| PLAN.md als State | permissionMode |
-| Tests als Backpressure | Domänenwissen |
-| Fresh Context pro Iteration | Agent-Routing |
-| Git = Gedächtnis | APPROVAL/AUTO Modi |
+Der Orchestrator ist ein **Bash-Script**, kein LLM. Claude dient nur als Transport-Layer fuer Agent-Aufrufe.
 
-## Der Hybrid-Flow
+| Prinzip | Bedeutung |
+|---------|-----------|
+| **Ralph-Loop** | `while !done; do spawn_agent; verify; done` — Externe Verifikation |
+| **Boomerang** | Vollstaendige Kontext-Isolation pro Agent — kein Context Rot |
+| **Deterministisch** | Shell-Scripts steuern, LLM fuehrt aus |
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│  PHASE 1: PLANNING                                              │
-│  ────────────────────                                           │
-│  Task(byt8:architect-planner) → PLAN.md                         │
-│  USER APPROVAL ✋                                                │
-│                                                                 │
-│  PHASE 2: BUILDING LOOP                                         │
-│  ────────────────────────                                       │
-│  while tasks in PLAN.md:                                        │
-│      task = next_open_task(PLAN.md)                             │
-│      agent = route(task.category)    # Spezialisierter Agent    │
-│      Task(agent, task)               # bypassPermissions=AUTO   │
-│      run_tests()                     # Backpressure!            │
-│      mark_done(task)                                            │
-│      git_commit()                                               │
-│                                                                 │
-│  PHASE 3: REVIEW                                                │
-│  ────────────────────                                           │
-│  Task(byt8:security-auditor) → USER APPROVAL ✋                  │
-│  Task(byt8:code-reviewer) → USER APPROVAL ✋                     │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                                                          │
+│  Stop Hook (wf_orchestrator.sh)                          │
+│  ┌────────────────────────┐                              │
+│  │  1. verify_done()      │  ← Shell prueft Dateien/    │
+│  │     (wf_verify.sh)     │    State (kein LLM!)        │
+│  │                        │                              │
+│  │  2. done? → advance    │  ← AUTO: naechste Phase     │
+│  │           → approval   │  ← APPROVAL: User fragen    │
+│  │                        │                              │
+│  │  3. !done? → re-spawn  │  ← Ralph-Loop retry         │
+│  │     (max 3 attempts)   │    (frischer Agent-Context)  │
+│  └────────────────────────┘                              │
+│                                                          │
+│  Agent-Dispatch via decision:block                       │
+│  → Claude MUSS Task(bytA:agent) ausfuehren              │
+│  → Agent laeuft isoliert (Boomerang)                     │
+│  → Orchestrator prueft extern (Ralph)                    │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
 ```
 
-## Zwei Modi
+## Workflow
 
-### Interaktiv (in Claude Code)
 ```
 /bytA:feature #391
 ```
-Claude führt den Workflow Schritt für Schritt aus.
 
-### Autonom (Terminal)
-```bash
-# Planning
-./plugins/bytA/scripts/loop.sh plan 391
+### Phasen
 
-# Building Loop (max 50 Iterationen)
-./plugins/bytA/scripts/loop.sh build
+| Phase | Agent | Typ | Done-Kriterium |
+|-------|-------|-----|----------------|
+| 0 | architect-planner | APPROVAL | Spec-Datei existiert |
+| 1 | ui-designer | APPROVAL | Wireframe HTML existiert |
+| 2 | api-architect | AUTO | API-Spec existiert |
+| 3 | postgresql-architect | AUTO | Migration SQL existiert |
+| 4 | spring-boot-developer | AUTO | Backend-Report MD existiert |
+| 5 | angular-frontend-developer | AUTO | Frontend-Report MD existiert |
+| 6 | test-engineer | AUTO | allPassed == true |
+| 7 | security-auditor | APPROVAL | Audit-Datei existiert |
+| 8 | code-reviewer | APPROVAL | userApproved == true |
+| 9 | Push & PR | APPROVAL | PR URL in State |
 
-# Status prüfen
-./plugins/bytA/scripts/loop.sh status
+**APPROVAL** = User muss approven (Workflow pausiert)
+**AUTO** = Externe Verifikation, dann naechste Phase automatisch
+
+### Ablauf-Diagramm
+
+```
+Phase 0 (Tech Spec) ──[User Approval]──→ Phase 1 (Wireframes)
+                                              │
+                                        [User Approval]
+                                              │
+                                              ▼
+Phase 2 (API) → Phase 3 (DB) → Phase 4 (Backend) → Phase 5 (Frontend) → Phase 6 (Tests)
+   AUTO           AUTO           AUTO                  AUTO                  AUTO
+                                              │
+                                              ▼
+Phase 7 (Security) ──[User Approval]──→ Phase 8 (Review) ──[User Approval]──→ Phase 9 (PR)
 ```
 
-## PLAN.md Format
+### Rollback (Option C: Heuristik + User-Wahl)
 
-```markdown
-# Implementation Plan: Issue #391 - Feature XYZ
+Bei Phase 7/8 kann der User aendern lassen:
+1. Shell-Script schlaegt Rollback-Ziel vor (basierend auf betroffenen Dateipfaden)
+2. User bestaetigt oder waehlt anderes Ziel
+3. State wird deterministisch bereinigt (alle downstream Phasen geloescht)
+4. Auto-Advance laeuft automatisch bis zum naechsten Approval Gate
 
-## Status: IN_PROGRESS
+## Hook-Architektur
 
-## Tasks
+| Hook | Script | Funktion |
+|------|--------|----------|
+| **Stop** | `wf_orchestrator.sh` | Ralph-Loop: Verify → Advance/Retry → Agent-Dispatch |
+| **UserPromptSubmit** | `wf_user_prompt.sh` | Approval Gate Context + Rollback-Optionen |
+| **PreToolUse/Bash** | `guard_git_push.sh` | Blockiert Push ohne pushApproved |
+| **SubagentStop** | `subagent_done.sh` | Deterministische WIP-Commits |
 
-### API Design
-- [x] Define REST endpoints
-- [x] Create DTOs
+**Skill-Level Hooks (in SKILL.md Frontmatter):**
 
-### Database
-- [x] Create migration V007__add_table.sql
+| Hook | Script | Funktion |
+|------|--------|----------|
+| **PreToolUse/Edit\|Write** | `block_orchestrator_code_edit.sh` | Orchestrator darf keinen Code aendern |
+| **PreToolUse/Task** | `block_orchestrator_explore.sh` | Orchestrator darf nicht explorieren |
 
-### Backend
-- [ ] Implement Controller        ← Nächster Task
-- [ ] Implement Service
-- [ ] Write unit tests
+## Agents
 
-### Frontend
-- [ ] Create Component
-- [ ] Add routing
+| Agent | Phase | Aufgabe |
+|-------|-------|---------|
+| architect-planner | 0 | Technical Specification, 5x Warum, Architektur |
+| ui-designer | 1 | HTML Wireframes mit Angular Material + data-testid |
+| api-architect | 2 | REST API Design (Markdown-Sketch, kein YAML) |
+| postgresql-architect | 3 | Flyway SQL Migrations, Schema, Indexes |
+| spring-boot-developer | 4 | Spring Boot 4 Backend (Controller, Service, Tests) |
+| angular-frontend-developer | 5 | Angular 21 Frontend (Signals, Standalone Components) |
+| test-engineer | 6 | E2E + Integration Tests (Playwright, JUnit, Jasmine) |
+| security-auditor | 7 | OWASP Top 10 Security Audit |
+| code-reviewer | 8 | Code Quality Gate (SOLID, Coverage, Architecture) |
+| architect-reviewer | - | Eskalation bei Architektur-Concerns |
 
-### E2E Tests
-- [ ] Test happy path
+## Externe Verifikation (kein LLM!)
 
-## Completion Criteria
-- [ ] All tasks checked
-- [ ] All tests pass
+Done-Kriterien werden von `wf_verify.sh` extern geprueft:
+
+| Phase | Pruefung | Methode |
+|-------|----------|---------|
+| 0 | Spec-Datei | `ls .workflow/specs/*-ph00-*.md` |
+| 1 | Wireframe | `ls wireframes/*.html` |
+| 2 | API-Spec | `ls .workflow/specs/*-ph02-*.md` |
+| 3 | Migration | `ls backend/.../V*.sql` |
+| 4 | Backend-Report | `ls .workflow/specs/*-ph04-*.md` |
+| 5 | Frontend-Report | `ls .workflow/specs/*-ph05-*.md` |
+| 6 | Tests bestanden | `jq .context.testResults.allPassed` |
+| 7 | Audit-Datei | `ls .workflow/specs/*-ph07-*.md` |
+| 8 | User approved | `jq .context.reviewFeedback.userApproved` |
+| 9 | PR URL | `jq .phases["9"].prUrl` |
+
+### Agent-Reports (MD-Dateien)
+
+Jeder Agent schreibt eine MD-Datei in `.workflow/specs/` mit seinem vollstaendigen Report.
+Downstream-Agents lesen diese Dateien selbst via Read-Tool (Boomerang: isolierter Context).
+Der Orchestrator sieht nur den **Dateipfad** (wenige Bytes) — kein Context-Wachstum.
+
 ```
-
-## Agent-Routing
-
-| Task-Kategorie | Agent | Mode |
-|----------------|-------|------|
-| Planning | byt8:architect-planner | APPROVAL |
-| API Design | byt8:api-architect | APPROVAL |
-| Database | bytA-auto-db-architect | AUTO |
-| Backend | bytA-auto-backend-dev | AUTO |
-| Frontend | bytA-auto-frontend-dev | AUTO |
-| E2E Tests | bytA-auto-test-engineer | AUTO |
-| Security | byt8:security-auditor | APPROVAL |
-| Review | byt8:code-reviewer | APPROVAL |
-
-**AUTO** = `permissionMode: bypassPermissions` → läuft ohne User-Frage
-**APPROVAL** = `permissionMode: default` → User wird gefragt
-
-## Backpressure
-
-Tests erzwingen Korrektheit - deterministisch, kann nicht umgangen werden:
-
-```bash
-# Backend
-cd backend && ./mvnw test
-
-# Frontend
-cd frontend && npm test
-
-# E2E
-cd frontend && npm run e2e
+.workflow/specs/
+├── issue-42-ph00-architect-planner.md     ← Technical Spec
+├── issue-42-ph02-api-architect.md         ← API Design
+├── issue-42-ph03-postgresql-architect.md   ← Database Design
+├── issue-42-ph04-spring-boot-developer.md  ← Backend Report
+├── issue-42-ph05-angular-frontend-developer.md ← Frontend Report
+├── issue-42-ph06-test-engineer.md         ← Test Report
+├── issue-42-ph07-security-auditor.md      ← Security Audit
+└── issue-42-ph08-code-reviewer.md         ← Code Review
 ```
-
-Wenn Tests fehlschlagen → Loop macht nächste Iteration mit Fix.
-
-## Hook-Enforcement
-
-Der Stop-Hook erzwingt den Workflow:
-
-1. Prüft ob `.workflow/bytA-session` existiert (Skill aktiv)
-2. Prüft ob `.workflow/PLAN.md` existiert (Planning done)
-3. Prüft ob offene Tasks existieren (Building nicht fertig)
-
-→ `decision:block` erzwingt nächsten Schritt
 
 ## Struktur
 
 ```
 bytA/
 ├── .claude-plugin/plugin.json
-├── agents/
-│   ├── orchestrator.md           # (Legacy, nicht mehr primär)
-│   ├── auto-api-architect.md     # AUTO
-│   ├── auto-db-architect.md      # AUTO
-│   ├── auto-backend-dev.md       # AUTO
-│   ├── auto-frontend-dev.md      # AUTO
-│   └── auto-test-engineer.md     # AUTO
-├── commands/feature.md
+├── .mcp.json                          # MCP Server (context7, angular-cli)
+├── agents/                            # 10 spezialisierte Agents
+│   ├── architect-planner.md
+│   ├── ui-designer.md
+│   ├── api-architect.md
+│   ├── postgresql-architect.md
+│   ├── spring-boot-developer.md
+│   ├── angular-frontend-developer.md
+│   ├── test-engineer.md
+│   ├── security-auditor.md
+│   ├── code-reviewer.md
+│   └── architect-reviewer.md
+├── commands/
+│   └── feature.md                     # /bytA:feature Entry Point
+├── config/
+│   └── phases.conf                    # Deklarative Phase-Definition
 ├── docs/
-│   └── HYBRID-CONCEPT.md         # Detaillierte Dokumentation
-├── hooks/hooks.json
+│   └── REFACTORING-PROPOSAL-BOOMERANG-RALPH.md
+├── hooks/
+│   └── hooks.json                     # 4 Plugin-Level Hooks
 ├── scripts/
-│   ├── enforce_orchestrator.sh   # Hook-Script
-│   └── loop.sh                   # Autonomer Loop
-├── skills/feature/SKILL.md
+│   ├── wf_orchestrator.sh             # Stop Hook: Ralph-Loop Orchestrator
+│   ├── wf_verify.sh                   # Externe Done-Verifikation
+│   ├── wf_prompt_builder.sh           # Deterministische Agent-Prompts
+│   ├── wf_user_prompt.sh              # UserPromptSubmit: Approval Gates
+│   ├── wf_cleanup.sh                  # Startup: Workflow aufraumen
+│   ├── guard_git_push.sh              # PreToolUse: Push Guard
+│   ├── block_orchestrator_code_edit.sh # PreToolUse: Code-Edit Blocker
+│   ├── block_orchestrator_explore.sh  # PreToolUse: Explore Blocker
+│   └── subagent_done.sh              # SubagentStop: WIP Commits
+├── skills/
+│   └── feature/
+│       └── SKILL.md                   # Radikal vereinfacht (~170 Zeilen)
 └── README.md
 ```
 
-## Warum Hybrid?
+## Unterschied zu byt8
 
-| Problem | Ralph-Lösung | Boomerang-Lösung | Hybrid |
-|---------|--------------|------------------|--------|
-| Claude ignoriert Prompts | Tests als Backpressure | - | ✓ Tests |
-| Generalist-Agent | - | Spezialisierte Agents | ✓ Routing |
-| Context-Rot | Fresh Context | - | ✓ Loop |
-| State verloren | PLAN.md auf Disk | - | ✓ PLAN.md |
-| AUTO/APPROVAL | - | permissionMode | ✓ Modes |
+| Aspekt | byt8 | bytA |
+|--------|------|------|
+| Orchestrator | Claude (LLM) mit SKILL.md | Bash-Script (wf_orchestrator.sh) |
+| Done-Pruefung | LLM interpretiert Agent-Output | Shell prueft Dateien/Exit-Codes |
+| Context-Wachstum | Monoton steigend | Konstant (~2.5 KB) |
+| Retry-Logik | Stop Hook + Block Counter | Ralph-Loop (explicit retry) |
+| Rollback | LLM fuehrt jq-Befehle aus | Shell-Script (deterministisch) |
+| SKILL.md | ~270 Zeilen Orchestrator-Logik | ~170 Zeilen (Transport-Layer) |
 
 ## Quellen
 
-- [Ralph Playbook](https://claytonfarr.github.io/ralph-playbook/)
-- [Everything is a Ralph Loop](https://ghuntley.com/loop/)
-- [Roo Code Boomerang](https://docs.roocode.com/features/boomerang-tasks)
-- [Claude Code Subagents](https://code.claude.com/docs/en/sub-agents)
+- [Boomerang Tasks — Roo Code](https://docs.roocode.com/features/boomerang-tasks)
+- [Ralph Loop — Geoffrey Huntley](https://ghuntley.com/loop/)
+- [Claude Code Hooks](https://code.claude.com/docs/en/hooks)
+- [Claude Code Sub-Agents](https://code.claude.com/docs/en/sub-agents)
