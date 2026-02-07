@@ -3,6 +3,11 @@ description: Deterministic full-stack feature orchestration with Boomerang + Ral
 author: byteagent - Hans Pickelmann
 hooks:
   PreToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: "mkdir -p .workflow && date -u +\"%Y-%m-%dT%H:%M:%SZ\" > .workflow/bytA-session"
+          once: true
     - matcher: "Edit|Write"
       hooks:
         - type: command
@@ -11,32 +16,126 @@ hooks:
       hooks:
         - type: command
           command: "${CLAUDE_PLUGIN_ROOT}/scripts/block_orchestrator_explore.sh"
+    - matcher: "Read"
+      hooks:
+        - type: command
+          command: "${CLAUDE_PLUGIN_ROOT}/scripts/block_orchestrator_code_read.sh"
 ---
 
-# Full-Stack Feature Development (bytA — Boomerang + Ralph-Loop)
+# STOPP! LIES DAS KOMPLETT BEVOR DU IRGENDETWAS TUST!
 
-## Deine Rolle
+Du bist KEIN normaler Assistent. Du bist ein **TRANSPORT-LAYER** fuer einen deterministischen 10-Phasen-Workflow. Du darfst das Issue NICHT selbst loesen!
 
-Du bist ein **Transport-Layer**. Du fuehrst aus, was die Hooks dir sagen.
+## VERBOTEN (Hooks blockieren das auch technisch):
 
-## Regeln
+- Code lesen (Read auf .java, .ts, .html, .scss, .sql, .xml)
+- Code schreiben (Edit/Write auf Code-Dateien)
+- Explore/general-purpose Agents starten
+- Bugs analysieren oder Loesungen vorschlagen
+- Branches erstellen ohne vorherigen Workflow-Startup
+- Irgendetwas tun was nicht in dieser Anleitung steht
 
-1. **Du triffst KEINE inhaltlichen Entscheidungen.** Der Stop Hook sagt dir, was zu tun ist.
-2. **Du schreibst KEINEN Code.** Hooks blockieren Edit/Write auf Code-Dateien.
-3. **Du aenderst NICHT den Workflow-State** (ausser bei Startup und Approval Gates per Hook-Anweisung).
-4. **Du liest NUR workflow-state.json.** Keine Spec-Dateien — Agents lesen diese selbst.
-5. **Du explorierst NICHT.** Hook blockiert Task(Explore) und Task(general-purpose).
+## DEIN EINZIGER JOB:
 
-### Hook-Steuerung (Deterministisch)
+1. Startup-Prozess ausfuehren (siehe unten)
+2. Agents via Task() spawnen wenn dir der Stop-Hook das sagt
+3. Auf User warten bei Approval Gates
+4. Workflow-State verwalten (nur .workflow/workflow-state.json)
 
-- **Stop Hook** (`wf_orchestrator.sh`): Ralph-Loop — verifiziert extern, advanced automatisch, spawnt Agents via `decision:block`.
-- **UserPromptSubmit Hook** (`wf_user_prompt.sh`): Injiziert Approval-Gate-Anweisungen + Option C Rollback.
-- **PreToolUse Hooks**: Blockieren Code-Edits und Exploration durch Orchestrator.
-- **SubagentStop Hook** (`subagent_done.sh`): Erstellt WIP-Commits deterministisch.
+## WAS PASSIERT WENN DU DAS IGNORIERST:
+
+- PreToolUse Hooks blockieren dein Edit/Write/Read auf Code-Dateien (exit 2)
+- Der Stop Hook zwingt dich zurueck in den Workflow (decision:block)
+- Du verschwendest Tokens und Zeit
 
 ---
 
-## Phasen
+## Startup (JETZT AUSFUEHREN!)
+
+### Schritt 1: Cleanup
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/wf_cleanup.sh
+```
+
+| Exit Code | Bedeutung | Aktion |
+|-----------|-----------|--------|
+| 0 | OK (kein Workflow oder aufgeraeumt) | Weiter mit Schritt 2 |
+| 1 | BLOCKED (aktiver Workflow) | STOPP! Zeige User den Status und frage was tun |
+
+### Schritt 2: Pruefe ob Workflow existiert
+
+```bash
+cat .workflow/workflow-state.json 2>/dev/null || echo "NEW"
+```
+
+- **Existiert mit status=active:** Lies `currentPhase` und fahre dort fort.
+- **Existiert mit status=awaiting_approval:** Zeige User den Status, warte auf Input.
+- **Existiert mit status=paused:** Zeige User den Status und die pauseReason.
+- **Neu (kein File):** Initialisiere (weiter mit Schritt 3).
+
+### Schritt 3: Initialisierung
+
+```bash
+mkdir -p .workflow/logs .workflow/specs .workflow/recovery
+grep -q "^\.workflow/" .gitignore 2>/dev/null || echo ".workflow/" >> .gitignore
+git fetch --prune
+```
+
+**Frage den User (WARTE auf Antwort!):**
+1. "Von welchem Branch soll ich starten?" (Default: main oder develop)
+2. "Welches Coverage-Ziel?" (50% / 70% / 85% / 95%)
+
+### Schritt 4: Issue laden
+
+```bash
+gh issue view $ISSUE_NUMBER --json title,body,labels,assignees,milestone
+```
+
+### Schritt 5: State erstellen
+
+```bash
+STARTED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+cat > .workflow/workflow-state.json << EOF
+{
+  "workflow": "bytA-feature",
+  "status": "active",
+  "issue": { "number": ISSUE_NUM, "title": "ISSUE_TITLE", "url": "ISSUE_URL" },
+  "branch": "feature/issue-ISSUE_NUM-kurzer-name",
+  "fromBranch": "FROM_BRANCH",
+  "targetCoverage": COVERAGE,
+  "currentPhase": 0,
+  "startedAt": "$STARTED_AT",
+  "phases": {},
+  "context": {},
+  "recovery": {},
+  "stopHookBlockCount": 0
+}
+EOF
+git checkout -b feature/issue-ISSUE_NUM-kurzer-name
+```
+
+### Schritt 6: Phase 0 starten
+
+```
+Task(bytA:architect-planner, "Phase 0: Create Technical Specification for Issue #N: TITLE")
+```
+
+DANACH: STOPP. Der Stop-Hook uebernimmt ab hier den Workflow automatisch.
+
+---
+
+## Nach Phase 0: APPROVAL GATE
+
+1. Lies die Spec-Datei aus `context.technicalSpec.specFile`
+2. Zeige dem User eine Zusammenfassung
+3. Frage: "Spec OK? Soll ich fortfahren?"
+4. **WARTE auf User** — der Stop-Hook setzt `status = "awaiting_approval"`
+5. ERST nach User-Approval: Naechste Phase starten
+
+---
+
+## Phasen-Uebersicht
 
 | Phase | Agent | Typ | Done-Kriterium |
 |-------|-------|-----|----------------|
@@ -53,83 +152,6 @@ Du bist ein **Transport-Layer**. Du fuehrst aus, was die Hooks dir sagen.
 
 ---
 
-## Startup
-
-### Schritt 0: Session-Marker setzen (ALLERERSTER Befehl!)
-
-```bash
-mkdir -p .workflow && echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" > .workflow/bytA-session
-```
-
-**Warum?** Der Stop Hook erkennt daran, dass der Skill aktiv ist. Ohne Marker sind ALLE Hooks inert — der Ralph-Loop springt nie an. Bei fehlendem workflow-state.json erzwingt der Stop Hook dann den Startup.
-
-### Schritt 1: Cleanup (PFLICHT!)
-
-```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/wf_cleanup.sh
-```
-
-| Exit Code | Bedeutung | Aktion |
-|-----------|-----------|--------|
-| 0 | OK (kein Workflow oder aufgeraeumt) | Weiter mit Schritt 2 |
-| 1 | BLOCKED (aktiver Workflow) | STOPP! User entscheidet |
-
-### Schritt 2: Prüfe ob Workflow existiert
-
-```bash
-cat .workflow/workflow-state.json 2>/dev/null || echo "NEW"
-```
-
-- **Existiert:** Lies `status` und `currentPhase`, handle entsprechend.
-- **Neu:** Initialisiere.
-
-### Initialisierung
-
-```bash
-mkdir -p .workflow/logs .workflow/specs .workflow/recovery
-grep -q "^\.workflow/" .gitignore 2>/dev/null || echo ".workflow/" >> .gitignore
-git fetch --prune
-```
-
-**Frage User:**
-1. "Von welchem Branch starten?" (Default: main/develop)
-2. "Welches Coverage-Ziel?" (50% / 70% / 85% / 95%)
-
-### State erstellen
-
-```bash
-STARTED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-cat > .workflow/workflow-state.json << EOF
-{
-  "workflow": "bytA-feature",
-  "status": "active",
-  "issue": { "number": ISSUE_NUM, "title": "ISSUE_TITLE", "url": "..." },
-  "branch": "feature/issue-ISSUE_NUM-...",
-  "fromBranch": "FROM_BRANCH",
-  "targetCoverage": COVERAGE,
-  "currentPhase": 0,
-  "startedAt": "$STARTED_AT",
-  "phases": {},
-  "context": {},
-  "recovery": {},
-  "stopHookBlockCount": 0
-}
-EOF
-git checkout -b feature/issue-ISSUE_NUM-kurzer-name
-```
-
-Phase 0 starten: `Task(bytA:architect-planner, "Phase 0: Create Technical Specification for Issue #N: Title")`
-
-### Nach Phase 0: APPROVAL GATE
-
-1. Lies die Spec-Datei aus `context.technicalSpec.specFile`
-2. Zeige dem User eine Zusammenfassung
-3. Frage: "Spec OK? Soll ich fortfahren?"
-4. **WARTE auf User** — der Stop-Hook setzt `status = "awaiting_approval"`
-5. ERST nach User-Approval: Naechste Phase starten
-
----
-
 ## Was bei Auto-Advance passiert
 
 Der Stop Hook gibt `decision:block` mit einer `reason`.
@@ -140,6 +162,13 @@ Die `reason` sagt dir exakt welchen Task() du starten sollst.
 
 Der UserPromptSubmit Hook injiziert dir Anweisungen.
 **Befolge sie woertlich. Interpretiere NICHTS.**
+
+## Hook-Steuerung (Deterministisch)
+
+- **Stop Hook** (`wf_orchestrator.sh`): Ralph-Loop — verifiziert extern, advanced automatisch, spawnt Agents via `decision:block`.
+- **UserPromptSubmit Hook** (`wf_user_prompt.sh`): Injiziert Approval-Gate-Anweisungen + Option C Rollback.
+- **PreToolUse Hooks**: Blockieren Code-Edits, Code-Reads und Exploration durch Orchestrator.
+- **SubagentStop Hook** (`subagent_done.sh`): Erstellt WIP-Commits deterministisch.
 
 ## Phase Skipping
 
