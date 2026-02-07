@@ -223,3 +223,19 @@ EOF
     echo "Phase $PHASE: Unknown phase for Issue #$ISSUE_NUM"
     ;;
 esac
+
+# ═══════════════════════════════════════════════════════════════════════════
+# RETURN PROTOCOL (an JEDEN Prompt angehängt)
+# ═══════════════════════════════════════════════════════════════════════════
+# Der Orchestrator verifiziert extern via wf_verify.sh (Dateien, State).
+# Er liest deine Summary NICHT. Minimaler Return = weniger Context-Verbrauch.
+# ═══════════════════════════════════════════════════════════════════════════
+cat << 'RETURN_EOF'
+
+## RETURN PROTOCOL
+Your last message to the orchestrator MUST be exactly one line:
+  Done.
+All your output goes to disk (spec files, workflow-state.json, code).
+The orchestrator does NOT read your summary — it verifies externally.
+Do NOT include a detailed summary. Just: Done.
+RETURN_EOF
