@@ -484,12 +484,25 @@ if "${SCRIPT_DIR}/wf_verify.sh" "$PHASE"; then
     jq '.status = "awaiting_approval" | .awaitingApprovalFor = .currentPhase' \
       "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
 
-    log "APPROVAL GATE: Phase $PHASE ($PHASE_NAME) done."
+    log "APPROVAL GATE: Phase $PHASE ($PHASE_NAME) done. awaiting_approval gesetzt."
     log_transition "approval_gate" "phase=$PHASE"
     play_notification
 
-    # Kein JSON → exit 0 → Claude stoppt
-    exit 0
+    # Ergebnis-Datei fuer den Approval-Kontext finden
+    PHASE_PAD=$(printf "%02d" "$PHASE")
+    SPEC_FILE=$(ls .workflow/specs/issue-*-ph${PHASE_PAD}-*.md 2>/dev/null | head -1 || echo "")
+    # Phase 1 hat Wireframes statt Specs
+    if [ -z "$SPEC_FILE" ] && [ "$PHASE" = "1" ]; then
+      SPEC_FILE=$(ls wireframes/issue-*.html 2>/dev/null | head -1 || echo "")
+    fi
+
+    APPROVAL_MSG="APPROVAL GATE: Phase $PHASE ($PHASE_NAME) ist abgeschlossen."
+    if [ -n "$SPEC_FILE" ]; then
+      APPROVAL_MSG="$APPROVAL_MSG Ergebnis: $SPEC_FILE —"
+    fi
+    APPROVAL_MSG="$APPROVAL_MSG Lies die Ergebnis-Datei und praesentiere dem User eine kurze Zusammenfassung der Ergebnisse. Frage dann: 'Soll ich mit dem Workflow fortfahren? (approve/weiter) oder hast du Aenderungswuensche?' WICHTIG: Fuehre KEINE weiteren Aktionen aus — warte auf die Antwort des Users."
+
+    output_block "$APPROVAL_MSG"
 
   else
     # ═══════════════════════════════════════════════════════════════════════
