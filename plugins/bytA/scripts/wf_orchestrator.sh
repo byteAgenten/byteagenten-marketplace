@@ -19,6 +19,33 @@
 # BASH 3.x KOMPATIBEL (macOS default)
 # ═══════════════════════════════════════════════════════════════════════════
 
+# ═══════════════════════════════════════════════════════════════════════════
+# HOOK INIT: Stdin lesen + CWD aus Hook-Input
+# Hooks koennen von beliebigem CWD gestartet werden. Wir nutzen cwd aus
+# dem Hook-Input um ins Projekt-Root zu wechseln.
+# Muss VOR set -e stehen damit Fehler nicht zum stillen Crash fuehren.
+# ═══════════════════════════════════════════════════════════════════════════
+INPUT=$(cat)
+_DLOG="/tmp/bytA-orchestrator-debug.log"
+{
+  echo "=== $(date -u +"%Y-%m-%dT%H:%M:%SZ") ==="
+  echo "CWD_BEFORE=$(pwd)"
+  echo "DOLLAR_ZERO=$0"
+  echo "PLUGIN_ROOT=${CLAUDE_PLUGIN_ROOT:-unset}"
+} >> "$_DLOG" 2>/dev/null || true
+
+_HOOK_CWD=$(echo "$INPUT" | jq -r '.cwd // ""' 2>/dev/null || echo "")
+if [ -n "$_HOOK_CWD" ] && [ -d "$_HOOK_CWD" ]; then
+  cd "$_HOOK_CWD"
+fi
+
+{
+  echo "CWD_AFTER=$(pwd)"
+  echo "WF_EXISTS=$(test -f .workflow/workflow-state.json && echo yes || echo no)"
+} >> "$_DLOG" 2>/dev/null || true
+
+trap 'echo "ERR exit=$? line=$LINENO cmd=$BASH_COMMAND" >> "'"$_DLOG"'" 2>/dev/null || true' ERR
+
 set -e
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -28,14 +55,15 @@ WORKFLOW_DIR=".workflow"
 WORKFLOW_FILE="${WORKFLOW_DIR}/workflow-state.json"
 LOGS_DIR="${WORKFLOW_DIR}/logs"
 
-# Source phase configuration
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Source phase configuration (CLAUDE_PLUGIN_ROOT ist zuverlaessiger als $0 im Hook-Kontext)
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+  SCRIPT_DIR="${CLAUDE_PLUGIN_ROOT}/scripts"
+else
+  SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+fi
 source "${SCRIPT_DIR}/../config/phases.conf"
 
-# ═══════════════════════════════════════════════════════════════════════════
-# STDIN LESEN (stop_hook_active fuer Loop-Prevention)
-# ═══════════════════════════════════════════════════════════════════════════
-INPUT=$(cat)
+# Stop-Hook-spezifische Felder aus bereits gelesenem INPUT
 STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // false' 2>/dev/null || echo "false")
 
 # ═══════════════════════════════════════════════════════════════════════════

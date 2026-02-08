@@ -21,8 +21,12 @@ set -e
 PHASE=$1
 WORKFLOW_FILE=".workflow/workflow-state.json"
 
-# Source phase configuration
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Source phase configuration (CLAUDE_PLUGIN_ROOT bevorzugt)
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+  SCRIPT_DIR="${CLAUDE_PLUGIN_ROOT}/scripts"
+else
+  SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+fi
 source "${SCRIPT_DIR}/../config/phases.conf"
 
 # ═══════════════════════════════════════════════════════════════════════════

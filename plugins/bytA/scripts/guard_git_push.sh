@@ -6,7 +6,11 @@
 # AUSSER pushApproved=true in workflow-state.json gesetzt ist.
 # ═══════════════════════════════════════════════════════════════════════════
 
+# Hook CWD fix: cd ins Projekt-Root aus Hook-Input
 INPUT=$(cat)
+_HOOK_CWD=$(echo "$INPUT" | jq -r '.cwd // ""' 2>/dev/null || echo "")
+[ -n "$_HOOK_CWD" ] && [ -d "$_HOOK_CWD" ] && cd "$_HOOK_CWD"
+
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""')
 
 # Kein Bash-Befehl → durchlassen

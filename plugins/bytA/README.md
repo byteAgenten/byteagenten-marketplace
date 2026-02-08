@@ -1,6 +1,6 @@
 # bytA Plugin
 
-**Version 3.4.0** | Deterministic Orchestration: Boomerang + Ralph-Loop
+**Version 3.5.0** | Deterministic Orchestration: Boomerang + Ralph-Loop
 
 Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 10-Phasen-Workflow.
 
@@ -144,6 +144,15 @@ Phase 6 nutzt ein Compound-Kriterium (`+` Separator): STATE und GLOB muessen BEI
 Der Stop-Hook (`wf_orchestrator.sh`) prueft GLOB-Kriterien auch im `awaiting_approval` Status.
 Verhindert, dass ein LLM die externe Verifikation umgeht, indem es `status = "awaiting_approval"` setzt,
 bevor der Shell-Orchestrator verifizieren kann. Bei fehlgeschlagenem GLOB → Reset auf `active` → Ralph-Loop.
+
+### Hook CWD Fix (v3.5.0)
+
+Alle Hook-Scripts lesen `cwd` aus dem Hook-Input-JSON (stdin) und wechseln ins Projekt-Root
+bevor sie auf `.workflow/` zugreifen. Claude Code kann Hooks von einem beliebigen Working Directory
+starten — ohne diesen Fix finden die Scripts die Workflow-Dateien nicht und beenden sich lautlos.
+
+Der Stop-Hook (`wf_orchestrator.sh`) loggt zusaetzlich nach `/tmp/bytA-orchestrator-debug.log`
+fuer Fehlerdiagnose (CWD vorher/nachher, Workflow-Datei-Existenz, ERR-Trap mit Zeilennummer).
 
 ### Phase Skipping (v3.3.0)
 

@@ -12,14 +12,23 @@
 # BASH 3.x KOMPATIBEL (macOS default)
 # ═══════════════════════════════════════════════════════════════════════════
 
+# Hook CWD fix: cd ins Projekt-Root aus Hook-Input
+_HOOK_INPUT=$(cat)
+_HOOK_CWD=$(echo "$_HOOK_INPUT" | jq -r '.cwd // ""' 2>/dev/null || echo "")
+[ -n "$_HOOK_CWD" ] && [ -d "$_HOOK_CWD" ] && cd "$_HOOK_CWD"
+
 set -e
 
 WORKFLOW_DIR=".workflow"
 WORKFLOW_FILE="${WORKFLOW_DIR}/workflow-state.json"
 LOGS_DIR="${WORKFLOW_DIR}/logs"
 
-# Source phase configuration
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Source phase configuration (CLAUDE_PLUGIN_ROOT bevorzugt)
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+  SCRIPT_DIR="${CLAUDE_PLUGIN_ROOT}/scripts"
+else
+  SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+fi
 source "${SCRIPT_DIR}/../config/phases.conf"
 
 # ═══════════════════════════════════════════════════════════════════════════

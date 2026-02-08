@@ -9,7 +9,11 @@
 # Skill-scoped Hook → feuert NUR fuer Orchestrator, NICHT fuer Subagents
 # ═══════════════════════════════════════════════════════════════════════════
 
+# Hook CWD fix: cd ins Projekt-Root aus Hook-Input
 INPUT=$(cat)
+_HOOK_CWD=$(echo "$INPUT" | jq -r '.cwd // ""' 2>/dev/null || echo "")
+[ -n "$_HOOK_CWD" ] && [ -d "$_HOOK_CWD" ] && cd "$_HOOK_CWD"
+
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // .tool_input.file // ""')
 
 # Kein Dateipfad → durchlassen
