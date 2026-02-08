@@ -1,6 +1,6 @@
 # bytA Plugin
 
-**Version 3.3.0** | Deterministic Orchestration: Boomerang + Ralph-Loop
+**Version 3.4.0** | Deterministic Orchestration: Boomerang + Ralph-Loop
 
 Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 10-Phasen-Workflow.
 
@@ -144,6 +144,15 @@ Phase 6 nutzt ein Compound-Kriterium (`+` Separator): STATE und GLOB muessen BEI
 Der Stop-Hook (`wf_orchestrator.sh`) prueft GLOB-Kriterien auch im `awaiting_approval` Status.
 Verhindert, dass ein LLM die externe Verifikation umgeht, indem es `status = "awaiting_approval"` setzt,
 bevor der Shell-Orchestrator verifizieren kann. Bei fehlgeschlagenem GLOB → Reset auf `active` → Ralph-Loop.
+
+### Phase Skipping (v3.3.0)
+
+Phase 0 (architect-planner) kann Phasen als `"skipped"` markieren, wenn sie nicht benoetigt werden
+(z.B. keine DB-Aenderungen → Phase 3 skippen). Der Orchestrator (`wf_orchestrator.sh`) erkennt
+pre-geskippte Phasen und ueberspringt sie automatisch — auch ueber APPROVAL-Gates hinweg.
+
+Skippbare Phasen: 1 (Wireframes), 2 (API), 3 (DB), 4 (Backend), 5 (Frontend).
+Nicht skippbar: 0 (Spec), 6 (Tests), 7 (Security), 8 (Review), 9 (Push & PR).
 
 ### Agent-Reports (MD-Dateien)
 

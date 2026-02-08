@@ -86,6 +86,25 @@ context.technicalSpec = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-ph00-arc
 
 ## YOUR TASK
 Create a Technical Specification. Apply 5x Warum root cause analysis. Use MCP tools for current docs.
+
+## PHASE SKIPPING (PFLICHT bei nicht benoetigten Phasen!)
+Wenn bestimmte Phasen fuer dieses Issue NICHT benoetigt werden, MUSST du sie JETZT pre-skippen.
+Fuehre fuer JEDE nicht benoetigte Phase einen jq-Befehl aus:
+
+Beispiel (Phase 3 skippen — keine DB-Aenderungen):
+  jq '.phases["3"] = {"name":"postgresql-architect","status":"skipped","reason":"Keine DB-Aenderungen"} | .context.migrations = {"skipped":true,"reason":"Keine DB-Aenderungen"}' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
+
+Skip-Referenz:
+| Phase | Agent | context-Key | Wann skippen? |
+|-------|-------|-------------|---------------|
+| 1 | ui-designer | wireframes | Keine UI-Aenderungen noetig |
+| 2 | api-architect | apiDesign | Kein neues/geaendertes API |
+| 3 | postgresql-architect | migrations | Keine DB-Aenderungen |
+| 4 | spring-boot-developer | backendImpl | Kein Backend betroffen |
+| 5 | angular-frontend-developer | frontendImpl | Kein Frontend betroffen |
+
+NIEMALS skippen: Phase 0, 6 (Tests), 7 (Security), 8 (Review), 9 (Push & PR).
+Nur Phasen skippen die WIRKLICH nicht benoetigt werden. Der Orchestrator ueberspringt pre-geskippte Phasen automatisch.
 $RETRY_SECTION$HOTFIX_SECTION
 EOF
     ;;
@@ -285,6 +304,24 @@ context.reviewFeedback = {"reviewFile":".workflow/specs/issue-${ISSUE_NUM}-ph08-
 
 ## YOUR TASK
 Independent code quality review. Verify coverage targets. Check SOLID, DRY, KISS.
+$RETRY_SECTION$HOTFIX_SECTION
+EOF
+    ;;
+
+  9)
+    BRANCH=$(jq -r '.branch // "unknown"' "$WORKFLOW_FILE")
+    FROM_BRANCH=$(jq -r '.fromBranch // "main"' "$WORKFLOW_FILE")
+    cat << EOF
+Phase 9: Push & PR for Issue #$ISSUE_NUM: $ISSUE_TITLE
+
+## WORKFLOW CONTEXT
+- Issue: #$ISSUE_NUM - $ISSUE_TITLE
+- Branch: $BRANCH
+- Target Branch: $FROM_BRANCH
+
+## YOUR TASK (KEIN SUBAGENT — wird direkt vom Orchestrator ausgefuehrt)
+Phase 9 wird durch den UserPromptSubmit-Hook gesteuert.
+Sage "Done." und folge den Anweisungen des Hooks.
 $RETRY_SECTION$HOTFIX_SECTION
 EOF
     ;;
