@@ -6,6 +6,11 @@
 # KEIN LLM beteiligt — rein shell-basiert.
 # ═══════════════════════════════════════════════════════════════════════════
 
+# Hook CWD fix: cd ins Projekt-Root aus Hook-Input
+_HOOK_INPUT=$(cat)
+_HOOK_CWD=$(echo "$_HOOK_INPUT" | jq -r '.cwd // ""' 2>/dev/null || echo "")
+[ -n "$_HOOK_CWD" ] && [ -d "$_HOOK_CWD" ] && cd "$_HOOK_CWD"
+
 set -e
 
 WORKFLOW_DIR=".workflow"
@@ -16,8 +21,12 @@ if [ ! -f "$WORKFLOW_FILE" ]; then
   exit 0
 fi
 
-# Source phase configuration
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Source phase configuration (CLAUDE_PLUGIN_ROOT bevorzugt)
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+  SCRIPT_DIR="${CLAUDE_PLUGIN_ROOT}/scripts"
+else
+  SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+fi
 source "${SCRIPT_DIR}/../config/phases.conf"
 
 STATUS=$(jq -r '.status // "unknown"' "$WORKFLOW_FILE" 2>/dev/null || echo "unknown")

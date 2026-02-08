@@ -6,7 +6,7 @@ hooks:
     - matcher: "Bash"
       hooks:
         - type: command
-          command: "mkdir -p .workflow && date -u +\"%Y-%m-%dT%H:%M:%SZ\" > .workflow/bytA-session"
+          command: "_CWD=$(jq -r '.cwd // \".\"'); cd \"$_CWD\" 2>/dev/null || true; mkdir -p .workflow && date -u +\"%Y-%m-%dT%H:%M:%SZ\" > .workflow/bytA-session"
           once: true
     - matcher: "Edit|Write"
       hooks:
