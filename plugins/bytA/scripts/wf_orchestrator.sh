@@ -206,6 +206,17 @@ fi
 
 mkdir -p "$LOGS_DIR" 2>/dev/null || true
 
+# ═══════════════════════════════════════════════════════════════════════════
+# OWNERSHIP GUARD: Nur eigene Workflows verarbeiten
+# Plugin-Level Hooks feuern GLOBAL — andere Plugins (z.B. byt8) haben
+# eigene Stop-Hooks die denselben workflow-state.json lesen/schreiben.
+# Ohne diesen Guard: Race Condition + State-Corruption.
+# ═══════════════════════════════════════════════════════════════════════════
+WORKFLOW_TYPE=$(jq -r '.workflow // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+if [ "$WORKFLOW_TYPE" != "bytA-feature" ]; then
+  exit 0
+fi
+
 # State lesen
 STATUS=$(jq -r '.status // "unknown"' "$WORKFLOW_FILE" 2>/dev/null || echo "unknown")
 PHASE=$(jq -r '.currentPhase // 0' "$WORKFLOW_FILE" 2>/dev/null || echo "0")
