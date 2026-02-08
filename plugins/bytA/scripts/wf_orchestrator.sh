@@ -351,6 +351,25 @@ if "${SCRIPT_DIR}/wf_verify.sh" "$PHASE"; then
   # ═════════════════════════════════════════════════════════════════════════
 
   # ─────────────────────────────────────────────────────────────────────────
+  # SKIP-ADVANCE: Phase pre-skipped → bypass approval, auto-advance
+  # ─────────────────────────────────────────────────────────────────────────
+  CURRENT_PHASE_STATUS=$(jq -r ".phases[\"$PHASE\"].status // \"pending\"" "$WORKFLOW_FILE" 2>/dev/null)
+  if [ "$CURRENT_PHASE_STATUS" = "skipped" ]; then
+    NEXT_PHASE=$(get_next_active_phase "$PHASE")
+    NEXT_NAME=$(get_phase_name "$NEXT_PHASE")
+    NEXT_AGENT=$(get_phase_agent "$NEXT_PHASE")
+
+    jq --argjson np "$NEXT_PHASE" '.currentPhase = $np | .status = "active"' \
+      "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+
+    log "SKIP-ADVANCE: Phase $PHASE ($PHASE_NAME) pre-skipped → Phase $NEXT_PHASE ($NEXT_NAME)"
+    log_transition "skip_advance" "from=$PHASE to=$NEXT_PHASE"
+
+    PROMPT=$("${SCRIPT_DIR}/wf_prompt_builder.sh" "$NEXT_PHASE")
+    output_block "Phase $PHASE ($PHASE_NAME) uebersprungen (pre-skipped). Starte Phase $NEXT_PHASE ($NEXT_NAME): Task(bytA:$NEXT_AGENT, '$PROMPT')"
+  fi
+
+  # ─────────────────────────────────────────────────────────────────────────
   # Phase 8 Spezial: CHANGES_REQUESTED → Deterministischer Rollback
   # GLOB passed (Review-Datei existiert), aber Review hat Aenderungswuensche.
   # Muss VOR mark_phase_completed stehen, damit Phase 8 NICHT completed wird.
@@ -448,7 +467,7 @@ if "${SCRIPT_DIR}/wf_verify.sh" "$PHASE"; then
     # ═══════════════════════════════════════════════════════════════════════
     # AUTO-ADVANCE → Naechste Phase (deterministisch)
     # ═══════════════════════════════════════════════════════════════════════
-    NEXT_PHASE=$((PHASE + 1))
+    NEXT_PHASE=$(get_next_active_phase "$PHASE")
     NEXT_NAME=$(get_phase_name "$NEXT_PHASE")
     NEXT_AGENT=$(get_phase_agent "$NEXT_PHASE")
 

@@ -113,36 +113,61 @@ if [ "$STATUS" = "awaiting_approval" ]; then
 
   case $PHASE in
     0)
+      NEXT_PHASE=$(get_next_active_phase "$PHASE" "$WORKFLOW_FILE")
+      NEXT_NAME=$(get_phase_name "$NEXT_PHASE")
+      NEXT_AGENT=$(get_phase_agent "$NEXT_PHASE")
       echo "Der User antwortet auf die Technical Specification (Phase 0)."
       echo ""
       echo "BEI APPROVAL (Ja/OK/Weiter):"
-      echo "  1. jq '.status = \"active\" | .currentPhase = 1' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
-      echo "  2. Task(bytA:ui-designer, 'Phase 1 (Wireframes) fuer Issue #$ISSUE_NUM: $ISSUE_TITLE')"
+      echo "  1. State updaten:"
+      echo "     jq '.status = \"active\" | .currentPhase = $NEXT_PHASE' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
+      echo "  2. Prompt bauen (Bash-Befehl ausfuehren, Output merken):"
+      echo "     ${CLAUDE_PLUGIN_ROOT}/scripts/wf_prompt_builder.sh $NEXT_PHASE"
+      echo "  3. Agent starten mit dem KOMPLETTEN Output von Schritt 2:"
+      echo "     Task(bytA:$NEXT_AGENT, '<output>')"
       echo ""
       echo "BEI FEEDBACK (Aenderungswuensche):"
       echo "  1. jq '.status = \"active\"' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
-      echo "  2. Task(bytA:architect-planner, 'Revise Phase 0 based on feedback: {USER_FEEDBACK}')"
+      echo "  2. Prompt bauen mit Feedback (Bash-Befehl ausfuehren):"
+      echo "     ${CLAUDE_PLUGIN_ROOT}/scripts/wf_prompt_builder.sh 0 'USER_FEEDBACK_HIER_EINFUEGEN'"
+      echo "  3. Task(bytA:architect-planner, '<output>')"
       ;;
 
     1)
+      NEXT_PHASE=$(get_next_active_phase "$PHASE" "$WORKFLOW_FILE")
+      NEXT_NAME=$(get_phase_name "$NEXT_PHASE")
+      NEXT_AGENT=$(get_phase_agent "$NEXT_PHASE")
       echo "Der User antwortet auf die Wireframes (Phase 1)."
       echo ""
       echo "BEI APPROVAL (Ja/OK/Weiter):"
-      echo "  1. jq '.status = \"active\" | .currentPhase = 2' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
-      echo "  2. Task(bytA:api-architect, 'Phase 2 (API Design) fuer Issue #$ISSUE_NUM: $ISSUE_TITLE')"
-      echo "  3. Auto-Advance laeuft durch Phasen 2-6 bis Phase 7 (Approval Gate)"
+      echo "  1. State updaten:"
+      echo "     jq '.status = \"active\" | .currentPhase = $NEXT_PHASE' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
+      echo "  2. Prompt bauen (Bash-Befehl ausfuehren, Output merken):"
+      echo "     ${CLAUDE_PLUGIN_ROOT}/scripts/wf_prompt_builder.sh $NEXT_PHASE"
+      echo "  3. Agent starten mit dem KOMPLETTEN Output von Schritt 2:"
+      echo "     Task(bytA:$NEXT_AGENT, '<output>')"
+      echo "  4. Auto-Advance laeuft durch AUTO-Phasen bis zum naechsten Approval Gate"
       echo ""
       echo "BEI FEEDBACK (Aenderungswuensche):"
       echo "  1. jq '.status = \"active\"' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
-      echo "  2. Task(bytA:ui-designer, 'Revise Phase 1 based on feedback: {USER_FEEDBACK}')"
+      echo "  2. Prompt bauen mit Feedback (Bash-Befehl ausfuehren):"
+      echo "     ${CLAUDE_PLUGIN_ROOT}/scripts/wf_prompt_builder.sh 1 'USER_FEEDBACK_HIER_EINFUEGEN'"
+      echo "  3. Task(bytA:ui-designer, '<output>')"
       ;;
 
     7)
+      NEXT_PHASE=$(get_next_active_phase "$PHASE" "$WORKFLOW_FILE")
+      NEXT_NAME=$(get_phase_name "$NEXT_PHASE")
+      NEXT_AGENT=$(get_phase_agent "$NEXT_PHASE")
       echo "Der User antwortet auf das Security Audit Ergebnis (Phase 7)."
       echo ""
       echo "BEI APPROVAL (Weiter/OK):"
-      echo "  1. jq '.status = \"active\" | .currentPhase = 8' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
-      echo "  2. Task(bytA:code-reviewer, 'Phase 8 (Code Review) fuer Issue #$ISSUE_NUM: $ISSUE_TITLE')"
+      echo "  1. State updaten:"
+      echo "     jq '.status = \"active\" | .currentPhase = $NEXT_PHASE' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
+      echo "  2. Prompt bauen (Bash-Befehl ausfuehren, Output merken):"
+      echo "     ${CLAUDE_PLUGIN_ROOT}/scripts/wf_prompt_builder.sh $NEXT_PHASE"
+      echo "  3. Agent starten mit dem KOMPLETTEN Output von Schritt 2:"
+      echo "     Task(bytA:$NEXT_AGENT, '<output>')"
       echo ""
       echo "BEI SECURITY-FIXES:"
       echo "  1. ZUERST State updaten:"
@@ -166,7 +191,9 @@ if [ "$STATUS" = "awaiting_approval" ]; then
       echo ""
       echo "BEI FEEDBACK:"
       echo "  1. jq '.status = \"active\"' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
-      echo "  2. Task(bytA:code-reviewer, 'Revise Phase 8 based on feedback: {USER_FEEDBACK}')"
+      echo "  2. Prompt bauen mit Feedback (Bash-Befehl ausfuehren):"
+      echo "     ${CLAUDE_PLUGIN_ROOT}/scripts/wf_prompt_builder.sh 8 'USER_FEEDBACK_HIER_EINFUEGEN'"
+      echo "  3. Task(bytA:code-reviewer, '<output>')"
 
       # Option C: Dateipfad-basierte Heuristik + User-Wahl
       FIX_FILES=$(jq -r '.context.reviewFeedback.fixes[]?.file // empty' "$WORKFLOW_FILE" 2>/dev/null || echo "")
