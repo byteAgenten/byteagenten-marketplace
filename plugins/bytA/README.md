@@ -1,6 +1,6 @@
 # bytA Plugin
 
-**Version 3.6.0** | Deterministic Orchestration: Boomerang + Ralph-Loop
+**Version 3.6.1** | Deterministic Orchestration: Boomerang + Ralph-Loop
 
 Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 10-Phasen-Workflow.
 
