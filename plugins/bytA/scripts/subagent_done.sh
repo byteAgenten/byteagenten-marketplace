@@ -21,6 +21,14 @@ if [ ! -f "$WORKFLOW_FILE" ]; then
   exit 0
 fi
 
+# ═══════════════════════════════════════════════════════════════════════════
+# OWNERSHIP GUARD: Nur eigene Workflows verarbeiten
+# ═══════════════════════════════════════════════════════════════════════════
+WORKFLOW_TYPE=$(jq -r '.workflow // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+if [ "$WORKFLOW_TYPE" != "bytA-feature" ]; then
+  exit 0
+fi
+
 # Source phase configuration (CLAUDE_PLUGIN_ROOT bevorzugt)
 if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
   SCRIPT_DIR="${CLAUDE_PLUGIN_ROOT}/scripts"

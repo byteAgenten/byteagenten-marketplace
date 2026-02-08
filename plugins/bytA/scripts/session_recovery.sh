@@ -45,6 +45,14 @@ if [ ! -f "$WORKFLOW_FILE" ]; then
   exit 0
 fi
 
+# ═══════════════════════════════════════════════════════════════════════════
+# OWNERSHIP GUARD: Nur eigene Workflows verarbeiten
+# ═══════════════════════════════════════════════════════════════════════════
+WORKFLOW_TYPE=$(jq -r '.workflow // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+if [ "$WORKFLOW_TYPE" != "bytA-feature" ]; then
+  exit 0
+fi
+
 STATUS=$(jq -r '.status // "unknown"' "$WORKFLOW_FILE" 2>/dev/null || echo "unknown")
 
 if [ "$STATUS" != "active" ] && [ "$STATUS" != "paused" ] && [ "$STATUS" != "awaiting_approval" ]; then

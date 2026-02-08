@@ -1,6 +1,6 @@
 # bytA Plugin
 
-**Version 3.5.1** | Deterministic Orchestration: Boomerang + Ralph-Loop
+**Version 3.6.0** | Deterministic Orchestration: Boomerang + Ralph-Loop
 
 Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 10-Phasen-Workflow.
 
@@ -92,6 +92,7 @@ Bei Phase 7/8 kann der User aendern lassen:
 | **UserPromptSubmit** | `wf_user_prompt.sh` | Approval Gate Context + Rollback-Optionen |
 | **PreToolUse/Bash** | `guard_git_push.sh` | Blockiert Push ohne pushApproved |
 | **SubagentStop** | `subagent_done.sh` | Deterministische WIP-Commits |
+| **SessionStart** | `session_recovery.sh` | Context Overflow Recovery |
 
 **Skill-Level Hooks (in SKILL.md Frontmatter):**
 
@@ -154,6 +155,16 @@ starten — ohne diesen Fix finden die Scripts die Workflow-Dateien nicht und be
 Der Stop-Hook (`wf_orchestrator.sh`) loggt zusaetzlich nach `/tmp/bytA-orchestrator-debug.log`
 fuer Fehlerdiagnose (CWD vorher/nachher, Workflow-Datei-Existenz, ERR-Trap mit Zeilennummer).
 
+### Workflow Ownership Guard (v3.6.0)
+
+Alle 5 Plugin-Level-Hooks pruefen `workflow == "bytA-feature"` bevor sie aktiv werden.
+Plugin-Level Hooks feuern **global** fuer JEDES Event, unabhaengig davon welches Plugin/Skill
+den Workflow gestartet hat. Ohne diesen Guard koennen andere Plugins (z.B. byt8) denselben
+`workflow-state.json` lesen/schreiben und eine Race Condition + State-Corruption verursachen.
+
+Betroffene Scripts: `wf_orchestrator.sh`, `wf_user_prompt.sh`, `subagent_done.sh`,
+`session_recovery.sh`, `guard_git_push.sh`.
+
 ### Phase Skipping (v3.3.0)
 
 Phase 0 (architect-planner) kann Phasen als `"skipped"` markieren, wenn sie nicht benoetigt werden
@@ -205,7 +216,7 @@ bytA/
 ├── docs/
 │   └── REFACTORING-PROPOSAL-BOOMERANG-RALPH.md
 ├── hooks/
-│   └── hooks.json                     # 4 Plugin-Level Hooks
+│   └── hooks.json                     # 5 Plugin-Level Hooks
 ├── scripts/
 │   ├── wf_orchestrator.sh             # Stop Hook: Ralph-Loop Orchestrator
 │   ├── wf_verify.sh                   # Externe Done-Verifikation
