@@ -1,6 +1,6 @@
 # bytA Plugin
 
-**Version 3.6.1** | Deterministic Orchestration: Boomerang + Ralph-Loop
+**Version 3.7.0** | Deterministic Orchestration: Boomerang + Ralph-Loop
 
 Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 10-Phasen-Workflow.
 
@@ -165,6 +165,21 @@ den Workflow gestartet hat. Ohne diesen Guard koennen andere Plugins (z.B. byt8)
 Betroffene Scripts: `wf_orchestrator.sh`, `wf_user_prompt.sh`, `subagent_done.sh`,
 `session_recovery.sh`, `guard_git_push.sh`.
 
+### Deterministic Approval-Advance (v3.7.0)
+
+Alle Approval-Phasen (0, 1, 7, 8, 9) nutzen `wf_advance.sh` fuer deterministische State-Manipulation.
+Claude fuehrt nur noch **einen einzigen Bash-Befehl** aus statt 3-4 manuelle jq-Befehle:
+
+```bash
+wf_advance.sh approve              # User approved → naechste Phase
+wf_advance.sh feedback 'MESSAGE'   # User will Aenderungen → gleiche Phase nochmal
+wf_advance.sh rollback 4 'MESSAGE' # Rollback zu Phase 4 mit Feedback
+wf_advance.sh complete             # Workflow abschliessen (nach Push+PR)
+```
+
+Das Script uebernimmt: State-Update, Context-Cleanup, Spec-Cleanup, Prompt-Bau via `wf_prompt_builder.sh`,
+und gibt eine `EXECUTE: Task(bytA:agent, 'prompt')` Anweisung aus die Claude direkt ausfuehrt.
+
 ### Phase Skipping (v3.3.0)
 
 Phase 0 (architect-planner) kann Phasen als `"skipped"` markieren, wenn sie nicht benoetigt werden
@@ -220,6 +235,7 @@ bytA/
 ├── scripts/
 │   ├── wf_orchestrator.sh             # Stop Hook: Ralph-Loop Orchestrator
 │   ├── wf_verify.sh                   # Externe Done-Verifikation
+│   ├── wf_advance.sh                  # Deterministic Approval-Advance (v3.7.0)
 │   ├── wf_prompt_builder.sh           # Deterministische Agent-Prompts
 │   ├── wf_user_prompt.sh              # UserPromptSubmit: Approval Gates
 │   ├── wf_cleanup.sh                  # Startup: Workflow aufraumen
@@ -242,7 +258,7 @@ bytA/
 | Done-Pruefung | LLM interpretiert Agent-Output | Shell prueft Dateien/Exit-Codes |
 | Context-Wachstum | Monoton steigend | Konstant (~2.5 KB) |
 | Retry-Logik | Stop Hook + Block Counter | Ralph-Loop (explicit retry) |
-| Rollback | LLM fuehrt jq-Befehle aus | Shell-Script (deterministisch) |
+| Rollback | LLM fuehrt jq-Befehle aus | wf_advance.sh (deterministisch) |
 | SKILL.md | ~270 Zeilen Orchestrator-Logik | ~170 Zeilen (Transport-Layer) |
 
 ## Troubleshooting

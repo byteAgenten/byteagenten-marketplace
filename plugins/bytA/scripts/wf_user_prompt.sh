@@ -76,40 +76,6 @@ mkdir -p "$LOGS_DIR" 2>/dev/null || true
 echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] UserPromptSubmit: Phase $PHASE ($PHASE_NAME) | Status: $STATUS" >> "$LOGS_DIR/hooks.log" 2>/dev/null || true
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ROLLBACK-HILFSFUNKTION (deterministisch)
-# ═══════════════════════════════════════════════════════════════════════════
-print_rollback_instructions() {
-  local from_phase=$1
-  echo ""
-  echo "  BEI AENDERUNGSWUENSCHEN (Rollback):"
-  echo "  Der User kann ein Rollback-Ziel angeben:"
-  echo "  → 0 = Tech Spec (architect-planner)"
-  echo "  → 1 = Wireframes (ui-designer)"
-  echo "  → 2 = API Design (api-architect)"
-  echo "  → 3 = Database (postgresql-architect)"
-  echo "  → 4 = Backend (spring-boot-developer)"
-  echo "  → 5 = Frontend (angular-frontend-developer)"
-  echo "  → 6 = Tests (test-engineer)"
-  echo ""
-  echo "  ABLAUF bei Rollback (REIHENFOLGE PFLICHT!):"
-  echo "  1. Ziel-Phase aus User-Antwort bestimmen"
-  echo "  2. ZUERST State updaten:"
-  echo "     jq '.currentPhase = ZIEL | .status = \"active\" | del(.context.securityAudit) | del(.context.testResults)' \\"
-  echo "       .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
-  echo "     Wenn ZIEL <= 5: zusaetzlich del(.context.frontendImpl)"
-  echo "     Wenn ZIEL <= 4: zusaetzlich del(.context.backendImpl)"
-  echo "     Wenn ZIEL <= 3: zusaetzlich del(.context.migrations)"
-  echo "     Wenn ZIEL <= 2: zusaetzlich del(.context.apiDesign)"
-  echo "     Wenn ZIEL <= 1: zusaetzlich del(.context.wireframes)"
-  echo "  3. DANN Spec-Dateien ab Rollback-Ziel loeschen (PFLICHT — verhindert stale GLOB-Matches!):"
-  echo "     for p in \$(seq ZIEL 8); do pf=\$(printf '%02d' \$p); rm -f .workflow/specs/issue-*-ph\${pf}-*.md; done"
-  echo "  4. DANN Agent starten mit User-Feedback im Prompt:"
-  echo "     Task(bytA:AGENT, 'Phase ZIEL (Hotfix): {USER_FEEDBACK}')"
-  echo "  5. Auto-Advance laeuft automatisch bis zum naechsten Approval Gate"
-  echo "  NIEMALS Agent aufrufen OHNE vorher currentPhase zu setzen!"
-}
-
-# ═══════════════════════════════════════════════════════════════════════════
 # KONTEXT-INJECTION (stdout → Claudes Kontext)
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -124,126 +90,79 @@ if [ "$STATUS" = "paused" ]; then
 fi
 
 if [ "$STATUS" = "awaiting_approval" ]; then
+  # ADVANCE_CMD Prefix — deterministisch, kein manuelles jq noetig
+  ADVANCE_CMD="${SCRIPT_DIR}/wf_advance.sh"
+
   echo "<user-prompt-submit-hook>"
   echo "WORKFLOW APPROVAL GATE | Phase $PHASE ($PHASE_NAME) | Issue #$ISSUE_NUM: $ISSUE_TITLE"
+  echo ""
+  echo "WICHTIG: State-Aenderungen passieren DETERMINISTISCH im wf_advance.sh Script."
+  echo "Du musst NUR den passenden Bash-Befehl ausfuehren und die EXECUTE-Anweisung aus dem Output befolgen."
   echo ""
 
   case $PHASE in
     0)
-      NEXT_PHASE=$(get_next_active_phase "$PHASE" "$WORKFLOW_FILE")
-      NEXT_NAME=$(get_phase_name "$NEXT_PHASE")
-      NEXT_AGENT=$(get_phase_agent "$NEXT_PHASE")
       echo "Der User antwortet auf die Technical Specification (Phase 0)."
       echo ""
       echo "BEI APPROVAL (Ja/OK/Weiter):"
-      echo "  1. State updaten:"
-      echo "     jq '.status = \"active\" | .currentPhase = $NEXT_PHASE' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
-      echo "  2. Prompt bauen (Bash-Befehl ausfuehren, Output merken):"
-      echo "     ${CLAUDE_PLUGIN_ROOT}/scripts/wf_prompt_builder.sh $NEXT_PHASE"
-      echo "  3. Agent starten mit dem KOMPLETTEN Output von Schritt 2:"
-      echo "     Task(bytA:$NEXT_AGENT, '<output>')"
+      echo "  Bash: $ADVANCE_CMD approve"
+      echo "  Fuehre die EXECUTE-Anweisung aus dem Output aus."
       echo ""
-      echo "BEI FEEDBACK (Aenderungswuensche):"
-      echo "  1. jq '.status = \"active\"' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
-      echo "  2. Prompt bauen mit Feedback (Bash-Befehl ausfuehren):"
-      echo "     ${CLAUDE_PLUGIN_ROOT}/scripts/wf_prompt_builder.sh 0 'USER_FEEDBACK_HIER_EINFUEGEN'"
-      echo "  3. Task(bytA:architect-planner, '<output>')"
+      echo "BEI FEEDBACK (Aenderungswuensche an Tech Spec):"
+      echo "  Bash: $ADVANCE_CMD feedback 'USER_FEEDBACK_HIER'"
+      echo "  Fuehre die EXECUTE-Anweisung aus dem Output aus."
       ;;
 
     1)
-      NEXT_PHASE=$(get_next_active_phase "$PHASE" "$WORKFLOW_FILE")
-      NEXT_NAME=$(get_phase_name "$NEXT_PHASE")
-      NEXT_AGENT=$(get_phase_agent "$NEXT_PHASE")
       echo "Der User antwortet auf die Wireframes (Phase 1)."
       echo ""
       echo "BEI APPROVAL (Ja/OK/Weiter):"
-      echo "  1. State updaten:"
-      echo "     jq '.status = \"active\" | .currentPhase = $NEXT_PHASE' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
-      echo "  2. Prompt bauen (Bash-Befehl ausfuehren, Output merken):"
-      echo "     ${CLAUDE_PLUGIN_ROOT}/scripts/wf_prompt_builder.sh $NEXT_PHASE"
-      echo "  3. Agent starten mit dem KOMPLETTEN Output von Schritt 2:"
-      echo "     Task(bytA:$NEXT_AGENT, '<output>')"
-      echo "  4. Auto-Advance laeuft durch AUTO-Phasen bis zum naechsten Approval Gate"
+      echo "  Bash: $ADVANCE_CMD approve"
+      echo "  Fuehre die EXECUTE-Anweisung aus dem Output aus."
       echo ""
-      echo "BEI FEEDBACK (Aenderungswuensche):"
-      echo "  1. jq '.status = \"active\"' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
-      echo "  2. Prompt bauen mit Feedback (Bash-Befehl ausfuehren):"
-      echo "     ${CLAUDE_PLUGIN_ROOT}/scripts/wf_prompt_builder.sh 1 'USER_FEEDBACK_HIER_EINFUEGEN'"
-      echo "  3. Task(bytA:ui-designer, '<output>')"
+      echo "BEI FEEDBACK (Aenderungswuensche an Wireframes):"
+      echo "  Bash: $ADVANCE_CMD feedback 'USER_FEEDBACK_HIER'"
+      echo "  Fuehre die EXECUTE-Anweisung aus dem Output aus."
       ;;
 
     7)
-      NEXT_PHASE=$(get_next_active_phase "$PHASE" "$WORKFLOW_FILE")
-      NEXT_NAME=$(get_phase_name "$NEXT_PHASE")
-      NEXT_AGENT=$(get_phase_agent "$NEXT_PHASE")
       echo "Der User antwortet auf das Security Audit Ergebnis (Phase 7)."
       echo ""
       echo "BEI APPROVAL (Weiter/OK):"
-      echo "  1. State updaten:"
-      echo "     jq '.status = \"active\" | .currentPhase = $NEXT_PHASE' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
-      echo "  2. Prompt bauen (Bash-Befehl ausfuehren, Output merken):"
-      echo "     ${CLAUDE_PLUGIN_ROOT}/scripts/wf_prompt_builder.sh $NEXT_PHASE"
-      echo "  3. Agent starten mit dem KOMPLETTEN Output von Schritt 2:"
-      echo "     Task(bytA:$NEXT_AGENT, '<output>')"
+      echo "  Bash: $ADVANCE_CMD approve"
+      echo "  Fuehre die EXECUTE-Anweisung aus dem Output aus."
       echo ""
-      echo "BEI SECURITY-FIXES:"
-      echo "  1. ZUERST State updaten:"
-      echo "     jq '.currentPhase = 6 | .status = \"active\" | del(.context.securityAudit) | del(.context.testResults)' \\"
-      echo "       .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
-      echo "  2. Spec-Dateien ab Phase 6 loeschen (PFLICHT — verhindert stale GLOB-Matches!):"
-      echo "     for p in \$(seq 6 8); do pf=\$(printf '%02d' \$p); rm -f .workflow/specs/issue-*-ph\${pf}-*.md; done"
-      echo "  3. DANN Fix-Agent starten:"
-      echo "     Backend (.java) → Task(bytA:spring-boot-developer, 'Security Fix: {FINDINGS}')"
-      echo "     Frontend (.ts/.html) → Task(bytA:angular-frontend-developer, 'Security Fix: {FINDINGS}')"
-      echo "  4. Auto-Advance: Phase 6 (Tests) → Phase 7 (Re-Audit)"
-      print_rollback_instructions 7
+      echo "BEI SECURITY-FIXES (Rollback noetig):"
+      echo "  Bash: $ADVANCE_CMD rollback ZIEL 'SECURITY_FINDINGS_HIER'"
+      echo "  Ziel: 4=Backend, 5=Frontend, 6=Tests (Default)"
+      echo "  Fuehre die EXECUTE-Anweisung aus dem Output aus."
       ;;
 
     8)
       echo "Der User antwortet auf das Code Review Ergebnis (Phase 8)."
       echo ""
       echo "BEI APPROVAL (Weiter/OK):"
-      echo "  1. jq '.status = \"awaiting_approval\" | .currentPhase = 9 | .context.reviewFeedback.userApproved = true' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
-      echo "  2. Phase 9: User fragen 'PR erstellen? Ziel-Branch?' (Default: fromBranch)"
+      echo "  Bash: $ADVANCE_CMD approve"
+      echo "  Fuehre die EXECUTE-Anweisung aus dem Output aus."
       echo ""
-      echo "BEI FEEDBACK:"
-      echo "  1. jq '.status = \"active\"' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
-      echo "  2. Prompt bauen mit Feedback (Bash-Befehl ausfuehren):"
-      echo "     ${CLAUDE_PLUGIN_ROOT}/scripts/wf_prompt_builder.sh 8 'USER_FEEDBACK_HIER_EINFUEGEN'"
-      echo "  3. Task(bytA:code-reviewer, '<output>')"
-
-      # Option C: Dateipfad-basierte Heuristik + User-Wahl
-      FIX_FILES=$(jq -r '.context.reviewFeedback.fixes[]?.file // empty' "$WORKFLOW_FILE" 2>/dev/null || echo "")
-      if [ -n "$FIX_FILES" ]; then
-        SUGGESTED=6
-        if echo "$FIX_FILES" | grep -q '\.sql'; then SUGGESTED=3; fi
-        if echo "$FIX_FILES" | grep -q '\.java'; then SUGGESTED=4; fi
-        if echo "$FIX_FILES" | grep -q -E '\.(ts|html|scss)'; then SUGGESTED=5; fi
-        SUGGESTED_NAME=$(get_phase_name "$SUGGESTED")
-        echo ""
-        echo "  OPTION C - VORGESCHLAGENES ROLLBACK-ZIEL:"
-        echo "  → Phase $SUGGESTED ($SUGGESTED_NAME) basierend auf betroffenen Dateien:"
-        echo "    $FIX_FILES"
-        echo "  User kann bestaetigen oder anderes Ziel waehlen."
-      fi
-      print_rollback_instructions 8
+      echo "BEI FEEDBACK (Re-Review gleiche Phase):"
+      echo "  Bash: $ADVANCE_CMD feedback 'USER_FEEDBACK_HIER'"
+      echo "  Fuehre die EXECUTE-Anweisung aus dem Output aus."
+      echo ""
+      echo "BEI ROLLBACK (zu anderer Phase):"
+      echo "  Bash: $ADVANCE_CMD rollback ZIEL 'REVIEW_FINDINGS_HIER'"
+      echo "  Ziel: 3=DB, 4=Backend, 5=Frontend, 6=Tests"
+      echo "  Fuehre die EXECUTE-Anweisung aus dem Output aus."
       ;;
 
     9)
       echo "Der User antwortet auf Push & PR (Phase 9)."
       echo ""
-      echo "PRE-PUSH BUILD GATE (PFLICHT!):"
-      echo "  BEVOR du pushst, MUSST du sicherstellen dass alle Tests gruen sind:"
-      echo "  1. cd backend && mvn verify (Backend Tests)"
-      echo "  2. cd frontend && npm test -- --no-watch --browsers=ChromeHeadless (Frontend Tests)"
-      echo "  3. cd frontend && npm run build (Build pruefen)"
-      echo "  Bei FEHLERN: NICHT pushen! Zurueck zu Phase 6 (test-engineer)."
-      echo ""
-      echo "BEI APPROVAL (Ja, pushen) UND GRUENEN TESTS:"
-      echo "  1. jq '.pushApproved = true' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
-      echo "  2. git push -u origin BRANCH"
-      echo "  3. gh pr create --base INTO_BRANCH --title 'feat(#$ISSUE_NUM): $ISSUE_TITLE' --body PR_BODY"
-      echo "  4. jq '.status = \"completed\"' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json"
+      echo "BEI APPROVAL (Ja, pushen):"
+      echo "  Bash: $ADVANCE_CMD approve"
+      echo "  Fuehre die Anweisungen aus dem Output aus (Build Gate + Push + PR)."
+      echo "  Nach erfolgreichem Push+PR:"
+      echo "  Bash: $ADVANCE_CMD complete"
       ;;
   esac
 
