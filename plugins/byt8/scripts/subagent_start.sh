@@ -36,8 +36,9 @@ LOG_DIR="${WORKFLOW_DIR}/logs"
 # ═══════════════════════════════════════════════════════════════════════════
 if [ -f "$WORKFLOW_FILE" ]; then
   CLEANUP_STATUS=$(jq -r '.status // "unknown"' "$WORKFLOW_FILE" 2>/dev/null || echo "unknown")
-  if [ "$CLEANUP_STATUS" = "completed" ]; then
-    # Abgeschlossener Workflow gefunden → aufräumen
+  CLEANUP_WORKFLOW=$(jq -r '.workflow // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+  if [ "$CLEANUP_STATUS" = "completed" ] && [ "$CLEANUP_WORKFLOW" = "full-stack-feature" ]; then
+    # Eigener abgeschlossener Workflow gefunden → aufräumen
     rm -rf "$WORKFLOW_DIR"
     # Kein weiterer Code nötig, exit 0
     exit 0
@@ -48,6 +49,14 @@ fi
 # PRÜFEN: Workflow vorhanden? (nach potentiellem Cleanup)
 # ═══════════════════════════════════════════════════════════════════════════
 if [ ! -f "$WORKFLOW_FILE" ]; then
+  exit 0
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════
+# OWNERSHIP GUARD: Nur eigene Workflows verarbeiten
+# ═══════════════════════════════════════════════════════════════════════════
+WORKFLOW_TYPE=$(jq -r '.workflow // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+if [ "$WORKFLOW_TYPE" != "full-stack-feature" ]; then
   exit 0
 fi
 

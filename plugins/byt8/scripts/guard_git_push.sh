@@ -47,6 +47,14 @@ if [ ! -f "$WORKFLOW_FILE" ]; then
   exit 0
 fi
 
+# ═══════════════════════════════════════════════════════════════════════════
+# OWNERSHIP GUARD: Nur eigene Workflows verarbeiten
+# ═══════════════════════════════════════════════════════════════════════════
+WORKFLOW_TYPE=$(jq -r '.workflow // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+if [ "$WORKFLOW_TYPE" != "full-stack-feature" ]; then
+  exit 0
+fi
+
 # State lesen (fail-open bei Parse-Fehler)
 STATUS=$(jq -r '.status // "unknown"' "$WORKFLOW_FILE" 2>/dev/null || echo "unknown")
 

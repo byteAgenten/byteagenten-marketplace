@@ -28,6 +28,14 @@ if [ ! -f "$WORKFLOW_FILE" ]; then
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
+# OWNERSHIP GUARD: Nur eigene Workflows verarbeiten
+# ═══════════════════════════════════════════════════════════════════════════
+WORKFLOW_TYPE=$(jq -r '.workflow // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+if [ "$WORKFLOW_TYPE" != "full-stack-feature" ]; then
+  exit 0
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════
 # LOGGING (nur wenn Workflow existiert)
 # ═══════════════════════════════════════════════════════════════════════════
 mkdir -p "$LOG_DIR" 2>/dev/null || true
