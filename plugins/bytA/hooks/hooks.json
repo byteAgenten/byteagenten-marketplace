@@ -1,9 +1,7 @@
 {
-  "description": "bytA Workflow Engine - Boomerang + Ralph-Loop (v3.2)",
   "hooks": {
     "UserPromptSubmit": [
       {
-        "description": "Approval Gate Context Injection + Loop-Prevention Reset",
         "hooks": [
           {
             "type": "command",
@@ -15,7 +13,6 @@
     "PreToolUse": [
       {
         "matcher": "Bash",
-        "description": "Guard: Block git push/PR without pushApproved flag",
         "hooks": [
           {
             "type": "command",
@@ -26,7 +23,6 @@
     ],
     "Stop": [
       {
-        "description": "Deterministic Orchestrator (Ralph-Loop + External Verify)",
         "hooks": [
           {
             "type": "command",
@@ -37,7 +33,6 @@
     ],
     "SessionStart": [
       {
-        "description": "Context Recovery after Overflow - instructs Claude to reload skill",
         "hooks": [
           {
             "type": "command",
@@ -48,7 +43,6 @@
     ],
     "SubagentStop": [
       {
-        "description": "Deterministic WIP Commits (no LLM)",
         "hooks": [
           {
             "type": "command",
