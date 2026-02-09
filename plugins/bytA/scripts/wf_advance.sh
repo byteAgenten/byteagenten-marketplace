@@ -186,6 +186,25 @@ approve)
   NEXT_NAME=$(get_phase_name "$NEXT_PHASE")
   NEXT_AGENT=$(get_phase_agent "$NEXT_PHASE")
 
+  # ─── Phase 9 Redirect: Direkt awaiting_approval setzen ─────────────
+  # Phase 9 hat keinen Subagent — der Orchestrator (Claude) fuehrt sie
+  # selbst aus. Daher kein EXECUTE:Task, sondern sofort Approval Gate.
+  if [ "$NEXT_PHASE" = "9" ]; then
+    jq '.currentPhase = 9 | .status = "awaiting_approval" | .awaitingApprovalFor = 9' \
+      "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+
+    log "ADVANCE: Phase $APPROVAL_PHASE ($PHASE_NAME) approved → Phase 9 (Push & PR) awaiting_approval"
+    log_transition "user_advance" "action=approve from=$APPROVAL_PHASE to=9"
+
+    echo "=== bytA ADVANCE: approve ==="
+    echo "Phase $APPROVAL_PHASE ($PHASE_NAME) approved."
+    echo "Next: Phase 9 (Push & PR) — Warte auf User-Confirmation fuer Push."
+    echo ""
+    echo "Sage dem User:"
+    echo "  'Soll ich den Branch pushen und einen PR nach $FROM_BRANCH erstellen?'"
+    exit 0
+  fi
+
   # ─── State advance (DETERMINISTISCH) ──────────────────────────────────
   jq --argjson np "$NEXT_PHASE" '.currentPhase = $np | .status = "active"' \
     "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
