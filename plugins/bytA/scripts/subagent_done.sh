@@ -52,7 +52,28 @@ PHASE_AGENT=$(get_phase_agent "$CURRENT_PHASE")
 
 # Logging
 mkdir -p "$LOG_DIR" 2>/dev/null || true
-echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] SubagentStop: $PHASE_AGENT (Phase $CURRENT_PHASE)" >> "$LOG_DIR/hooks.log"
+TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+echo "[$TIMESTAMP] SubagentStop: $PHASE_AGENT (Phase $CURRENT_PHASE)" >> "$LOG_DIR/hooks.log"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# COMPACT-REPORT: Context-Kompaktierung aus Agent-Transcript erkennen
+# ═══════════════════════════════════════════════════════════════════════════
+AGENT_TRANSCRIPT=$(echo "$_HOOK_INPUT" | jq -r '.agent_transcript_path // ""' 2>/dev/null || echo "")
+if [ -n "$AGENT_TRANSCRIPT" ] && [ -f "$AGENT_TRANSCRIPT" ]; then
+  COMPACT_COUNT=$(grep -c '"compact_boundary"' "$AGENT_TRANSCRIPT" 2>/dev/null || echo "0")
+  if [ "$COMPACT_COUNT" -gt 0 ]; then
+    # Peak: hoechster preTokens-Wert aus compact_boundary Entries
+    PEAK=$(grep '"compact_boundary"' "$AGENT_TRANSCRIPT" | jq -r '.compactMetadata.preTokens // 0' 2>/dev/null | sort -rn | head -1)
+    # Final: letzter total_input aus dem letzten assistant-Turn
+    FINAL=$(grep '"assistant"' "$AGENT_TRANSCRIPT" | tail -1 | jq '(.message.usage.input_tokens // 0) + (.message.usage.cache_creation_input_tokens // 0) + (.message.usage.cache_read_input_tokens // 0)' 2>/dev/null || echo "0")
+    # Turns: Anzahl assistant-Eintraege
+    TURNS=$(grep -c '"assistant"' "$AGENT_TRANSCRIPT" 2>/dev/null || echo "0")
+
+    REPORT="COMPACT-REPORT: $PHASE_AGENT | compacts=$COMPACT_COUNT | peak=$PEAK | final=$FINAL | turns=$TURNS"
+    echo "[$TIMESTAMP] $REPORT" >> "$LOG_DIR/hooks.log"
+    echo "⚠ $REPORT"
+  fi
+fi
 
 # Sichtbare Ausgabe
 echo ""
