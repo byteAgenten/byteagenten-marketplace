@@ -1,6 +1,6 @@
 {
   "name": "bytA",
-  "version": "3.7.3",
+  "version": "3.7.4",
   "description": "Deterministic full-stack development workflow for Angular 21 + Spring Boot 4. Boomerang (agent isolation) + Ralph-Loop (external verification).",
   "author": {
     "name": "byteAgenten"

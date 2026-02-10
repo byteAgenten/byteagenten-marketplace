@@ -161,7 +161,7 @@ approve)
     log_transition "user_advance" "action=approve phase=9"
 
     echo "=== bytA ADVANCE: approve (Phase 9) ==="
-    echo "Push approved."
+    echo "Push + PR approved. pushApproved=true"
     echo ""
     echo "PRE-PUSH BUILD GATE (PFLICHT!):"
     echo "1. cd backend && mvn verify"
@@ -170,7 +170,9 @@ approve)
     echo ""
     echo "Bei GRUENEN TESTS:"
     echo "4. git push -u origin $BRANCH"
-    echo "5. gh pr create --base $FROM_BRANCH --title 'feat(#$ISSUE_NUM): $ISSUE_TITLE'"
+    echo "5. gh pr create --base $FROM_BRANCH --title 'feat(#$ISSUE_NUM): $ISSUE_TITLE' --body 'PR_BODY_HIER'"
+    echo "   WICHTIG: Verwende den PR-Body den du dem User gezeigt hast und den er approved hat."
+    echo "   Ersetze PR_BODY_HIER mit dem vollstaendigen Markdown-Body."
     echo ""
     echo "Nach erfolgreichem Push+PR:"
     echo "EXECUTE: Bash('${SCRIPT_DIR}/wf_advance.sh complete')"
@@ -188,32 +190,75 @@ approve)
   NEXT_NAME=$(get_phase_name "$NEXT_PHASE")
   NEXT_AGENT=$(get_phase_agent "$NEXT_PHASE")
 
-  # ─── Phase 9 Auto-Approve: Push-Instruktionen direkt ausgeben ───────
-  # Phase 8 Approval impliziert Phase 9 Approval — kein zweites Bestätigen.
-  # Phase 9 hat keinen Subagent — der Orchestrator (Claude) fuehrt sie
-  # selbst aus (Build Gate + Push + PR).
+  # ─── Phase 9: awaiting_approval mit PR-Vorschau ──────────────────────
+  # Push braucht IMMER User-Bestaetigung. Zeige was gepusht wird.
   if [ "$NEXT_PHASE" = "9" ]; then
-    jq '.currentPhase = 9 | .status = "active" | .awaitingApprovalFor = 9 | .pushApproved = true' \
+    jq '.currentPhase = 9 | .status = "awaiting_approval" | .awaitingApprovalFor = 9' \
       "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
 
-    log "ADVANCE: Phase $APPROVAL_PHASE ($PHASE_NAME) approved → Phase 9 (Push & PR) auto-approved"
-    log_transition "user_advance" "action=approve from=$APPROVAL_PHASE to=9 auto_push=true"
+    log "ADVANCE: Phase $APPROVAL_PHASE ($PHASE_NAME) approved → Phase 9 (Push & PR) awaiting_approval"
+    log_transition "user_advance" "action=approve from=$APPROVAL_PHASE to=9"
+
+    # ─── Git-Daten sammeln ───────────────────────────────────────────
+    PR_TITLE="feat(#$ISSUE_NUM): $ISSUE_TITLE"
+    COMMIT_COUNT=$(git log "$FROM_BRANCH"..HEAD --oneline 2>/dev/null | wc -l | tr -d ' ')
+    COMMIT_LOG=$(git log "$FROM_BRANCH"..HEAD --oneline 2>/dev/null | head -20)
+    FILES_CHANGED=$(git diff --stat "$FROM_BRANCH"..HEAD 2>/dev/null | tail -1)
+    FILE_LIST=$(git diff --stat "$FROM_BRANCH"..HEAD 2>/dev/null | head -30)
+
+    # ─── Vorhandene Spec-Dateien auflisten ───────────────────────────
+    SPEC_FILES=$(ls .workflow/specs/issue-${ISSUE_NUM}-ph*.md 2>/dev/null || echo "")
+
+    # ─── Phasen-Status-Tabelle bauen ─────────────────────────────────
+    PHASE_TABLE=""
+    for p in 0 1 2 3 4 5 6 7 8; do
+      local_pn=$(get_phase_name "$p")
+      local_pf=$(printf "%02d" "$p")
+      if jq -e ".phases[\"$p\"].status == \"skipped\"" "$WORKFLOW_FILE" >/dev/null 2>&1; then
+        PHASE_TABLE="${PHASE_TABLE}  Phase $p ($local_pn): SKIPPED\n"
+      elif ls .workflow/specs/issue-${ISSUE_NUM}-ph${local_pf}-*.md >/dev/null 2>&1; then
+        PHASE_TABLE="${PHASE_TABLE}  Phase $p ($local_pn): DONE\n"
+      fi
+    done
 
     echo "=== bytA ADVANCE: approve ==="
     echo "Phase $APPROVAL_PHASE ($PHASE_NAME) approved."
-    echo "Phase 9 (Push & PR) — Auto-Approved. pushApproved=true"
     echo ""
-    echo "PRE-PUSH BUILD GATE (PFLICHT!):"
-    echo "1. cd backend && mvn verify"
-    echo "2. cd frontend && npm test -- --no-watch --browsers=ChromeHeadless"
-    echo "3. cd frontend && npm run build"
+    echo "=== PHASE 9: PR-VORSCHAU ERSTELLEN ==="
     echo ""
-    echo "Bei GRUENEN TESTS:"
-    echo "4. git push -u origin $BRANCH"
-    echo "5. gh pr create --base $FROM_BRANCH --title 'feat(#$ISSUE_NUM): $ISSUE_TITLE'"
+    echo "PR-Titel: $PR_TITLE"
+    echo "Branch:   $BRANCH → $FROM_BRANCH"
+    echo "Commits:  $COMMIT_COUNT"
     echo ""
-    echo "Nach erfolgreichem Push+PR:"
-    echo "EXECUTE: Bash('${SCRIPT_DIR}/wf_advance.sh complete')"
+    echo "--- Phasen ---"
+    printf "$PHASE_TABLE"
+    echo ""
+    echo "--- Commit-Log ---"
+    echo "$COMMIT_LOG"
+    echo ""
+    echo "--- Geaenderte Dateien ---"
+    echo "$FILE_LIST"
+    echo ""
+    echo "--- Spec-Dateien (fuer PR-Body) ---"
+    for sf in $SPEC_FILES; do echo "  $sf"; done
+    echo ""
+    echo "ANWEISUNG AN CLAUDE:"
+    echo "1. Lies die Spec-Dateien (Read-Tool) und erstelle einen ausfuehrlichen PR-Body:"
+    echo "   ## Summary"
+    echo "   Kurze Beschreibung was implementiert wurde und warum (aus Phase 0 Spec)."
+    echo "   ## Changes"
+    echo "   - Backend: Was wurde geaendert (aus Phase 4 Report)"
+    echo "   - Frontend: Was wurde geaendert (aus Phase 5 Report, falls vorhanden)"
+    echo "   - Database: Migrationen (aus Phase 3 Report, falls vorhanden)"
+    echo "   ## Testing"
+    echo "   Test-Ergebnisse und Coverage (aus Phase 6 Report)."
+    echo "   ## Security"
+    echo "   Security-Audit-Ergebnis (aus Phase 7 Report)."
+    echo "   ## Review"
+    echo "   Code-Review-Ergebnis und offene Suggestions (aus Phase 8 Report)."
+    echo "2. Zeige dem User die VOLLSTAENDIGE PR-Vorschau (Titel + Body) und frage:"
+    echo "   'Soll ich mit diesem PR pushen? Aenderungswuensche am PR-Text?'"
+    echo "3. Bei Approval: Bash('${SCRIPT_DIR}/wf_advance.sh approve')"
     exit 0
   fi
 
