@@ -1,6 +1,6 @@
 # bytA Plugin
 
-**Version 3.7.4** | Deterministic Orchestration: Boomerang + Ralph-Loop
+**Version 3.8.0** | Deterministic Orchestration: Boomerang + Ralph-Loop
 
 Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 10-Phasen-Workflow.
 
@@ -36,6 +36,13 @@ Der Orchestrator ist ein **Bash-Script**, kein LLM. Claude dient nur als Transpo
 │                                                          │
 └──────────────────────────────────────────────────────────┘
 ```
+
+## Commands
+
+| Command | Beschreibung |
+|---------|-------------|
+| `/bytA:feature` | Deterministischer 10-Phasen-Workflow fuer Full-Stack Features |
+| `/bytA:prd-generator` | PRD-Generator: Product Requirements Documents + GitHub Issues |
 
 ## Workflow
 
@@ -225,7 +232,8 @@ bytA/
 │   ├── code-reviewer.md
 │   └── architect-reviewer.md
 ├── commands/
-│   └── feature.md                     # /bytA:feature Entry Point
+│   ├── feature.md                     # /bytA:feature Entry Point
+│   └── prd-generator.md               # /bytA:prd-generator Entry Point
 ├── config/
 │   └── phases.conf                    # Deklarative Phase-Definition
 ├── docs/
@@ -245,8 +253,10 @@ bytA/
 │   ├── block_orchestrator_explore.sh  # PreToolUse: Explore Blocker
 │   └── subagent_done.sh              # SubagentStop: WIP Commits
 ├── skills/
-│   └── feature/
-│       └── SKILL.md                   # Radikal vereinfacht (~170 Zeilen)
+│   ├── feature/
+│   │   └── SKILL.md                   # Radikal vereinfacht (~170 Zeilen)
+│   └── prd-generator/
+│       └── SKILL.md                   # PRD Generator
 └── README.md
 ```
 
