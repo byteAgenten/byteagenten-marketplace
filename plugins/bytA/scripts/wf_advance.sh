@@ -64,7 +64,9 @@ log_transition() {
 # ═══════════════════════════════════════════════════════════════════════════
 # SOUND NOTIFICATIONS (gleiche Logik wie wf_orchestrator.sh)
 # ═══════════════════════════════════════════════════════════════════════════
-CUSTOM_SOUND_DIR="${CLAUDE_PLUGIN_ROOT:-}/assets/sounds"
+# SCRIPT_DIR statt CLAUDE_PLUGIN_ROOT — wf_advance.sh wird als Bash-Befehl
+# aufgerufen (nicht als Hook), daher ist CLAUDE_PLUGIN_ROOT nicht gesetzt.
+CUSTOM_SOUND_DIR="${SCRIPT_DIR}/../assets/sounds"
 
 play_sound() {
   local sound_file="$1"
@@ -186,22 +188,32 @@ approve)
   NEXT_NAME=$(get_phase_name "$NEXT_PHASE")
   NEXT_AGENT=$(get_phase_agent "$NEXT_PHASE")
 
-  # ─── Phase 9 Redirect: Direkt awaiting_approval setzen ─────────────
+  # ─── Phase 9 Auto-Approve: Push-Instruktionen direkt ausgeben ───────
+  # Phase 8 Approval impliziert Phase 9 Approval — kein zweites Bestätigen.
   # Phase 9 hat keinen Subagent — der Orchestrator (Claude) fuehrt sie
-  # selbst aus. Daher kein EXECUTE:Task, sondern sofort Approval Gate.
+  # selbst aus (Build Gate + Push + PR).
   if [ "$NEXT_PHASE" = "9" ]; then
-    jq '.currentPhase = 9 | .status = "awaiting_approval" | .awaitingApprovalFor = 9' \
+    jq '.currentPhase = 9 | .status = "active" | .awaitingApprovalFor = 9 | .pushApproved = true' \
       "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
 
-    log "ADVANCE: Phase $APPROVAL_PHASE ($PHASE_NAME) approved → Phase 9 (Push & PR) awaiting_approval"
-    log_transition "user_advance" "action=approve from=$APPROVAL_PHASE to=9"
+    log "ADVANCE: Phase $APPROVAL_PHASE ($PHASE_NAME) approved → Phase 9 (Push & PR) auto-approved"
+    log_transition "user_advance" "action=approve from=$APPROVAL_PHASE to=9 auto_push=true"
 
     echo "=== bytA ADVANCE: approve ==="
     echo "Phase $APPROVAL_PHASE ($PHASE_NAME) approved."
-    echo "Next: Phase 9 (Push & PR) — Warte auf User-Confirmation fuer Push."
+    echo "Phase 9 (Push & PR) — Auto-Approved. pushApproved=true"
     echo ""
-    echo "Sage dem User:"
-    echo "  'Soll ich den Branch pushen und einen PR nach $FROM_BRANCH erstellen?'"
+    echo "PRE-PUSH BUILD GATE (PFLICHT!):"
+    echo "1. cd backend && mvn verify"
+    echo "2. cd frontend && npm test -- --no-watch --browsers=ChromeHeadless"
+    echo "3. cd frontend && npm run build"
+    echo ""
+    echo "Bei GRUENEN TESTS:"
+    echo "4. git push -u origin $BRANCH"
+    echo "5. gh pr create --base $FROM_BRANCH --title 'feat(#$ISSUE_NUM): $ISSUE_TITLE'"
+    echo ""
+    echo "Nach erfolgreichem Push+PR:"
+    echo "EXECUTE: Bash('${SCRIPT_DIR}/wf_advance.sh complete')"
     exit 0
   fi
 
