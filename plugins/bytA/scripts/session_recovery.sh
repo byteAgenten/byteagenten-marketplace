@@ -72,6 +72,21 @@ mkdir -p "$LOG_DIR" 2>/dev/null || true
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 echo "[$TIMESTAMP] SessionStart($SOURCE): Phase $CURRENT_PHASE ($PHASE_NAME) | Status: $STATUS" >> "$LOG_DIR/hooks.log"
 
+# ═══════════════════════════════════════════════════════════════════════════
+# SESSION RE-CLAIM: Bei resume/startup die ownerSessionId aktualisieren.
+# Resume erzeugt eine neue session_id (by design, GitHub #8069).
+# Startup = neue Session die den Workflow fortsetzen will.
+# Compact = gleiche Session, gleiche ID → kein Update noetig.
+# ═══════════════════════════════════════════════════════════════════════════
+if [ "$SOURCE" = "resume" ] || [ "$SOURCE" = "startup" ]; then
+  _CURRENT_SESSION=$(echo "$_HOOK_INPUT" | jq -r '.session_id // ""' 2>/dev/null || echo "")
+  if [ -n "$_CURRENT_SESSION" ]; then
+    jq --arg sid "$_CURRENT_SESSION" '.ownerSessionId = $sid' \
+      "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+    echo "[$TIMESTAMP] SESSION RE-CLAIM ($SOURCE): ownerSessionId → ${_CURRENT_SESSION:0:12}..." >> "$LOG_DIR/hooks.log"
+  fi
+fi
+
 if [ "$SOURCE" = "compact" ]; then
   # ═══════════════════════════════════════════════════════════════════════
   # COMPACT RECOVERY: Starke Transport-Layer Instruktionen

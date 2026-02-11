@@ -30,6 +30,24 @@ if [ "$WORKFLOW_TYPE" != "bytA-feature" ]; then
   exit 0
 fi
 
+# Status pruefen: nur bei laufendem Workflow blockieren
+WORKFLOW_STATUS=$(jq -r '.status // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+case "$WORKFLOW_STATUS" in
+  active|paused|awaiting_approval) ;; # weiter → blockieren
+  *) exit 0 ;; # completed/cancelled/etc → durchlassen
+esac
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SESSION CHECK: Nur die Workflow-owning Session blockieren.
+# Andere Sessions (z.B. fuer Issue-Erstellung, Recherche) durchlassen.
+# session_id ist ein Common Input Field in JEDEM Hook-Event.
+# ═══════════════════════════════════════════════════════════════════════════
+_CURRENT_SESSION=$(echo "$INPUT" | jq -r '.session_id // ""' 2>/dev/null || echo "")
+_OWNER_SESSION=$(jq -r '.ownerSessionId // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+if [ -n "$_OWNER_SESSION" ] && [ -n "$_CURRENT_SESSION" ] && [ "$_CURRENT_SESSION" != "$_OWNER_SESSION" ]; then
+  exit 0
+fi
+
 # ═══════════════════════════════════════════════════════════════════════════
 # SUBAGENT CHECK: Wenn Subagent aktiv → durchlassen
 # ═══════════════════════════════════════════════════════════════════════════

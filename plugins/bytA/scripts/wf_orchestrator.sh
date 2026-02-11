@@ -217,6 +217,19 @@ if [ "$WORKFLOW_TYPE" != "bytA-feature" ]; then
   exit 0
 fi
 
+# ═══════════════════════════════════════════════════════════════════════════
+# SESSION CLAIM: Erste Session die den Orchestrator triggert wird Owner.
+# Andere Sessions (z.B. fuer Issue-Erstellung) werden NICHT blockiert.
+# Bei Resume aendert sich die session_id → session_recovery.sh aktualisiert.
+# ═══════════════════════════════════════════════════════════════════════════
+_CURRENT_SESSION=$(echo "$INPUT" | jq -r '.session_id // ""' 2>/dev/null || echo "")
+_OWNER_SESSION=$(jq -r '.ownerSessionId // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+if [ -z "$_OWNER_SESSION" ] && [ -n "$_CURRENT_SESSION" ]; then
+  jq --arg sid "$_CURRENT_SESSION" '.ownerSessionId = $sid' \
+    "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+  log "SESSION CLAIM: ownerSessionId set to ${_CURRENT_SESSION:0:12}..."
+fi
+
 # State lesen
 STATUS=$(jq -r '.status // "unknown"' "$WORKFLOW_FILE" 2>/dev/null || echo "unknown")
 PHASE=$(jq -r '.currentPhase // 0' "$WORKFLOW_FILE" 2>/dev/null || echo "0")

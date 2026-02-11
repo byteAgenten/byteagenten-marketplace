@@ -29,6 +29,13 @@ if [ "$WORKFLOW_TYPE" != "bytA-feature" ]; then
   exit 0
 fi
 
+# Session-Check: Nur fuer die Workflow-Session den Marker setzen
+_CURRENT_SESSION=$(echo "$INPUT" | jq -r '.session_id // ""' 2>/dev/null || echo "")
+_OWNER_SESSION=$(jq -r '.ownerSessionId // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+if [ -n "$_OWNER_SESSION" ] && [ -n "$_CURRENT_SESSION" ] && [ "$_CURRENT_SESSION" != "$_OWNER_SESSION" ]; then
+  exit 0
+fi
+
 # ═══════════════════════════════════════════════════════════════════════════
 # CREATE MARKER: Signal that a subagent is active
 # ═══════════════════════════════════════════════════════════════════════════

@@ -1,6 +1,6 @@
 # bytA Plugin
 
-**Version 3.9.0** | Deterministic Orchestration: Boomerang + Ralph-Loop
+**Version 3.9.2** | Deterministic Orchestration: Boomerang + Ralph-Loop
 
 Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 10-Phasen-Workflow.
 
@@ -109,11 +109,17 @@ Alle Hooks sind **Plugin-Level** (in `hooks.json`). Skill-Level Hooks in Plugins
 
 ### Orchestrator-Blocker (v3.9.0)
 
-Die PreToolUse-Blocker verhindern, dass der Orchestrator Code direkt liest/schreibt. Drei Schichten:
+Die PreToolUse-Blocker verhindern, dass der Orchestrator Code direkt liest/schreibt. Vier Schichten:
 
-1. **Ownership Guard** — Nur bei aktivem `bytA-feature` Workflow
-2. **Subagent-Active Marker** — `SubagentStart` setzt `.workflow/.subagent-active`, `SubagentStop` entfernt ihn. Blocker erlauben Tool-Aufrufe wenn der Marker existiert (Subagents DUERFEN Code bearbeiten)
-3. **JSON deny Pattern** — `permissionDecision: "deny"` statt `exit 2` (zuverlaessiger, siehe GitHub #13744)
+1. **Ownership Guard** — Nur bei aktivem `bytA-feature` Workflow mit Status `active`/`paused`/`awaiting_approval`
+2. **Session Isolation (v3.9.2)** — `ownerSessionId` in `workflow-state.json` identifiziert die Workflow-Session. Andere Sessions (z.B. fuer Issue-Erstellung) werden NICHT blockiert. `session_id` ist ein Common Input Field in jedem Hook-Event.
+3. **Subagent-Active Marker** — `SubagentStart` setzt `.workflow/.subagent-active`, `SubagentStop` entfernt ihn. Blocker erlauben Tool-Aufrufe wenn der Marker existiert (Subagents DUERFEN Code bearbeiten)
+4. **JSON deny Pattern** — `permissionDecision: "deny"` statt `exit 2` (zuverlaessiger, siehe GitHub #13744)
+
+Session-Lifecycle:
+- **Workflow-Start**: Stop-Hook setzt `ownerSessionId` beim ersten Fire
+- **Resume**: SessionStart-Hook aktualisiert `ownerSessionId` (neue ID bei Resume, GitHub #8069)
+- **Compact**: Gleiche Session-ID, kein Update noetig
 
 ### Compact Recovery (v3.9.0)
 

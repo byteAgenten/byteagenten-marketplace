@@ -44,6 +44,13 @@ if [ "$STATUS" = "completed" ] || [ "$STATUS" = "idle" ]; then
   exit 0
 fi
 
+# Session-Check: Nur die Workflow-Session blockieren
+_CURRENT_SESSION=$(echo "$INPUT" | jq -r '.session_id // ""' 2>/dev/null || echo "")
+_OWNER_SESSION=$(jq -r '.ownerSessionId // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+if [ -n "$_OWNER_SESSION" ] && [ -n "$_CURRENT_SESSION" ] && [ "$_CURRENT_SESSION" != "$_OWNER_SESSION" ]; then
+  exit 0
+fi
+
 # pushApproved gesetzt? → durchlassen
 PUSH_APPROVED=$(jq -r '.pushApproved // false' "$WORKFLOW_FILE" 2>/dev/null || echo "false")
 if [ "$PUSH_APPROVED" = "true" ]; then
