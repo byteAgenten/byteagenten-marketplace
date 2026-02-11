@@ -379,7 +379,9 @@ rollback)
 # COMPLETE — Workflow abschliessen
 # ═══════════════════════════════════════════════════════════════════════════
 complete)
-  jq --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+  COMPLETED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+  jq --arg ts "$COMPLETED_AT" \
     '.status = "completed" | .completedAt = $ts' \
     "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
 
@@ -388,9 +390,37 @@ complete)
 
   play_completion
 
+  # ─── Dauer berechnen ─────────────────────────────────────────────────
+  STARTED_AT=$(jq -r '.startedAt // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+  DURATION_STR=""
+  if [ -n "$STARTED_AT" ]; then
+    # macOS date -j fuer Parsing, Linux date -d
+    if date -j -f "%Y-%m-%dT%H:%M:%SZ" "$STARTED_AT" +%s >/dev/null 2>&1; then
+      START_EPOCH=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$STARTED_AT" +%s 2>/dev/null || echo "0")
+      END_EPOCH=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$COMPLETED_AT" +%s 2>/dev/null || echo "0")
+    else
+      START_EPOCH=$(date -d "$STARTED_AT" +%s 2>/dev/null || echo "0")
+      END_EPOCH=$(date -d "$COMPLETED_AT" +%s 2>/dev/null || echo "0")
+    fi
+    if [ "$START_EPOCH" -gt 0 ] 2>/dev/null && [ "$END_EPOCH" -gt 0 ] 2>/dev/null; then
+      DIFF=$((END_EPOCH - START_EPOCH))
+      HOURS=$((DIFF / 3600))
+      MINS=$(( (DIFF % 3600) / 60 ))
+      if [ "$HOURS" -gt 0 ]; then
+        DURATION_STR="${HOURS}h ${MINS}m"
+      else
+        DURATION_STR="${MINS}m"
+      fi
+    fi
+  fi
+
   echo "=== bytA ADVANCE: complete ==="
   echo "Workflow fuer Issue #$ISSUE_NUM abgeschlossen."
-  echo "Status: completed | CompletedAt: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+  echo "Status: completed | CompletedAt: $COMPLETED_AT"
+  if [ -n "$DURATION_STR" ]; then
+    echo "Dauer:  $DURATION_STR (Start: $STARTED_AT)"
+    log "ADVANCE: Workflow duration: $DURATION_STR"
+  fi
   ;;
 
 # ═══════════════════════════════════════════════════════════════════════════
