@@ -2,14 +2,15 @@
 # ═══════════════════════════════════════════════════════════════════════════
 # bytA Session Recovery (SessionStart Hook)
 # ═══════════════════════════════════════════════════════════════════════════
-# Feuert nach Context Overflow / neuer Session.
-# Wenn aktiver Workflow existiert → Minimalen Recovery-Prompt ausgeben.
+# Feuert bei Session-Start UND nach Context Compaction.
 #
-# Unterschied zu byt8: Deutlich kuerzer, weil der Ralph-Loop
-# State auf Disk hat und die Stop/UserPromptSubmit Hooks den Rest machen.
-# Dieser Hook muss nur sicherstellen, dass Claude weiss:
-# 1. Es gibt einen aktiven Workflow
-# 2. Es soll /bytA:feature aufrufen (damit SKILL.md geladen wird)
+# source=startup/resume/clear → "Rufe /bytA:feature auf"
+# source=compact             → Starke Transport-Layer Instruktionen
+#                               + "Sage Done." (Stop-Hook uebernimmt)
+#
+# Nach Compaction darf NICHT /bytA:feature aufgerufen werden, weil
+# wf_cleanup.sh den aktiven Workflow als BLOCKED meldet.
+# Stattdessen: "Done." sagen → Stop-Hook fuehrt Ralph-Loop fort.
 # ═══════════════════════════════════════════════════════════════════════════
 
 # Hook CWD fix: cd ins Projekt-Root aus Hook-Input
@@ -30,18 +31,14 @@ else
 fi
 source "${SCRIPT_DIR}/../config/phases.conf"
 
+# Detect source (startup, resume, clear, compact)
+SOURCE=$(echo "$_HOOK_INPUT" | jq -r '.source // "startup"' 2>/dev/null || echo "startup")
+
 # ═══════════════════════════════════════════════════════════════════════════
 # PRUEFEN: Aktiver Workflow vorhanden?
 # ═══════════════════════════════════════════════════════════════════════════
 
 if [ ! -f "$WORKFLOW_FILE" ]; then
-  # Kein Workflow → aber vielleicht Session-Marker?
-  if [ -f "${WORKFLOW_DIR}/bytA-session" ]; then
-    echo ""
-    echo "WORKFLOW RECOVERY: Session-Marker gefunden aber kein Workflow-State."
-    echo "Startup wurde nicht abgeschlossen. Rufe /bytA:feature auf."
-    echo ""
-  fi
   exit 0
 fi
 
@@ -60,7 +57,7 @@ if [ "$STATUS" != "active" ] && [ "$STATUS" != "paused" ] && [ "$STATUS" != "awa
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
-# RECOVERY: Minimaler Kontext
+# RECOVERY: Kontext-Injektion
 # ═══════════════════════════════════════════════════════════════════════════
 
 CURRENT_PHASE=$(jq -r '.currentPhase // 0' "$WORKFLOW_FILE")
@@ -69,24 +66,75 @@ ISSUE_TITLE=$(jq -r '.issue.title // "Unbekannt"' "$WORKFLOW_FILE")
 
 PHASE_NAME=$(get_phase_name "$CURRENT_PHASE")
 
-echo ""
-echo "════════════════════════════════════════════════════════════════════"
-echo "WORKFLOW RECOVERY nach Context Overflow"
-echo "════════════════════════════════════════════════════════════════════"
-echo ""
-echo "  Issue:  #${ISSUE_NUMBER} - ${ISSUE_TITLE}"
-echo "  Phase:  ${CURRENT_PHASE} (${PHASE_NAME})"
-echo "  Status: ${STATUS}"
-echo ""
-echo "  PFLICHT-AKTION: Rufe /bytA:feature auf!"
-echo ""
-echo "  Das laedt den Skill neu. Die Hooks uebernehmen dann:"
-echo "  - Stop Hook: Ralph-Loop setzt automatisch fort"
-echo "  - UserPromptSubmit Hook: Injiziert Approval-Gate-Kontext"
-echo "  - PreToolUse Hooks: Blockieren unerlaubte Aktionen"
-echo ""
-echo "  KEINE eigenstaendigen Aktionen ausfuehren!"
-echo "  NUR /bytA:feature aufrufen."
-echo ""
-echo "════════════════════════════════════════════════════════════════════"
-echo ""
+# Log recovery event
+LOG_DIR="${WORKFLOW_DIR}/logs"
+mkdir -p "$LOG_DIR" 2>/dev/null || true
+TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+echo "[$TIMESTAMP] SessionStart($SOURCE): Phase $CURRENT_PHASE ($PHASE_NAME) | Status: $STATUS" >> "$LOG_DIR/hooks.log"
+
+if [ "$SOURCE" = "compact" ]; then
+  # ═══════════════════════════════════════════════════════════════════════
+  # COMPACT RECOVERY: Starke Transport-Layer Instruktionen
+  # ═══════════════════════════════════════════════════════════════════════
+  # Nach Compaction hat Claude die SKILL.md Instruktionen verloren.
+  # Skill-Level Hooks in Plugins feuern NICHT (GitHub #17688).
+  # Plugin-Level PreToolUse Hooks BLOCKIEREN Code-Zugriff deterministisch.
+  # Dieser Hook re-injiziert die Kern-Instruktionen.
+  # ═══════════════════════════════════════════════════════════════════════
+  echo ""
+  echo "════════════════════════════════════════════════════════════════════"
+  echo "⚠ WORKFLOW RECOVERY nach Context Compaction"
+  echo "════════════════════════════════════════════════════════════════════"
+  echo ""
+  echo "  Issue:  #${ISSUE_NUMBER} - ${ISSUE_TITLE}"
+  echo "  Phase:  ${CURRENT_PHASE} (${PHASE_NAME})"
+  echo "  Status: ${STATUS}"
+  echo ""
+  echo "  ┌─────────────────────────────────────────────────────────────┐"
+  echo "  │  DU BIST EIN TRANSPORT-LAYER — KEIN ENTWICKLER!            │"
+  echo "  │                                                             │"
+  echo "  │  VERBOTEN (Hooks blockieren technisch):                     │"
+  echo "  │  - Code lesen (.ts, .java, .html, .scss, .xml, etc.)      │"
+  echo "  │  - Code schreiben/editieren                                 │"
+  echo "  │  - Bugs analysieren oder Loesungen vorschlagen             │"
+  echo "  │  - Explore/general-purpose Agents starten                  │"
+  echo "  │                                                             │"
+  echo "  │  DEINE EINZIGE AKTION JETZT:                               │"
+  echo "  │  Sage \"Done.\" — der Stop-Hook uebernimmt ALLES.           │"
+  echo "  │                                                             │"
+  echo "  │  Der Stop-Hook wird:                                        │"
+  echo "  │  1. Den Workflow-State pruefen                              │"
+  echo "  │  2. Die naechste Phase starten (oder Approval anfordern)   │"
+  echo "  │  3. Dir den exakten Task()-Aufruf geben                    │"
+  echo "  │                                                             │"
+  echo "  │  DU MUSST NUR 'Done.' SAGEN!                               │"
+  echo "  └─────────────────────────────────────────────────────────────┘"
+  echo ""
+  echo "════════════════════════════════════════════════════════════════════"
+  echo ""
+else
+  # ═══════════════════════════════════════════════════════════════════════
+  # NORMAL RECOVERY: Neue Session / Resume / Clear
+  # ═══════════════════════════════════════════════════════════════════════
+  echo ""
+  echo "════════════════════════════════════════════════════════════════════"
+  echo "WORKFLOW RECOVERY nach Session-Neustart"
+  echo "════════════════════════════════════════════════════════════════════"
+  echo ""
+  echo "  Issue:  #${ISSUE_NUMBER} - ${ISSUE_TITLE}"
+  echo "  Phase:  ${CURRENT_PHASE} (${PHASE_NAME})"
+  echo "  Status: ${STATUS}"
+  echo ""
+  echo "  PFLICHT-AKTION: Rufe /bytA:feature auf!"
+  echo ""
+  echo "  Das laedt den Skill neu. Die Hooks uebernehmen dann:"
+  echo "  - Stop Hook: Ralph-Loop setzt automatisch fort"
+  echo "  - UserPromptSubmit Hook: Injiziert Approval-Gate-Kontext"
+  echo "  - PreToolUse Hooks: Blockieren unerlaubte Aktionen"
+  echo ""
+  echo "  KEINE eigenstaendigen Aktionen ausfuehren!"
+  echo "  NUR /bytA:feature aufrufen."
+  echo ""
+  echo "════════════════════════════════════════════════════════════════════"
+  echo ""
+fi

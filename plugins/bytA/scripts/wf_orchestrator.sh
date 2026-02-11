@@ -503,15 +503,27 @@ if "${SCRIPT_DIR}/wf_verify.sh" "$PHASE"; then
     PHASE_PAD=$(printf "%02d" "$PHASE")
     SPEC_FILE=$(ls .workflow/specs/issue-*-ph${PHASE_PAD}-*.md 2>/dev/null | head -1 || echo "")
     # Phase 1 hat Wireframes statt Specs
+    IS_WIREFRAME=false
     if [ -z "$SPEC_FILE" ] && [ "$PHASE" = "1" ]; then
       SPEC_FILE=$(ls wireframes/issue-*.html 2>/dev/null | head -1 || echo "")
+      IS_WIREFRAME=true
     fi
 
     APPROVAL_MSG="APPROVAL GATE: Phase $PHASE ($PHASE_NAME) ist abgeschlossen."
+
     if [ -n "$SPEC_FILE" ]; then
-      APPROVAL_MSG="$APPROVAL_MSG Ergebnis: $SPEC_FILE —"
+      if [ "$IS_WIREFRAME" = "true" ]; then
+        # ─── Wireframe: Nur Pfad anzeigen, NICHT lesen (103K+ chars!) ───
+        APPROVAL_MSG="$APPROVAL_MSG Wireframe erstellt: $SPEC_FILE — Sage dem User er kann das Wireframe im Browser oeffnen (file:// URL oder 'open $SPEC_FILE'). NICHT die HTML-Datei lesen!"
+      else
+        # ─── Spec-Datei: Vorschau aus ersten 40 Zeilen extrahieren ───
+        # Spart ~20K+ Tokens weil Claude die Datei NICHT selbst lesen muss.
+        SPEC_PREVIEW=$(head -40 "$SPEC_FILE" 2>/dev/null || echo "(Vorschau nicht verfuegbar)")
+        APPROVAL_MSG="$APPROVAL_MSG Ergebnis: $SPEC_FILE — VORSCHAU (erste 40 Zeilen, NICHT die Datei lesen!): --- $SPEC_PREVIEW ---"
+      fi
     fi
-    APPROVAL_MSG="$APPROVAL_MSG Lies die Ergebnis-Datei und praesentiere dem User eine kurze Zusammenfassung der Ergebnisse. Frage dann: 'Soll ich mit dem Workflow fortfahren? (approve/weiter) oder hast du Aenderungswuensche?' WICHTIG: Fuehre KEINE weiteren Aktionen aus — warte auf die Antwort des Users."
+
+    APPROVAL_MSG="$APPROVAL_MSG Praesentiere dem User die Vorschau/Ergebnisse. Frage dann: 'Soll ich mit dem Workflow fortfahren? (approve/weiter) oder hast du Aenderungswuensche?' WICHTIG: KEINE Datei lesen! Die Vorschau oben reicht. Fuehre KEINE weiteren Aktionen aus — warte auf die Antwort des Users."
 
     output_block "$APPROVAL_MSG"
 

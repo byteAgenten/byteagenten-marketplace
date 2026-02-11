@@ -50,6 +50,11 @@ ISSUE_TITLE=$(jq -r '.issue.title // "Feature"' "$WORKFLOW_FILE")
 PHASE_NAME=$(get_phase_name "$CURRENT_PHASE")
 PHASE_AGENT=$(get_phase_agent "$CURRENT_PHASE")
 
+# ═══════════════════════════════════════════════════════════════════════════
+# CLEANUP: Subagent-Active Marker entfernen
+# ═══════════════════════════════════════════════════════════════════════════
+rm -f .workflow/.subagent-active 2>/dev/null || true
+
 # Logging
 mkdir -p "$LOG_DIR" 2>/dev/null || true
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")

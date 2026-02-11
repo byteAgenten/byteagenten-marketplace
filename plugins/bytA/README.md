@@ -1,6 +1,6 @@
 # bytA Plugin
 
-**Version 3.8.0** | Deterministic Orchestration: Boomerang + Ralph-Loop
+**Version 3.9.0** | Deterministic Orchestration: Boomerang + Ralph-Loop
 
 Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 10-Phasen-Workflow.
 
@@ -93,22 +93,36 @@ Bei Phase 7/8 kann der User aendern lassen:
 
 ## Hook-Architektur
 
+Alle Hooks sind **Plugin-Level** (in `hooks.json`). Skill-Level Hooks in Plugins feuern nicht zuverlaessig (GitHub #17688).
+
 | Hook | Script | Funktion |
 |------|--------|----------|
 | **Stop** | `wf_orchestrator.sh` | Ralph-Loop: Verify → Advance/Retry → Agent-Dispatch |
 | **UserPromptSubmit** | `wf_user_prompt.sh` | Approval Gate Context + Rollback-Optionen |
 | **PreToolUse/Bash** | `guard_git_push.sh` | Blockiert Push ohne pushApproved |
-| **SubagentStop** | `subagent_done.sh` | Deterministische WIP-Commits |
-| **SessionStart** | `session_recovery.sh` | Context Overflow Recovery |
+| **PreToolUse/Edit\|Write** | `block_orchestrator_code_edit.sh` | Blockiert Code-Aenderungen im Orchestrator |
+| **PreToolUse/Read** | `block_orchestrator_code_read.sh` | Blockiert Code-Lesen im Orchestrator |
+| **PreToolUse/Task** | `block_orchestrator_explore.sh` | Blockiert Explore/general-purpose im Orchestrator |
+| **SubagentStart** | `subagent_start.sh` | Setzt `.subagent-active` Marker |
+| **SubagentStop** | `subagent_done.sh` | WIP-Commits + Compact-Report + Marker-Cleanup |
+| **SessionStart** | `session_recovery.sh` | Recovery nach Session-Start UND Compaction |
 
-**Skill-Level Hooks (in SKILL.md Frontmatter):**
+### Orchestrator-Blocker (v3.9.0)
 
-| Hook | Script | Funktion |
-|------|--------|----------|
-| **PreToolUse/Bash** | `once: true` (inline) | Session-Marker automatisch setzen |
-| **PreToolUse/Edit\|Write** | `block_orchestrator_code_edit.sh` | Orchestrator darf keinen Code aendern |
-| **PreToolUse/Read** | `block_orchestrator_code_read.sh` | Orchestrator darf keinen Code lesen |
-| **PreToolUse/Task** | `block_orchestrator_explore.sh` | Orchestrator darf nicht explorieren |
+Die PreToolUse-Blocker verhindern, dass der Orchestrator Code direkt liest/schreibt. Drei Schichten:
+
+1. **Ownership Guard** — Nur bei aktivem `bytA-feature` Workflow
+2. **Subagent-Active Marker** — `SubagentStart` setzt `.workflow/.subagent-active`, `SubagentStop` entfernt ihn. Blocker erlauben Tool-Aufrufe wenn der Marker existiert (Subagents DUERFEN Code bearbeiten)
+3. **JSON deny Pattern** — `permissionDecision: "deny"` statt `exit 2` (zuverlaessiger, siehe GitHub #13744)
+
+### Compact Recovery (v3.9.0)
+
+Nach Context-Compaction verliert Claude die SKILL.md-Instruktionen. Der `SessionStart` Hook erkennt `source=compact` und re-injiziert starke Transport-Layer-Instruktionen:
+
+- "Du bist ein TRANSPORT-LAYER — sage nur Done."
+- "Der Stop-Hook uebernimmt ALLES"
+- PreToolUse-Blocker blockieren Code-Zugriff deterministisch
+- Kein `/bytA:feature` Aufruf noetig (wuerde von wf_cleanup.sh blockiert)
 
 ## Agents
 
@@ -239,7 +253,7 @@ bytA/
 ├── docs/
 │   └── REFACTORING-PROPOSAL-BOOMERANG-RALPH.md
 ├── hooks/
-│   └── hooks.json                     # 5 Plugin-Level Hooks
+│   └── hooks.json                     # 9 Plugin-Level Hooks
 ├── scripts/
 │   ├── wf_orchestrator.sh             # Stop Hook: Ralph-Loop Orchestrator
 │   ├── wf_verify.sh                   # Externe Done-Verifikation
@@ -248,10 +262,12 @@ bytA/
 │   ├── wf_user_prompt.sh              # UserPromptSubmit: Approval Gates
 │   ├── wf_cleanup.sh                  # Startup: Workflow aufraumen
 │   ├── guard_git_push.sh              # PreToolUse: Push Guard
-│   ├── block_orchestrator_code_edit.sh # PreToolUse: Code-Edit Blocker
-│   ├── block_orchestrator_code_read.sh # PreToolUse: Code-Read Blocker
-│   ├── block_orchestrator_explore.sh  # PreToolUse: Explore Blocker
-│   └── subagent_done.sh              # SubagentStop: WIP Commits
+│   ├── block_orchestrator_code_edit.sh # PreToolUse: Code-Edit Blocker (v3.9.0)
+│   ├── block_orchestrator_code_read.sh # PreToolUse: Code-Read Blocker (v3.9.0)
+│   ├── block_orchestrator_explore.sh  # PreToolUse: Explore Blocker (v3.9.0)
+│   ├── session_recovery.sh           # SessionStart: Recovery + Compact (v3.9.0)
+│   ├── subagent_start.sh             # SubagentStart: Marker setzen (v3.9.0)
+│   └── subagent_done.sh              # SubagentStop: WIP Commits + Marker Cleanup
 ├── skills/
 │   ├── feature/
 │   │   └── SKILL.md                   # Radikal vereinfacht (~170 Zeilen)
@@ -289,16 +305,20 @@ claude
 Moegliche Ursachen:
 1. **Plugin nicht installiert** → `/hooks` zeigt keine bytA-Hooks → Plugin neu installieren
 2. **Plugin-Cache veraltet** → Cache leeren (siehe oben)
-3. **Skill-Hooks laden nicht** → PreToolUse auf Edit muss `.html` blockieren
+3. **Session nach Cache-Refresh nicht neu gestartet** → Hooks zeigen auf alten Pfad → Session komplett neu starten
 
 ### Hooks pruefen
 
-Wenn `/bytA:feature` ausgefuehrt wird, muessen diese Hooks aktiv sein:
-- Stop Hook: `wf_orchestrator.sh` (plugin-level)
-- PreToolUse/Bash: Session-Marker `once:true` (skill-level)
-- PreToolUse/Edit|Write: `block_orchestrator_code_edit.sh` (skill-level)
-- PreToolUse/Read: `block_orchestrator_code_read.sh` (skill-level)
-- PreToolUse/Task: `block_orchestrator_explore.sh` (skill-level)
+Alle Hooks sind Plugin-Level (in `hooks.json`). Nach `/hooks` muessen diese sichtbar sein:
+- Stop: `wf_orchestrator.sh`
+- UserPromptSubmit: `wf_user_prompt.sh`
+- PreToolUse/Bash: `guard_git_push.sh`
+- PreToolUse/Edit|Write: `block_orchestrator_code_edit.sh`
+- PreToolUse/Read: `block_orchestrator_code_read.sh`
+- PreToolUse/Task: `block_orchestrator_explore.sh`
+- SubagentStart: `subagent_start.sh`
+- SubagentStop: `subagent_done.sh`
+- SessionStart: `session_recovery.sh`
 
 Verbose-Modus: `Ctrl+O` in Claude Code zeigt Hook-Ausgaben.
 Debug-Modus: `claude --debug` zeigt detaillierte Hook-Ausfuehrung.

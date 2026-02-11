@@ -1,25 +1,6 @@
 ---
 description: Deterministic full-stack feature orchestration with Boomerang + Ralph-Loop automation.
 author: byteagent - Hans Pickelmann
-hooks:
-  PreToolUse:
-    - matcher: "Bash"
-      hooks:
-        - type: command
-          command: "_CWD=$(jq -r '.cwd // \".\"'); cd \"$_CWD\" 2>/dev/null || true; mkdir -p .workflow && date -u +\"%Y-%m-%dT%H:%M:%SZ\" > .workflow/bytA-session"
-          once: true
-    - matcher: "Edit|Write"
-      hooks:
-        - type: command
-          command: "${CLAUDE_PLUGIN_ROOT}/scripts/block_orchestrator_code_edit.sh"
-    - matcher: "Task"
-      hooks:
-        - type: command
-          command: "${CLAUDE_PLUGIN_ROOT}/scripts/block_orchestrator_explore.sh"
-    - matcher: "Read"
-      hooks:
-        - type: command
-          command: "${CLAUDE_PLUGIN_ROOT}/scripts/block_orchestrator_code_read.sh"
 ---
 
 # STOPP! LIES DAS KOMPLETT BEVOR DU IRGENDETWAS TUST!
