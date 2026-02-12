@@ -3,7 +3,7 @@ name: ui-designer
 last_updated: 2026-01-26
 description: Create wireframes, design UI layouts, plan user interfaces. TRIGGER "wireframe", "UI design", "mockup", "dashboard layout". DELEGATES to ui-theming on Greenfield. All templates include data-testid for Playwright. NOT FOR UI implementation, backend, API design.
 tools: ["Read", "Write", "Edit", "Glob", "Grep", "mcp__plugin_bytA_angular-cli__get_best_practices", "mcp__plugin_bytA_angular-cli__find_examples", "mcp__plugin_bytA_angular-cli__search_documentation"]
-model: sonnet
+model: inherit
 color: orange
 ---
 
