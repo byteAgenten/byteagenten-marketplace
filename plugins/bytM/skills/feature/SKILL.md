@@ -191,17 +191,16 @@ Launch these 5 `Task` calls in a **single message** (parallel):
 >
 > PROCESS:
 > 1. Wait for all 4 summaries (they arrive as messages). Track: backend [ ] frontend [ ] ui-designer [ ] quality [ ]
-> 2. After receiving all 4, read their full plans from disk:
->    - `.workflow/specs/issue-{N}-plan-backend.md`
->    - `.workflow/specs/issue-{N}-plan-frontend.md`
->    - `.workflow/specs/issue-{N}-plan-ui.md`
->    - `.workflow/specs/issue-{N}-plan-quality.md`
->    - Do NOT read the wireframe HTML — use the UI-Designer's summary and plan-ui.md instead (wireframe is too large for context)
-> 3. Validate consistency:
+> 2. After receiving all 4, use their SUMMARIES (already in your context) for initial consistency check:
 >    - Backend endpoints match Frontend service calls?
 >    - DTOs aligned (field names, types)?
->    - data-testid from plan-ui.md match test scenarios?
->    - Any architectural conflicts?
+>    - Any obvious architectural conflicts?
+> 3. Read full plans SELECTIVELY — only the files you need for details:
+>    - If API mismatch suspected → read `issue-{N}-plan-backend.md` + `issue-{N}-plan-frontend.md`
+>    - If test coverage gap → read `issue-{N}-plan-quality.md`
+>    - `issue-{N}-plan-ui.md` is small, read if needed for data-testid alignment
+>    - Do NOT read the wireframe HTML (too large)
+>    - Do NOT read all 4 plan files by default — only those needed to resolve ambiguities
 > 4. If conflicts found: send fix request to the relevant specialist via SendMessage, wait for updated summary.
 > 5. Write CONSOLIDATED TECH SPEC to `.workflow/specs/issue-{N}-plan-consolidated.md` containing:
 >    - **`## Implementation Scope`** (FIRST section, REQUIRED): One of `backend-only`, `frontend-only`, or `full-stack`. This determines which agents are spawned in Round 2.
@@ -320,8 +319,10 @@ Update state: `currentRound = "verify"`. Spawn 3 fresh specialist agents:
 
 **test-engineer** → `Task(bytM:test-engineer, name: "test-engineer", team_name: "bytm-{N}", model: "{MODEL}")`:
 > ROUND 3: VERIFY for Issue #{N} - {TITLE}.
-> Read consolidated spec: `.workflow/specs/issue-{N}-plan-consolidated.md`
-> Do NOT read the wireframe HTML (too large). Instead, find data-testid selectors directly in the implemented code: `Grep("data-testid", "frontend/src/**/*.html")`
+> Read the implementation reports (NOT the consolidated spec — it's too large and redundant at this stage):
+> - `.workflow/specs/issue-{N}-impl-backend.md` (if exists)
+> - `.workflow/specs/issue-{N}-impl-frontend.md` (if exists)
+> Find data-testid selectors directly in the implemented code: `Grep("data-testid", "frontend/src/**/*.html")`
 >
 > Tasks:
 > 1. Write E2E tests (Playwright, Page Object pattern) using data-testid selectors
