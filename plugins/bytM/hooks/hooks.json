@@ -1,0 +1,36 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/guard_git_push.sh" }]
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/verify_task.sh" }]
+      }
+    ],
+    "TeammateIdle": [
+      {
+        "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/wip_commit.sh" }]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/session_recovery.sh" }]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "idle_prompt",
+        "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/play_notification.sh" }]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/play_completion.sh" }]
+      }
+    ]
+  }
+}

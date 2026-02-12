@@ -17,6 +17,11 @@
       "name": "bytA",
       "description": "Agent-based workflow orchestration for Angular + Spring Boot (experimental)",
       "source": "./plugins/bytA"
+    },
+    {
+      "name": "bytM",
+      "description": "Agent Team-based full-stack development with cross-validation (native Claude Code Agent Teams)",
+      "source": "./plugins/bytM"
     }
   ]
 }

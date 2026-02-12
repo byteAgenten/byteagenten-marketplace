@@ -8,6 +8,7 @@ Private Claude Code Plugins for byteAgenten team members.
 |--------|-------------|---------|
 | [byt8](./plugins/byt8) | Full-stack development toolkit for Angular 21 + Spring Boot 4 | 7.5.7 |
 | [bytA](./plugins/bytA) | Deterministic full-stack workflow (Boomerang + Ralph-Loop) | 3.9.2 |
+| [bytM](./plugins/bytM) | 4-Agent Team workflow with cross-validation (native Agent Teams) | 1.0.0 |
 
 ## Prerequisites
 
@@ -116,8 +117,10 @@ Falls du eine feste Version verwenden möchtest:
 | `/byt8:prd-generator` | Generate PRDs (user stories, requirements) and create GitHub Issues |
 | `/bytA:feature` | Deterministic 10-phase workflow (Boomerang + Ralph-Loop) |
 | `/bytA:prd-generator` | Generate PRDs (user stories, requirements) and create GitHub Issues |
+| `/bytM:feature` | 4-Agent Team workflow with cross-validation |
+| `/bytM:prd-generator` | Generate PRDs (user stories, requirements) and create GitHub Issues |
 
-→ Details und Beispiele siehe [byt8 README](./plugins/byt8/README.md) / [bytA README](./plugins/bytA/README.md)
+→ Details und Beispiele siehe [byt8 README](./plugins/byt8/README.md) / [bytA README](./plugins/bytA/README.md) / [bytM README](./plugins/bytM/README.md)
 
 ## Plugin Architecture
 
