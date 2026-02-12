@@ -107,14 +107,24 @@ Architect: Konsolidierte Spec schreiben → Konflikt geloest
 
 Du siehst die konsolidierte Spec und genehmigst, aenderst oder brichst ab.
 
-### Round 2: IMPLEMENT (2 Agents)
+### Round 2: IMPLEMENT (Scope-basiert: 1-2 Agents)
+
+Der Architect bestimmt den **Implementation Scope** in der konsolidierten Spec:
+
+| Scope | Agents | Beispiel |
+|-------|--------|----------|
+| `full-stack` | Backend + Frontend (2) | Neues Feature mit UI + API |
+| `backend-only` | Backend (1) | PDF-Export, neue API ohne UI |
+| `frontend-only` | Frontend (1) | UI-Redesign ohne API-Aenderung |
+
+**Nur betroffene Agents werden gespawnt** — kein Frontend-Agent bei reinem Backend-Feature.
 
 | Agent | Implementiert | Kommunikation |
 |-------|--------------|---------------|
 | Backend Dev | Entities, Services, Controller, Migrations, Tests | Kann Frontend fragen |
 | Frontend Dev | Components, Services, Routing, Tests, data-testid | Kann Backend fragen |
 
-Beide lesen die **konsolidierte Spec** von Disk. Koennen sich bei Unklarheiten per `SendMessage` abstimmen.
+Agents lesen die **konsolidierte Spec** von Disk. Koennen sich bei Unklarheiten per `SendMessage` abstimmen.
 
 ### Round 3: VERIFY (3 Spezialisten)
 

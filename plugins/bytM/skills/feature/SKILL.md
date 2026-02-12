@@ -194,6 +194,7 @@ Launch these 5 `Task` calls in a **single message** (parallel):
 >    - Any architectural conflicts?
 > 4. If conflicts found: send fix request to the relevant specialist via SendMessage, wait for updated summary.
 > 5. Write CONSOLIDATED TECH SPEC to `.workflow/specs/issue-{N}-plan-consolidated.md` containing:
+>    - **`## Implementation Scope`** (FIRST section, REQUIRED): One of `backend-only`, `frontend-only`, or `full-stack`. This determines which agents are spawned in Round 2.
 >    - Architecture overview
 >    - API contract (endpoints, DTOs, status codes)
 >    - Data model (entities, relationships, migrations)
@@ -201,7 +202,7 @@ Launch these 5 `Task` calls in a **single message** (parallel):
 >    - Wireframe reference
 >    - Test strategy summary
 >    - Resolved conflicts (if any)
-> 6. Send message to team lead: "Consolidated spec ready. [summary of findings, conflicts resolved: X]"
+> 6. Send message to team lead: "Consolidated spec ready. Scope: {backend-only|frontend-only|full-stack}. [summary of findings, conflicts resolved: X]"
 
 ### After Round 1
 
@@ -222,6 +223,7 @@ PLANS READY FOR REVIEW
 ========================================
 Issue: #{N} - {TITLE}
 
+SCOPE:        {backend-only | frontend-only | full-stack}
 ARCHITECTURE: {overview from consolidated spec}
 API:          {endpoints + DTOs}
 DATABASE:     {entities + migrations}
@@ -242,9 +244,21 @@ Options:
 
 ---
 
-## ROUND 2: IMPLEMENT (2 Agents)
+## ROUND 2: IMPLEMENT (Scope-Based Spawning)
 
-Update state: `currentRound = "implement"`. Spawn 2 fresh teammates:
+Update state: `currentRound = "implement"`.
+
+### Determine scope
+
+Read the `## Implementation Scope` section from the consolidated spec. Only spawn agents for affected domains:
+
+| Scope | Spawn |
+|-------|-------|
+| `full-stack` | backend + frontend (2 agents) |
+| `backend-only` | backend only (1 agent) |
+| `frontend-only` | frontend only (1 agent) |
+
+### Backend agent (if scope is `full-stack` or `backend-only`)
 
 **backend** → `Task(bytM:spring-boot-developer, name: "backend", team_name: "bytm-{N}", model: "{MODEL}")`:
 > ROUND 2: IMPLEMENT for Issue #{N} - {TITLE}.
@@ -256,6 +270,8 @@ Update state: `currentRound = "implement"`. Spawn 2 fresh teammates:
 > If you need clarification about frontend expectations, send a message to teammate "frontend".
 > Write implementation report to `.workflow/specs/issue-{N}-impl-backend.md`.
 > Say 'Done.'
+
+### Frontend agent (if scope is `full-stack` or `frontend-only`)
 
 **frontend** → `Task(bytM:angular-frontend-developer, name: "frontend", team_name: "bytm-{N}", model: "{MODEL}")`:
 > ROUND 2: IMPLEMENT for Issue #{N} - {TITLE}.
@@ -271,8 +287,8 @@ Update state: `currentRound = "implement"`. Spawn 2 fresh teammates:
 
 ### After Round 2
 
-1. Verify impl files exist
-2. Send `shutdown_request` to both teammates
+1. Verify impl files exist (only for spawned agents)
+2. Send `shutdown_request` to all round teammates
 3. WIP commit: `git add -A && git diff --cached --quiet || git commit -m "wip(#${N}/implement): ${TITLE}"`
 4. Update state: `currentRound = "verify"`
 
