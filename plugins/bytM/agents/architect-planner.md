@@ -79,43 +79,25 @@ Problem aus Issue: [X]
 
 ---
 
-## PFLICHT: MCP Tools nutzen
+## MCP Tools — Gezielt nutzen
 
-**BEVOR du Architektur-Entscheidungen triffst, MUSST du diese Tools aufrufen:**
+Nutze MCP-Tools wenn du **Architektur-Entscheidungen** triffst, bei denen aktuelle Docs wichtig sind. **NICHT** fuer Standard-Patterns die das Projekt bereits nutzt.
 
-### 1. Angular Best Practices pruefen (fuer Frontend-Entscheidungen)
+### Wann MCP aufrufen?
 
-```
-mcp__plugin_bytM_angular-cli__get_best_practices
-mcp__plugin_bytM_angular-cli__find_examples query="[feature-keyword]"
-mcp__plugin_bytM_angular-cli__search_documentation query="[concept]"
-```
+| Situation | Tool | Aufrufen? |
+|-----------|------|-----------|
+| Neue Angular-Patterns (Signals, @if/@for) | `get_best_practices` + `find_examples` | Ja |
+| Neue Library einbinden | `context7 resolve-library-id` + `query-docs` | Ja |
+| Standard-CRUD (Entity→Repo→Service→Controller) | — | Nein, Projekt-Code lesen |
+| Bestehende Patterns kopieren | — | Nein, Projekt-Code lesen |
+| Unbekanntes API-Design Pattern | `context7` fuer Spring Boot Docs | Ja |
 
-### 2. Aktuelle Library-Docs konsultieren
-
-```
-mcp__plugin_bytM_context7__resolve-library-id libraryName="[library]" query="[was du wissen willst]"
-mcp__plugin_bytM_context7__query-docs libraryId="[resolved-id]" query="[spezifische Frage]"
-```
-
-### 3. Projekt-Struktur verstehen
+### Projekt-Struktur (bei Bedarf)
 
 ```
 mcp__plugin_bytM_angular-cli__list_projects
 ```
-
-**NIEMALS auf veraltetes Training-Wissen verlassen!**
-
-Die MCP Tools liefern **aktuelle** Dokumentation und Best Practices.
-Dein Training-Wissen kann veraltet sein (Angular/Spring Boot aendern sich schnell).
-
-| Situation | MCP Tool verwenden |
-|-----------|-------------------|
-| Angular-Komponente planen | `get_best_practices` + `find_examples` |
-| Neue Library einbinden | `context7 resolve-library-id` + `query-docs` |
-| API-Design Pattern | `context7` fuer Spring Boot Docs |
-| State Management | `find_examples query="signals"` |
-| Routing/Guards | `search_documentation query="guards"` |
 
 ---
 

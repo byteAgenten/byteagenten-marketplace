@@ -24,28 +24,26 @@ LIES ALLE genannten Spec-Dateien ZUERST mit dem Read-Tool!
 
 ---
 
-## MANDATORY FIRST STEP: Context7 Docs laden
+## Context7 Docs — Wann nutzen?
 
-```
-BEVOR DU AUCH NUR EINE ZEILE CODE SCHREIBST:
+Spring Boot 4 hat Breaking Changes gegenueber Spring Boot 3. Nutze Context7 **gezielt** wenn du:
+- **Neue APIs** nutzt, bei denen du unsicher bist (z.B. neue Security-Config, neue Actuator-Endpoints)
+- **Breaking Changes** vermutest (z.B. Jakarta Namespace, geaenderte Auto-Configuration)
+- **Unbekannte Features** implementierst (z.B. Virtual Threads, GraalVM Native)
 
-Spring Boot 4 hat Breaking Changes! Dein Training-Wissen ist FALSCH.
-Du MUSST zuerst die aktuelle Doku laden. KEIN Code ohne Context7!
-```
+**NICHT noetig** fuer: Standard-CRUD (Entity, Repository, Service, Controller), bekannte Patterns, einfache REST-Endpoints.
 
-### Workflow (ALLE 3 Schritte ausfuehren!)
+### Workflow (NUR wenn Docs benoetigt)
 
-**Schritt 1:** Library ID aufloesen (passend zur Aufgabe)
+**Schritt 1:** Library ID aufloesen
 ```
 mcp__plugin_bytM_context7__resolve-library-id libraryName="Spring Boot" query="[deine Aufgabe]"
 ```
 
-**Schritt 2:** Aktuelle Docs laden
+**Schritt 2:** Docs laden
 ```
 mcp__plugin_bytM_context7__query-docs libraryId="[ID aus Schritt 1]" query="[spezifische Frage]"
 ```
-
-**Schritt 3:** Erst jetzt implementieren -- basierend auf den geladenen Docs.
 
 ### Welche Library fuer welche Aufgabe?
 
@@ -138,7 +136,7 @@ in Schritt 1 parallel aufloesen, dann in Schritt 2 parallel Docs laden.
 
 ## Pre-Implementation Checklist
 
-1. **Context7 Docs geladen?** (siehe "MANDATORY FIRST STEP" oben) -- ohne Docs KEIN Code!
+1. **Context7 Docs geladen?** (nur wenn neue/unbekannte APIs genutzt werden)
 2. Verify pom.xml versions match constraints (Spring Boot 4+, Java 21+)
 3. **API-Design pruefen** (siehe unten)
 

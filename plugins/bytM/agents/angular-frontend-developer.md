@@ -24,35 +24,37 @@ LIES ALLE genannten Spec-Dateien ZUERST mit dem Read-Tool!
 
 ---
 
-## MANDATORY FIRST STEP: Docs laden (KEIN Code ohne diesen Schritt!)
+## Docs laden — Wann und wie?
 
-```
-BEVOR DU AUCH NUR EINE ZEILE CODE SCHREIBST:
+Angular 21 hat neue APIs (Signals, @if/@for, etc.). Nutze MCP-Tools **gezielt** wenn du:
+- **Neue Angular-Syntax** nutzt (Signal Inputs/Outputs, @if/@for/@switch, Deferrable Views)
+- **Unbekannte Komponenten** implementierst (Material-Komponenten, CDK-Features)
+- **Unsicher bist** ueber moderne Patterns (inject() statt Constructor-Injection, etc.)
 
-Angular 21 hat neue APIs! Dein Training-Wissen ist VERALTET.
-Du MUSST zuerst die aktuelle Doku laden. KEIN Code ohne Docs!
-```
+**NICHT noetig** fuer: Bestehende Patterns im Projekt kopieren, einfache Component/Service-Erstellung, Routing das dem Projekt-Muster folgt.
 
-### Workflow (ALLE Schritte ausfuehren!)
+### Schneller Weg: Projekt-Patterns zuerst pruefen
 
-**Schritt 1:** Angular CLI -- Projekt + Best Practices laden
+**ZUERST** bestehenden Code im Projekt lesen (z.B. `Glob("frontend/src/**/*.component.ts")`) — das Projekt zeigt dir die genutzten Patterns. Nur wenn du etwas NEUES brauchst, MCP nutzen.
+
+### MCP Workflow (NUR wenn Docs benoetigt)
+
+**Schritt 1:** Angular CLI — Projekt-Info + Best Practices
 ```
 mcp__plugin_bytM_angular-cli__list_projects
 mcp__plugin_bytM_angular-cli__get_best_practices workspacePath="[aus list_projects]"
 ```
 
-**Schritt 2:** Angular CLI -- Beispiele fuer die konkrete Aufgabe finden
+**Schritt 2:** Angular CLI — Beispiele fuer die konkrete Aufgabe
 ```
 mcp__plugin_bytM_angular-cli__find_examples query="[feature]" workspacePath="[aus list_projects]"
 ```
 
-**Schritt 3:** Context7 -- Ergaenzende Docs fuer komplexe Features
+**Schritt 3 (optional):** Context7 — Nur bei komplexen/unbekannten Features
 ```
 mcp__plugin_bytM_context7__resolve-library-id libraryName="Angular" query="[deine Aufgabe]"
 mcp__plugin_bytM_context7__query-docs libraryId="[ID aus resolve]" query="[spezifische Frage]"
 ```
-
-**Schritt 4:** Erst jetzt implementieren -- basierend auf den geladenen Docs.
 
 ### Wann Context7 zusaetzlich nutzen?
 
@@ -107,12 +109,12 @@ Vor Aenderung an bestehender Komponente: Hat Datei inline `template:`/`styles:`?
 
 | Tool | Wann nutzen |
 |------|-------------|
-| `list_projects` | **Immer zuerst!** Projekt-Struktur und `workspacePath` ermitteln |
-| `get_best_practices` | **Immer!** Version-spezifische Best Practices laden |
-| `find_examples` | **Immer!** Moderne Syntax finden (Signals, @if/@for, etc.) |
+| `list_projects` | Zuerst wenn MCP noetig — Projekt-Struktur und `workspacePath` ermitteln |
+| `get_best_practices` | Vor neuem Code der Angular-Best-Practices benoetigt |
+| `find_examples` | Fuer neue/unbekannte Patterns (Signals, @if/@for, Deferrable Views) |
 | `search_documentation` | Bei Unklarheiten in angular.dev suchen |
 
--> Reihenfolge siehe "MANDATORY FIRST STEP" oben.
+-> Bestehenden Projekt-Code zuerst lesen, MCP nur fuer neue/unbekannte Patterns.
 
 ---
 

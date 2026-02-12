@@ -1,6 +1,6 @@
 # bytM Plugin
 
-**Version 1.1.2** | TeamCreate + Hub-and-Spoke Planning mit Cross-Validation
+**Version 1.2.0** | TeamCreate + Hub-and-Spoke Planning mit Cross-Validation
 
 Full-Stack Development fuer Angular 21 + Spring Boot 4 mit TeamCreate, SendMessage-Kommunikation und runden-frischen Agents.
 

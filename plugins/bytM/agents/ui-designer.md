@@ -27,27 +27,15 @@ LIES ALLE genannten Spec-Dateien ZUERST mit dem Read-Tool!
 
 ---
 
-## PFLICHT: MCP Tools nutzen
+## MCP Tools — Gezielt nutzen
 
-**BEVOR du Wireframes erstellst, MUSST du Angular Material Best Practices pruefen:**
+Nutze MCP-Tools wenn du **unbekannte Material-Komponenten** verwendest. Fuer Standard-Layouts (Tabelle, Formular, Cards) die das Projekt bereits nutzt: bestehenden Code lesen.
 
-```
-mcp__plugin_bytM_angular-cli__get_best_practices
-mcp__plugin_bytM_angular-cli__find_examples query="material table"
-mcp__plugin_bytM_angular-cli__find_examples query="material form"
-mcp__plugin_bytM_angular-cli__search_documentation query="material components"
-```
-
-| UI-Element | MCP Query |
-|------------|-----------|
-| Datentabelle | `find_examples query="material table sort paginator"` |
-| Formular | `find_examples query="material form field validation"` |
-| Dialog | `find_examples query="material dialog"` |
-| Navigation | `find_examples query="material sidenav toolbar"` |
-| Cards | `find_examples query="material card"` |
-
-**NIEMALS veraltete Angular Material Patterns verwenden!**
-Angular Material aendert sich mit jeder Major Version.
+| Situation | Tool | Aufrufen? |
+|-----------|------|-----------|
+| Unbekannte Material-Komponente | `find_examples query="material [component]"` | Ja |
+| Komplexe Interaktionen (Drag&Drop, Virtual Scroll) | `find_examples` + `search_documentation` | Ja |
+| Standard-Layout mit bekannten Komponenten | — | Nein, Projekt-Patterns nutzen |
 
 ---
 

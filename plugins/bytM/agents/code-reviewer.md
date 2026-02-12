@@ -134,9 +134,8 @@ cd frontend && npm run build
 
 ### 7. API Quality & Deprecation Checks
 
-Verify APIs via Context7 and Angular CLI MCP tools — do NOT rely on memorized deprecated API lists.
 Reject legacy Angular patterns (`*ngIf`, `*ngFor`, constructor injection, `BehaviorSubject` for state)
-in Angular 17+ projects. Use MCP `get_best_practices` + `find_examples` to verify current patterns.
+in Angular 17+ projects. Compare against existing project patterns. Use MCP tools only if unsure about current best practices.
 
 ## Review Process
 

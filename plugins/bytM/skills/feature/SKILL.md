@@ -266,7 +266,7 @@ Read the `## Implementation Scope` section from the consolidated spec. Only spaw
 > Read your plan: `.workflow/specs/issue-{N}-plan-backend.md`
 > Implement: entities, repositories, services, controllers, migrations, tests.
 > File domain: `backend/**` ONLY.
-> Run `mvn verify` before reporting done. Fix errors if any.
+> Run `mvn test` (NOT `mvn verify` — full build runs in VERIFY round). Fix failures if any.
 > If you need clarification about frontend expectations, send a message to teammate "frontend".
 > Write implementation report to `.workflow/specs/issue-{N}-impl-backend.md`.
 > Say 'Done.'
@@ -280,7 +280,7 @@ Read the `## Implementation Scope` section from the consolidated spec. Only spaw
 > Read wireframe: `wireframes/issue-{N}-{slug}.html`
 > Implement: components, services, routing, tests. Ensure all data-testid from wireframe are present.
 > File domain: `frontend/**` ONLY.
-> Run `npm run build && npm test` before reporting done. Fix errors if any.
+> Run `npm run build` before reporting done (tests run in VERIFY round). Fix build errors if any.
 > If you need clarification about backend endpoints/DTOs, send a message to teammate "backend".
 > Write implementation report to `.workflow/specs/issue-{N}-impl-frontend.md`.
 > Say 'Done.'
@@ -370,14 +370,7 @@ Options:
 
 ## ROUND 4: SHIP (Team Lead Direct)
 
-### Build gate
-
-Run each command DIRECTLY — no `| tail`, no `| grep`, no `2>&1`. Read the full output.
-
-```bash
-cd backend && mvn verify && cd ..
-cd frontend && npm test -- --no-watch --browsers=ChromeHeadless && npm run build && cd ..
-```
+No build gate here — the Code Reviewer already ran the full build in Round 3 VERIFY. Proceed directly to push.
 
 ### Push + PR
 
