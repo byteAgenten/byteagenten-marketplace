@@ -136,29 +136,6 @@ The actual values from the project are the single source of truth!
 
 ---
 
-## CORE CAPABILITIES
-
-### 1. Data-Driven Dashboard Design
-- KPI cards and metrics visualization
-- Progress indicators and status widgets
-- Data tables with sorting/filtering
-- Charts and graphs for reporting
-
-### 2. Form & Input Interfaces
-- Multi-step forms with validation
-- CRUD interfaces (Create, Read, Update, Delete)
-- Search and filter components
-- File upload interfaces
-
-### 3. HTML Wireframe Generation
-- Browser-viewable HTML files
-- Uses project design tokens (SCSS variables)
-- Angular Material component structure
-- Responsive layouts (mobile-first)
-- **data-testid on all interactive elements**
-
----
-
 ## HTML WIREFRAME TEMPLATE
 
 ### Process
@@ -230,12 +207,7 @@ The test-engineer requires stable selectors for E2E tests.
 | Error | `error-{field}-{type}` | `error-email-required` |
 | Empty State | `empty-state-{type}` | `empty-state-no-data` |
 
-### Dynamic IDs in Angular
-
-```html
-<mat-row [attr.data-testid]="'row-' + row.id"></mat-row>
-<button [attr.data-testid]="'btn-edit-' + item.id">Edit</button>
-```
+Dynamic IDs: `[attr.data-testid]="'row-' + row.id"`
 
 ---
 
@@ -266,60 +238,17 @@ reine Text-Beschreibungen sind KEIN gueltiger Output.
 
 ---
 
-## ANGULAR MATERIAL COMPONENT MAPPING
+## ANGULAR MATERIAL COMPONENTS
 
-| UI Element | Angular Material Component | data-testid |
-|------------|---------------------------|-------------|
-| Primary Action | `<button mat-raised-button color="primary">` | `btn-{action}` |
-| Secondary Action | `<button mat-button>` | `btn-{action}` |
-| Danger Action | `<button mat-raised-button color="warn">` | `btn-{action}` |
-| Text Input | `<mat-form-field><input matInput>` | `input-{field}` |
-| Textarea | `<mat-form-field><textarea matInput>` | `textarea-{field}` |
-| Select | `<mat-form-field><mat-select>` | `select-{field}` |
-| Date Picker | `<input matInput [matDatepicker]>` | `input-{field}` |
-| Data Table | `<mat-table [dataSource]>` | `table-{entity}` |
-| Table Row | `<mat-row>` | `row-{id}` |
-| Card | `<mat-card>` | `card-{context}` |
-| Tabs | `<mat-tab-group>` | `tabs-{context}` |
-| Dialog | `MatDialog.open(...)` | `dialog-{type}` |
-| Snackbar | `MatSnackBar.open(...)` | via panelClass |
-| Progress Bar | `<mat-progress-bar>` | `progress-{context}` |
-| Chip | `<mat-chip>` | `chip-{value}` |
-
----
-
-## UI PATTERN REFERENCES (with data-testid)
-
-For complete HTML examples (KPI dashboards, forms, tables, navigation):
-
-```
-Read: ${CLAUDE_PLUGIN_ROOT}/skills/ui-design/references/patterns-list.md
-Read: ${CLAUDE_PLUGIN_ROOT}/skills/ui-design/references/patterns-form.md
-Read: ${CLAUDE_PLUGIN_ROOT}/skills/ui-design/references/patterns-navigation.md
-```
-
----
-
-## SKILL INTEGRATION
-
-### Themes (Greenfield)
-```
-Read: ${CLAUDE_PLUGIN_ROOT}/skills/ui-theming/SKILL.md
-Read: ${CLAUDE_PLUGIN_ROOT}/skills/ui-theming/themes/[selected].md
-```
+Use MCP tools (`find_examples`, `search_documentation`) for current Material component syntax.
+Do NOT rely on memorized API — Material changes with every Angular major version.
 
 ---
 
 ## OUTPUT FORMAT
 
-When creating wireframes, provide:
-
 1. **Wireframe HTML File**: `wireframes/issue-{N}-[feature].html`
-2. **Design Rationale**: Brief explanation of design decisions
-3. **Component Mapping**: List of Angular Material components used
-4. **Accessibility Notes**: WCAG 2.1 compliance
-5. **Responsive Breakpoints**: Mobile/tablet/desktop behavior
-6. **data-testid Coverage**: Confirmation that all elements have testid
+2. **Design Notes** (spec file): Components used, data-testid coverage, responsive behavior
 
 When done, write your output to the specified spec file and say 'Done.'
 
@@ -327,45 +256,8 @@ When done, write your output to the specified spec file and say 'Done.'
 
 ## DESIGN PRINCIPLES
 
-1. **Design System First** - Always use existing tokens (on greenfield: delegate)
-2. **Mobile-First Responsive** - Start with mobile layout
-3. **Progressive Disclosure** - Show only what's needed
-4. **Data-Driven** - Design around real data patterns
-5. **Accessibility Built-In** - WCAG 2.1 AA compliance from start
-6. **Test-Ready** - data-testid on ALL interactive elements
-
-### Accessibility Checklist
-- [ ] Color contrast minimum 4.5:1
-- [ ] Keyboard navigation for all interactive elements
-- [ ] Focus indicators visible
-- [ ] ARIA labels for icons and non-text elements
-- [ ] Form labels associated with inputs
-- [ ] Error messages clear and accessible
-
-### data-testid Checklist
-- [ ] All buttons have data-testid
-- [ ] All inputs/selects/textareas have data-testid
-- [ ] All table rows have dynamic data-testid (row-{id})
-- [ ] All table cells with dynamic content have data-testid
-- [ ] All dialogs have data-testid
-- [ ] All error messages have data-testid
-- [ ] All empty states have data-testid
-- [ ] All form containers have data-testid
-
-### Localization Support
-- Date format configurable (DD.MM.YYYY / MM/DD/YYYY)
-- Number format with locale-specific separators
-- RTL layout support consideration
-
----
-
-## TOKEN OPTIMIZATION
-
-- **MAX 400 lines** output (wireframes are separate HTML files)
-- **ONLY wireframe paths** and component list
-- **NO lengthy design explanations** - the wireframe shows everything
-- **Compact summary** at the end: wireframe path, components, data-testid
-
----
-
-Focus on creating production-ready wireframes that can be directly translated to Angular components. Include design rationale and implementation notes with every wireframe.
+- Design System First — use existing tokens (greenfield: delegate to ui-theming)
+- Mobile-First Responsive
+- WCAG 2.1 AA — contrast 4.5:1, keyboard nav, ARIA labels, focus indicators
+- data-testid on ALL interactive elements (buttons, inputs, rows, dialogs, errors, empty states)
+- MAX 400 lines output — the wireframe speaks for itself

@@ -112,37 +112,14 @@ find frontend/src/app -name "*.spec.ts" | head -5 | xargs head -50
 
 ## E2E TESTING (Playwright)
 
-### TESTCONTAINERS-SETUP (ProjectOrbit spezifisch!)
+### E2E Ausfuehrung
 
-**Dieses Projekt hat ein vollautomatisches E2E-Setup mit Testcontainers!**
-
-**NIEMALS manuell Server starten oder Ports pruefen!** Das Setup macht ALLES automatisch:
-
-| Komponente | Port | Gestartet durch |
-|------------|------|-----------------|
-| PostgreSQL | dynamisch | Testcontainers (Docker) |
-| Backend | 8081 | `global-setup.ts` |
-| Frontend | 4201 | `global-setup.ts` |
-
-**Korrekte E2E-Test-Ausfuehrung:**
 ```bash
 cd frontend && npx playwright test
 ```
 
-Das ist ALLES! Die Konfiguration in `playwright.config.ts` ruft automatisch:
-1. `global-setup.ts` -> startet PostgreSQL, Backend, Frontend
-2. Tests laufen gegen `http://localhost:4201`
-3. `global-teardown.ts` -> raeumt alles auf
-
-**VERBOTEN:**
-- `FRONTEND_PORT=4200 BACKEND_PORT=8080 npx playwright test`
-- `curl localhost:8080` vor Tests
-- Manuelles Server-Starten
-- Ports 4200/8080 verwenden (das sind DEV-Ports!)
-
-**Auth-States (aus global-setup):**
-- `.auth/user.json` - USER Role (`user@projectOrbit.local`)
-- `.auth/admin.json` - ADMIN Role (`admin@projectOrbit.local`)
+**WICHTIG:** Lies `playwright.config.ts` und `global-setup.ts` im Projekt fuer Setup-Details.
+Starte KEINE Server manuell — das Setup macht alles automatisch.
 
 ---
 
@@ -181,41 +158,12 @@ find frontend/e2e/pages -name "*.page.ts" | head -3 | xargs head -50
 
 ---
 
-## KRITISCH: Test-Ausfuehrung - STRENGE REGELN
+## Test-Ausfuehrung — REGELN
 
-### ABSOLUTE VERBOTE:
-- **KEINE langen Timeouts** - Tests laufen in Sekunden, nicht Minuten!
-- **KEIN `timeout: 300000`** oder aehnliche Werte im Bash-Tool
-- **KEIN `run_in_background: true`** fuer Tests
-- **KEINE Pipes** die Fehler verschlucken (`| grep`, `| tail`, `2>&1`)
-- **KEIN `-q` (quiet) Flag** bei Maven
-- **KEIN Retry** ohne Fehleranalyse
-
-### Korrekte Test-Ausfuehrung:
-```bash
-# Unit Tests - DIREKT, ohne Timeout-Override
-mvn test -Dtest=SpecificTest
-npm test -- --include=**/specific.spec.ts --watch=false
-
-# E2E Tests - NUR wenn Server laufen
-npx playwright test specific.spec.ts --project=chromium
-```
-
-### Bei Fehler - SOFORT analysieren:
-```
-FALSCH: Test -> Fehler -> nochmal -> Timeout erhoehen -> nochmal...
-RICHTIG: Test -> Fehler -> Output LESEN -> Code fixen -> Test
-```
-
-### Erwartete Laufzeiten:
-| Test-Typ | Erwartete Dauer | Max. Toleranz |
-|----------|-----------------|---------------|
-| Unit (einzeln) | 5-30 Sekunden | 60 Sekunden |
-| Unit (alle) | 1-3 Minuten | 5 Minuten |
-| E2E (einzeln) | 10-30 Sekunden | 60 Sekunden |
-| E2E (alle) | 2-5 Minuten | 10 Minuten |
-
-**Wenn ein Test laenger dauert -> ABBRECHEN und analysieren!**
+- Tests DIREKT ausfuehren (kein `run_in_background`, kein `timeout: 300000`)
+- Kein `| grep`, `| tail`, `-q` — volle Ausgabe lesen
+- Bei Fehler: Output LESEN → Code fixen → erneut testen (kein blindes Retry)
+- Erwartete Laufzeiten: Unit 5-60s, E2E 10-60s, Suite max 5-10min
 
 ---
 

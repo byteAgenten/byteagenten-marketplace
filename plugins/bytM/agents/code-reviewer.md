@@ -132,39 +132,11 @@ cd frontend && npm run build
 - Domain-specific validation rules
 - Project coding standards
 
-### 7. API Quality & Deprecation Checks (CRITICAL)
+### 7. API Quality & Deprecation Checks
 
-**MANDATORY Context7 verification for ALL external library APIs**
-
-**Common deprecated APIs to REJECT:**
-
-**Frontend (Angular 18+):**
-- `*ngIf`, `*ngFor`, `*ngSwitch` - Use `@if`, `@for`, `@switch`
-- Constructor injection - Use `inject()` function
-- `async` in TestBed - Use `waitForAsync()`
-- Old RxJS patterns - Prefer Signals where possible
-- `BehaviorSubject` for state - Use `signal()`
-- Manual `subscribe()` for HTTP - Use `resource()`
-
-**Backend (Spring Boot 4 / Java 21):**
-- `@Before`, `@After` (JUnit 4) - Use `@BeforeEach`, `@AfterEach`
-- Old Hibernate patterns - Check Spring Boot 4 docs
-- Deprecated Jackson methods - Verify version compatibility
-
-### 8. Angular Modern Patterns (Angular 18+)
-
-| Pattern | Modern (17+) | Legacy |
-|---------|--------------|--------|
-| Control Flow | `@if`, `@for`, `@switch` | `*ngIf`, `*ngFor`, `*ngSwitch` |
-| Dependency Injection | `inject()` function | Constructor injection |
-| Components | `standalone: true` | NgModule-based |
-| State | `signal()`, `computed()` | `BehaviorSubject` |
-| HTTP Data | `resource()`, `rxResource()` | Manual `subscribe()` |
-| Cleanup | `takeUntilDestroyed()` | Manual unsubscribe |
-| For Loops | `@for` with `track` | `*ngFor` without trackBy |
-
-**For Angular 17+**: REJECT legacy patterns.
-**For Angular <17**: Legacy patterns are acceptable.
+Verify APIs via Context7 and Angular CLI MCP tools — do NOT rely on memorized deprecated API lists.
+Reject legacy Angular patterns (`*ngIf`, `*ngFor`, constructor injection, `BehaviorSubject` for state)
+in Angular 17+ projects. Use MCP `get_best_practices` + `find_examples` to verify current patterns.
 
 ## Review Process
 
@@ -177,63 +149,25 @@ For each file that was changed:
 
 ## Output Format (MANDATORY)
 
-**You MUST ALWAYS use this complete format!**
-
-FORBIDDEN: Only "Code Review approved" without details
-REQUIRED: Full format with all sections, even when APPROVED
+Report MUST include: Overall Assessment, Files Reviewed, Issues (Critical/Major/Minor), Next Steps.
+FORBIDDEN: Only "Code Review approved" without details.
 
 ```markdown
 ## Code Review Summary
-
 **Overall Assessment**: [APPROVED / APPROVED WITH SUGGESTIONS / CHANGES REQUIRED]
-
-**Files Reviewed**: [List of files]
-
----
-
-### Context7 Verification
-
-**Libraries Verified:**
-- [Library name]: Version [x.x.x] (verified via Context7)
-  - Deprecated APIs: None found / [List found]
-  - Best practices: Confirmed / [Issues found]
-
----
+**Files Reviewed**: [list]
 
 ### Critical Issues
-
-**File**: `path/to/file`
-**Line(s)**: [line numbers]
-**Issue**: [Description of the problem]
-**Impact**: [Why this is critical]
-**Recommendation**: [Specific fix needed]
-
----
+[file:line — issue — impact — recommendation]
 
 ### Major Issues
+[file — issue — recommendation]
 
-**File**: `path/to/file`
-**Issue**: [Description]
-**Recommendation**: [Suggested fix]
-
----
-
-### Minor Issues
-
-**File**: `path/to/file`
-**Suggestion**: [Description]
-
----
-
-### Missing Updates
-
-[Related files that should have been updated but weren't]
-
----
+### Minor Issues / Suggestions
+[file — suggestion]
 
 ### Next Steps
-
-[Clear action items based on the assessment]
+[action items]
 ```
 
 ## Decision Criteria

@@ -82,52 +82,24 @@ mcp__plugin_bytM_context7__query-docs libraryId="[ID aus resolve]" query="[spezi
 
 ## data-testid Konvention (PFLICHT!)
 
-**Jedes interaktive Element MUSS ein `data-testid` Attribut haben:**
+Jedes interaktive Element MUSS ein `data-testid` Attribut haben.
 
-```html
-<!-- Buttons -->
-<button data-testid="btn-save-time-entry">Speichern</button>
-<button data-testid="btn-cancel">Abbrechen</button>
+| Element | Pattern | Dynamisch |
+|---------|---------|-----------|
+| Button | `btn-{action}` | — |
+| Input | `input-{field}` | — |
+| Form | `form-{name}` | — |
+| Panel | `panel-{name}` | — |
+| Liste | `list-{name}` | — |
+| Dynamisch | `{entity}-{id}` | `[attr.data-testid]="'entry-' + item.id"` |
 
-<!-- Inputs -->
-<input data-testid="input-start-time" type="time" />
-<input data-testid="input-end-time" type="time" />
-
-<!-- Listen-Items -->
-<div *ngFor="let entry of entries" [attr.data-testid]="'entry-' + entry.id">
-
-<!-- Formulare -->
-<form data-testid="form-time-entry">
-
-<!-- Dialoge/Panels -->
-<mat-expansion-panel data-testid="panel-work-time-settings">
-```
-
-**Namenskonvention:**
-- `btn-{action}` -> Buttons
-- `input-{field}` -> Eingabefelder
-- `panel-{name}` -> Expansion Panels
-- `form-{name}` -> Formulare
-- `list-{name}` -> Listen
-- `{entity}-{id}` -> Dynamische Elemente
-
-**Warum?**
-- CSS-Selektoren (`.day-row`, `mat-expansion-panel`) sind fragil
-- `data-testid` ist stabil bei Refactorings
-- E2E-Tests werden wartbar und zuverlaessig
+CSS-Selektoren sind verboten — nur `data-testid` fuer stabile E2E-Tests.
 
 ---
 
-## Boy Scout Rule (Legacy-Komponenten)
+## Boy Scout Rule
 
-**Vor Aenderung an bestehender Komponente pruefen:**
-- Hat Datei `template:` oder `styles:`? -> **Erst refactorn!**
-
-**Refactoring-Schritte:**
-1. `template:` Inhalt -> `.component.html` extrahieren
-2. `styles:` Inhalt -> `.component.scss` extrahieren
-3. `.ts` auf `templateUrl`/`styleUrl` umstellen
-4. **Dann** Feature-Aenderung machen
+Vor Aenderung an bestehender Komponente: Hat Datei inline `template:`/`styles:`? → Erst zu `templateUrl`/`styleUrl` extrahieren, dann Feature-Aenderung.
 
 ---
 

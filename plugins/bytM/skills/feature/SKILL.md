@@ -7,57 +7,56 @@ author: byteagent - Hans Pickelmann
 
 ## YOUR ROLE
 
-You are the **TEAM LEAD** coordinating a 4-agent team through 5 rounds: **PLAN -> VALIDATE -> IMPLEMENT -> VERIFY -> SHIP**.
+You are the **TEAM LEAD** coordinating specialized agents through 4 rounds: **PLAN -> IMPLEMENT -> VERIFY -> SHIP**.
 
 You are in **DELEGATE MODE**: you coordinate, you do NOT write code or explore the codebase.
 
 ---
 
-## THE TEAM
+## EXECUTION MODEL: TeamCreate + Round-Scoped Agents
 
-Spawn these 4 teammates once at the start of Round 1. They persist across all rounds.
+Each round spawns **fresh teammates** via `Task` with `team_name`. Within a round, agents communicate via `SendMessage`. Between rounds, agents are shut down and information flows via `.workflow/specs/` files.
 
-| Name | Subagent Type | Role |
-|------|---------------|------|
-| architect | `bytM:architect-planner` | Tech spec, API design, architecture review |
-| backend | `bytM:spring-boot-developer` | Spring Boot, DB migrations, backend tests |
-| frontend | `bytM:angular-frontend-developer` | Angular, wireframes, UI, frontend tests |
-| quality | `bytM:test-engineer` | E2E tests, security audit, code review |
+```
+Round N:
+  1. Spawn teammates (Task with team_name + name)
+  2. Agents work in parallel, communicate via SendMessage
+  3. Agents write results to .workflow/specs/
+  4. shutdown_request to all round agents
+  5. WIP commit
 
-Each teammate **automatically** receives: their expertise (via subagent_type), CLAUDE.md, MCP servers (Context7, Angular CLI), and all tools. You do NOT need to include domain expertise in your prompts.
+Round N+1:
+  1. Spawn FRESH teammates (clean context!)
+  2. They read previous round's specs from disk
+  ...
+```
 
----
-
-## SPAWN PROMPT RULES
-
-When spawning a teammate or sending a round assignment:
-
-1. **State the round and task** (e.g., "ROUND 1: PLAN")
-2. **Reference the issue** (number + title)
-3. **Specify input files** to read (if any)
-4. **Specify output file** to write
-5. **End with**: "When done: mark task completed, send '{Round} done.' to team-lead."
-
-**Keep prompts short.** The agent knows HOW to do their job. You only tell them WHAT to do and WHERE to put the result.
+**Why fresh per round:** Persistent agents accumulate context across rounds and hit overflow by Round 3-4. Fresh agents get a clean 200k context window every round.
 
 ---
 
-## TASK NAMING CONVENTION (MANDATORY)
+## AGENT TYPES + MODEL STRATEGY
 
-Task subjects MUST use these prefixes so the TaskCompleted hook can verify output files:
+The user chooses a **model tier** at startup: `fast` (Sonnet) or `quality` (Opus). This is stored in `workflow-state.json` as `modelTier` and determines the `{MODEL}` variable used in all Task calls.
 
-| Round | Subject Pattern | Example |
-|-------|----------------|---------|
-| Plan | `PLAN: architect ...` | `PLAN: architect plan for #42` |
-| Plan | `PLAN: Backend ...` | `PLAN: Backend plan for #42` |
-| Plan | `PLAN: Frontend ...` | `PLAN: Frontend plan for #42` |
-| Plan | `PLAN: Quality ...` | `PLAN: Quality plan for #42` |
-| Validate | `VALIDATE: {agent} ...` | `VALIDATE: architect review for #42` |
-| Implement | `IMPLEMENT: Backend ...` | `IMPLEMENT: Backend for #42` |
-| Implement | `IMPLEMENT: Frontend ...` | `IMPLEMENT: Frontend for #42` |
-| Implement | `IMPLEMENT: Quality ...` | `IMPLEMENT: Quality E2E for #42` |
-| Verify | `VERIFY: {agent} ...` | `VERIFY: architect contract check #42` |
-| Verify (quality) | `VERIFY: Full audit ...` | `VERIFY: Full audit for #42` |
+| Tier | Model | Best for |
+|------|-------|----------|
+| `fast` (default) | sonnet | Standard-Features, CRUD, einfache UI |
+| `quality` | opus | Komplexe Business-Logik, verschachtelte State-Patterns, Performance-kritisch |
+
+| Subagent Type | Role | Used In |
+|---------------|------|---------|
+| `bytM:architect-planner` | Tech spec, API design, consolidation | Plan |
+| `bytM:spring-boot-developer` | Spring Boot, DB, backend tests | Plan, Implement |
+| `bytM:angular-frontend-developer` | Angular, routing, state management | Plan, Implement |
+| `bytM:ui-designer` | Wireframes (HTML), Material Design, data-testid | Plan |
+| `bytM:test-engineer` | E2E tests, test strategy, coverage | Plan, Verify |
+| `bytM:security-auditor` | OWASP security audit | Verify |
+| `bytM:code-reviewer` | Code review, quality gates, build verification | Verify |
+
+Agents automatically receive their expertise, CLAUDE.md, MCP servers, and tools via `subagent_type`. You do NOT include domain expertise in prompts.
+
+**IMPORTANT:** Always pass `model: "{MODEL}"` when spawning agents via Task. `{MODEL}` = `"sonnet"` for tier `fast`, `"opus"` for tier `quality`. Do NOT omit the model parameter — otherwise agents inherit Opus from the Team Lead.
 
 ---
 
@@ -86,6 +85,13 @@ Parse `$ARGUMENTS` for issue number. If not provided, ask:
 1. GitHub issue number (required)
 2. Base branch (default: main)
 3. Coverage target (default: 70%)
+4. Model tier: `fast` or `quality` (default: fast)
+
+Use `AskUserQuestion` with these options:
+- **fast (Recommended)**: Sonnet — schnell und kosteneffizient. Fuer Standard-Features, CRUD, einfache UI.
+- **quality**: Opus — maximale Code-Qualitaet. Fuer komplexe Business-Logik, verschachtelte State-Patterns, Performance-kritischen Code.
+
+Store the chosen tier. Map: `fast` → `MODEL = "sonnet"`, `quality` → `MODEL = "opus"`.
 
 ### Step 3: Load issue + create branch
 
@@ -102,125 +108,261 @@ mkdir -p .workflow/logs .workflow/specs .workflow/recovery
 grep -q "^\.workflow/" .gitignore 2>/dev/null || echo ".workflow/" >> .gitignore
 ```
 
-Create `.workflow/workflow-state.json` with: `workflow: "bytM-feature"`, `status: "active"`, `ownerSessionId: ""` (set automatically by hooks), issue details, branch, coverage target, `currentRound: "plan"`, team status (all pending), round status (plan in_progress, rest pending).
+Create `.workflow/workflow-state.json`:
+```json
+{
+  "workflow": "bytM-feature",
+  "status": "active",
+  "ownerSessionId": "",
+  "issue": { "number": "N", "title": "...", "body": "..." },
+  "branch": "feature/issue-N-slug",
+  "fromBranch": "main",
+  "coverageTarget": 70,
+  "modelTier": "fast",
+  "currentRound": "plan",
+  "context": {}
+}
+```
+
+### Step 5: Create team
+
+```
+TeamCreate(team_name: "bytm-{N}")
+```
 
 ---
 
-## ROUND 1: PLAN (4 Agents Parallel)
+## ROUND 1: PLAN — Hub-and-Spoke (5 Agents)
 
-Spawn all 4 teammates and assign plan tasks.
+The Architect acts as **hub**: 4 specialists plan their domain, send summaries to the Architect, who consolidates everything into a unified tech spec.
 
-**Example spawn prompts** (adapt with actual issue details):
+### Spawn all 5 teammates in parallel
 
-- **architect**: "ROUND 1: PLAN for Issue #{N} - {TITLE}. Create tech spec + API design. Determine skip flags (skipBackend/skipFrontend/skipDatabase). Output: `.workflow/specs/issue-{N}-plan-architect.md`"
-- **backend**: "ROUND 1: PLAN for Issue #{N} - {TITLE}. Plan DB schema, services, controllers, test approach. Output: `.workflow/specs/issue-{N}-plan-backend.md`"
-- **frontend**: "ROUND 1: PLAN for Issue #{N} - {TITLE}. Create wireframes (HTML with data-testid) + component/routing plan. Output: plan to `.workflow/specs/issue-{N}-plan-frontend.md`, wireframes to `wireframes/issue-{N}-{slug}.html`"
-- **quality**: "ROUND 1: PLAN for Issue #{N} - {TITLE}. Plan E2E scenarios, OWASP focus, quality gates, coverage strategy for {COVERAGE}%. Output: `.workflow/specs/issue-{N}-plan-quality.md`"
+Launch these 5 `Task` calls in a **single message** (parallel):
 
-Wait for all 4 "Plan done." messages. Verify all plan files exist. Update state: `currentRound = "plan_approval"`.
+**backend** → `Task(bytM:spring-boot-developer, name: "backend", team_name: "bytm-{N}", model: "{MODEL}")`:
+> ROUND 1: PLAN for Issue #{N} - {TITLE}.
+> Issue body: {BODY}
+> Plan: DB schema, services, controllers, endpoint signatures, test approach.
+> Write full plan to `.workflow/specs/issue-{N}-plan-backend.md`.
+> Then send a SHORT SUMMARY (max 20 lines: entities, endpoints, key decisions) to teammate "architect" via SendMessage.
+> After sending, say 'Done.'
+
+**frontend** → `Task(bytM:angular-frontend-developer, name: "frontend", team_name: "bytm-{N}", model: "{MODEL}")`:
+> ROUND 1: PLAN for Issue #{N} - {TITLE}.
+> Issue body: {BODY}
+> Plan: Components, routing, state management, service layer.
+> Write full plan to `.workflow/specs/issue-{N}-plan-frontend.md`.
+> Then send a SHORT SUMMARY (max 20 lines: components, routes, services, key decisions) to teammate "architect" via SendMessage.
+> After sending, say 'Done.'
+
+**ui-designer** → `Task(bytM:ui-designer, name: "ui-designer", team_name: "bytm-{N}", model: "{MODEL}")`:
+> ROUND 1: PLAN for Issue #{N} - {TITLE}.
+> Issue body: {BODY}
+> Create wireframe HTML with data-testid attributes on all interactive elements.
+> Write wireframe to `wireframes/issue-{N}-{slug}.html`.
+> Write design notes to `.workflow/specs/issue-{N}-plan-ui.md`.
+> Then send a SHORT SUMMARY (max 10 lines: components used, data-testid count, layout decisions) to teammate "architect" via SendMessage.
+> After sending, say 'Done.'
+
+**quality** → `Task(bytM:test-engineer, name: "quality", team_name: "bytm-{N}", model: "{MODEL}")`:
+> ROUND 1: PLAN for Issue #{N} - {TITLE}.
+> Issue body: {BODY}
+> Plan: E2E scenarios, OWASP focus areas, quality gates, coverage strategy for {COVERAGE}%.
+> Write full plan to `.workflow/specs/issue-{N}-plan-quality.md`.
+> Then send a SHORT SUMMARY (max 10 lines: scenario count, coverage target, security focus) to teammate "architect" via SendMessage.
+> After sending, say 'Done.'
+
+**architect** → `Task(bytM:architect-planner, name: "architect", team_name: "bytm-{N}", model: "{MODEL}")`:
+> ROUND 1: PLAN (Consolidator) for Issue #{N} - {TITLE}.
+> Issue body: {BODY}
+>
+> YOUR ROLE: You are the HUB. You will receive plan summaries from 4 teammates: backend, frontend, ui-designer, quality.
+>
+> PROCESS:
+> 1. Wait for all 4 summaries (they arrive as messages). Track: backend [ ] frontend [ ] ui-designer [ ] quality [ ]
+> 2. After receiving all 4, read their full plans from disk:
+>    - `.workflow/specs/issue-{N}-plan-backend.md`
+>    - `.workflow/specs/issue-{N}-plan-frontend.md`
+>    - `.workflow/specs/issue-{N}-plan-ui.md`
+>    - `.workflow/specs/issue-{N}-plan-quality.md`
+>    - `wireframes/issue-{N}-{slug}.html`
+> 3. Validate consistency:
+>    - Backend endpoints match Frontend service calls?
+>    - DTOs aligned (field names, types)?
+>    - Wireframe data-testid attributes match test scenarios?
+>    - Any architectural conflicts?
+> 4. If conflicts found: send fix request to the relevant specialist via SendMessage, wait for updated summary.
+> 5. Write CONSOLIDATED TECH SPEC to `.workflow/specs/issue-{N}-plan-consolidated.md` containing:
+>    - Architecture overview
+>    - API contract (endpoints, DTOs, status codes)
+>    - Data model (entities, relationships, migrations)
+>    - Frontend structure (components, routing, state)
+>    - Wireframe reference
+>    - Test strategy summary
+>    - Resolved conflicts (if any)
+> 6. Send message to team lead: "Consolidated spec ready. [summary of findings, conflicts resolved: X]"
+
+### After Round 1
+
+1. Wait for architect's "Consolidated spec ready" message
+2. Verify files exist: `ls .workflow/specs/issue-{N}-plan-consolidated.md .workflow/specs/issue-{N}-plan-backend.md .workflow/specs/issue-{N}-plan-frontend.md .workflow/specs/issue-{N}-plan-ui.md .workflow/specs/issue-{N}-plan-quality.md`
+3. Send `shutdown_request` to all 5 teammates
+4. WIP commit: `git add -A && git diff --cached --quiet || git commit -m "wip(#${N}/plan): ${TITLE}"`
+5. Update state: `currentRound = "plan_approval"`
 
 ---
 
 ## ROUND 1.5: USER APPROVAL
 
-Read all 4 plan files, extract summaries, present to user:
+Read the consolidated spec (`issue-{N}-plan-consolidated.md`), present summary:
 
 ```
 PLANS READY FOR REVIEW
 ========================================
 Issue: #{N} - {TITLE}
 
-ARCHITECT: {architecture + API summary + skip flags}
-BACKEND:   {DB + services summary}
-FRONTEND:  {components + routing summary}
-QUALITY:   {test scenarios + security focus}
+ARCHITECTURE: {overview from consolidated spec}
+API:          {endpoints + DTOs}
+DATABASE:     {entities + migrations}
+FRONTEND:     {components + routing}
+WIREFRAME:    wireframes/issue-{N}-{slug}.html
+TESTS:        {scenario count, coverage target}
+CONFLICTS:    {resolved conflicts or "none"}
 ========================================
 Options:
-  1. Approve (proceed to cross-validation)
-  2. Request changes (specify which agent)
+  1. Approve (proceed to implementation)
+  2. Request changes (specify which area)
   3. Abort workflow
 ```
 
 - **Approve**: proceed to Round 2
-- **Request changes**: SendMessage feedback to agent, wait for revision, re-present
-- **Abort**: set status completed, shutdown all agents
+- **Request changes**: spawn the relevant specialist with feedback, re-consolidate via Architect, re-present
+- **Abort**: set status completed, delete team
 
 ---
 
-## ROUND 2: CROSS-VALIDATE (4 Agents Parallel)
+## ROUND 2: IMPLEMENT (2 Agents)
 
-Update state: `currentRound = "validate"`. Send validation tasks via SendMessage:
+Update state: `currentRound = "implement"`. Spawn 2 fresh teammates:
 
-- **architect**: "ROUND 2: VALIDATE. Review backend + frontend plans. Check architecture conformance, API consistency, DTO alignment. Output: `.workflow/specs/issue-{N}-validation-architect.md`. Report: PASS/WARN/BLOCK per finding."
-- **backend**: "ROUND 2: VALIDATE. Review architect + frontend plans. Check API implementability, N+1 risks, transaction boundaries. Output: `.workflow/specs/issue-{N}-validation-backend.md`"
-- **frontend**: "ROUND 2: VALIDATE. Review architect + backend plans. Check API consumption, response formats, missing endpoints. Output: `.workflow/specs/issue-{N}-validation-frontend.md`"
-- **quality**: "ROUND 2: VALIDATE. Review ALL 3 plans. Check testability, OWASP risks, coverage feasibility, consistency. Output: `.workflow/specs/issue-{N}-validation-quality.md`"
+**backend** → `Task(bytM:spring-boot-developer, name: "backend", team_name: "bytm-{N}", model: "{MODEL}")`:
+> ROUND 2: IMPLEMENT for Issue #{N} - {TITLE}.
+> Read the consolidated spec: `.workflow/specs/issue-{N}-plan-consolidated.md`
+> Read your plan: `.workflow/specs/issue-{N}-plan-backend.md`
+> Implement: entities, repositories, services, controllers, migrations, tests.
+> File domain: `backend/**` ONLY.
+> Run `mvn verify` before reporting done. Fix errors if any.
+> If you need clarification about frontend expectations, send a message to teammate "frontend".
+> Write implementation report to `.workflow/specs/issue-{N}-impl-backend.md`.
+> Say 'Done.'
 
-Wait for all 4. Evaluate:
-- All PASS: proceed to Round 3
-- WARNs only: include in Round 3 prompts, proceed
-- Any BLOCK: send BLOCK details to plan author, max 2 fix cycles, then escalate to user
+**frontend** → `Task(bytM:angular-frontend-developer, name: "frontend", team_name: "bytm-{N}", model: "{MODEL}")`:
+> ROUND 2: IMPLEMENT for Issue #{N} - {TITLE}.
+> Read the consolidated spec: `.workflow/specs/issue-{N}-plan-consolidated.md`
+> Read your plan: `.workflow/specs/issue-{N}-plan-frontend.md`
+> Read wireframe: `wireframes/issue-{N}-{slug}.html`
+> Implement: components, services, routing, tests. Ensure all data-testid from wireframe are present.
+> File domain: `frontend/**` ONLY.
+> Run `npm run build && npm test` before reporting done. Fix errors if any.
+> If you need clarification about backend endpoints/DTOs, send a message to teammate "backend".
+> Write implementation report to `.workflow/specs/issue-{N}-impl-frontend.md`.
+> Say 'Done.'
 
----
+### After Round 2
 
-## ROUND 3: IMPLEMENT (3 Agents + Architect Standby)
-
-Update state: `currentRound = "implement"`. Send implementation tasks:
-
-- **backend**: "ROUND 3: IMPLEMENT for Issue #{N}. Read your plan + architect plan + validation feedback from `.workflow/specs/`. File domain: `backend/**` only. Run `mvn verify` before reporting done. Output: `.workflow/specs/issue-{N}-impl-backend.md`"
-- **frontend**: "ROUND 3: IMPLEMENT for Issue #{N}. Read your plan + architect plan + wireframes + validation feedback. File domain: `frontend/**` and `wireframes/**` only. Run `npm run build && npm test` before done. Output: `.workflow/specs/issue-{N}-impl-frontend.md`"
-- **quality**: "ROUND 3: IMPLEMENT for Issue #{N}. Scaffold E2E tests (Playwright, Page Object pattern). Read your plan + frontend plan for selectors. File domain: `e2e/**` only. Output: `.workflow/specs/issue-{N}-impl-quality.md`"
-- **architect**: "ROUND 3: STANDBY. Monitor messages, answer architecture questions. Do NOT write code."
-
-Wait for 3 "Implement done." messages. Update state: `currentRound = "verify"`.
-
----
-
-## ROUND 4: VERIFY (4 Agents Parallel)
-
-Update state: `rounds.verify.status = "in_progress"`. Send verification tasks:
-
-- **architect**: "ROUND 4: VERIFY. Check API contract consistency between backend controllers and frontend services. Use `git diff {FROM_BRANCH}..HEAD --name-only`. Output: `.workflow/specs/issue-{N}-verify-architect.md`. Report: PASS/WARN/BLOCK."
-- **backend**: "ROUND 4: VERIFY. Check that frontend service calls match your actual endpoints. Output: `.workflow/specs/issue-{N}-verify-backend.md`"
-- **frontend**: "ROUND 4: VERIFY. Check that backend response shapes match your component expectations. Output: `.workflow/specs/issue-{N}-verify-frontend.md`"
-- **quality**: "ROUND 4: VERIFY — Full audit. 3 sub-tasks: (1) Run E2E tests, output `issue-{N}-verify-test-engineer.md`, update `context.testResults` in state. (2) OWASP security audit, output `issue-{N}-verify-security-auditor.md`. (3) Code review, output `issue-{N}-verify-code-reviewer.md`, update `context.reviewFeedback`. Also write overall `issue-{N}-verify-quality.md`."
-
-Wait for all 4. Same evaluation as Round 2: PASS/WARN/BLOCK resolution.
+1. Verify impl files exist
+2. Send `shutdown_request` to both teammates
+3. WIP commit: `git add -A && git diff --cached --quiet || git commit -m "wip(#${N}/implement): ${TITLE}"`
+4. Update state: `currentRound = "verify"`
 
 ---
 
-## ROUND 4.5: USER APPROVAL
+## ROUND 3: VERIFY (3 Agents)
+
+Update state: `currentRound = "verify"`. Spawn 3 fresh specialist agents:
+
+**test-engineer** → `Task(bytM:test-engineer, name: "test-engineer", team_name: "bytm-{N}", model: "{MODEL}")`:
+> ROUND 3: VERIFY for Issue #{N} - {TITLE}.
+> Read consolidated spec: `.workflow/specs/issue-{N}-plan-consolidated.md`
+> Read wireframe: `wireframes/issue-{N}-{slug}.html` (for data-testid selectors)
+>
+> Tasks:
+> 1. Write E2E tests (Playwright, Page Object pattern) using data-testid selectors
+> 2. Run E2E tests: `cd frontend && npx playwright test`
+> 3. Run unit tests: Backend `cd backend && mvn test`, Frontend `cd frontend && npm test`
+> 4. Measure coverage
+>
+> Update `.workflow/workflow-state.json` field `context.testResults`:
+> `{ "allPassed": true/false, "e2e": "X/Y", "unitBackend": "X/Y", "unitFrontend": "X/Y", "coverage": "Z%" }`
+>
+> Output: `.workflow/specs/issue-{N}-verify-test-engineer.md`
+> Say 'Done.'
+
+**security-auditor** → `Task(bytM:security-auditor, name: "security-auditor", team_name: "bytm-{N}", model: "{MODEL}")`:
+> ROUND 3: VERIFY for Issue #{N} - {TITLE}.
+> OWASP security audit of all changed files.
+> Use `git diff {FROM_BRANCH}..HEAD --name-only` to scope the audit.
+> Do NOT call Context7 MCP tools — review code directly.
+> Report: PASS/WARN/BLOCK per OWASP category. Focus on A01 (Access Control), A03 (Injection), A07 (Auth Failures).
+> Output: `.workflow/specs/issue-{N}-verify-security-auditor.md`
+> Say 'Done.'
+
+**code-reviewer** → `Task(bytM:code-reviewer, name: "code-reviewer", team_name: "bytm-{N}", model: "{MODEL}")`:
+> ROUND 3: VERIFY for Issue #{N} - {TITLE}.
+> Full code review of all changes: `git diff {FROM_BRANCH}..HEAD`
+> Run build gate: `cd backend && mvn verify` then `cd frontend && npm test -- --no-watch --browsers=ChromeHeadless && npm run build`
+> Check: clean code, correct patterns, no TODOs, proper error handling.
+> Report: APPROVED / CHANGES_REQUIRED.
+> Update `.workflow/workflow-state.json` field `context.reviewFeedback`.
+> Output: `.workflow/specs/issue-{N}-verify-code-reviewer.md`
+> Say 'Done.'
+
+### After Round 3
+
+1. Verify all 3 report files exist
+2. Check `context.testResults.allPassed == true` in workflow-state.json
+3. Read all reports:
+   - All PASS/APPROVED → proceed to Round 3.5
+   - WARNs → include in user summary
+   - BLOCK/CHANGES_REQUIRED → re-spawn implementer with fix details, then re-verify (max 2 cycles)
+4. Send `shutdown_request` to all 3 teammates
+5. WIP commit
+
+---
+
+## ROUND 3.5: USER APPROVAL
 
 Read verification reports, present:
 
 ```
 VERIFICATION COMPLETE
 ========================================
-Security Audit:  {result}
-Code Review:     {result}
 E2E Tests:       {X}/{Y} PASSED
+Unit Tests:      Backend {X}/{Y}, Frontend {X}/{Y}
 Coverage:        {X}% (target: {COVERAGE}%)
-Cross-Validation: Architect/Backend/Frontend results
+Security Audit:  {PASS/WARN/BLOCK} ({details})
+Code Review:     {APPROVED/CHANGES_REQUIRED} ({details})
 ========================================
 Options:
   1. Approve (push + PR)
   2. Request changes
-  3. Rollback to Round 3
+  3. Rollback to Round 2
 ```
 
 ---
 
-## ROUND 5: SHIP (Team Lead Direct)
+## ROUND 4: SHIP (Team Lead Direct)
 
 ### Build gate
 ```bash
 cd backend && mvn verify && cd ..
-cd frontend && npm test && npm run build && cd ..
+cd frontend && npm test -- --no-watch --browsers=ChromeHeadless && npm run build && cd ..
 ```
 
 ### Push + PR
 ```bash
-jq '.currentRound = "ship" | .rounds.ship.status = "in_progress" | .pushApproved = true' \
+jq '.currentRound = "ship" | .pushApproved = true' \
   .workflow/workflow-state.json > /tmp/wf-tmp.json && mv /tmp/wf-tmp.json .workflow/workflow-state.json
 git add -A && git commit -m "feat(#{N}): {ISSUE_TITLE}" && git push -u origin {BRANCH}
 gh pr create --title "feat(#{N}): {ISSUE_TITLE}" --body "$(cat <<'EOF'
@@ -234,14 +376,16 @@ Implements #{N}: {ISSUE_TITLE}
 {from impl report}
 
 ## Quality
-- E2E: {results}, Coverage: {X}%, Security: {result}, Code Review: {result}
-- Cross-validation: all 4 agents validated plans before implementation
+- E2E: {results}, Coverage: {X}%
+- Security Audit: {result}
+- Code Review: {result}
+- Architecture validated by Architect during planning
 EOF
 )"
 ```
 
-### Complete + shutdown
-Set `status = "completed"`, `currentRound = "done"`. Send `shutdown_request` to all 4 teammates. Report PR URL to user.
+### Complete
+Set `status = "completed"`, `currentRound = "done"`. Delete team: `TeamDelete`. Report PR URL to user.
 
 ---
 
@@ -249,11 +393,11 @@ Set `status = "completed"`, `currentRound = "done"`. Send `shutdown_request` to 
 
 | Failure | Response |
 |---------|----------|
-| No output file after task | Remind agent (2x), then replace |
-| BLOCK in validation | Route fix to plan author, max 2 cycles |
-| Build/test failure | Agent fixes + re-runs, max 3 attempts |
-| Agent stuck/idle | Nudge, then replace if no response |
-| Validation deadlock (A blocks B, B blocks A) | Send both plans to both, resolve together |
+| Specialist doesn't send summary to Architect | Team lead nudges via SendMessage, max 2x |
+| Architect reports unresolvable conflict | Escalate to user with conflict details |
+| Agent returns without output file | Re-spawn agent (max 2 retries) |
+| Build/test failure in Implement | Re-spawn agent with error output (max 3 retries) |
+| BLOCK in Verify | Re-spawn implementer with fix details, re-verify (max 2 cycles) |
 | All retries exhausted | Escalate to user |
 
 ---
@@ -264,9 +408,9 @@ All in `.workflow/specs/`:
 
 | Round | Pattern | Example |
 |-------|---------|---------|
-| Plan | `issue-{N}-plan-{agent}.md` | `issue-42-plan-architect.md` |
-| Validation | `issue-{N}-validation-{agent}.md` | `issue-42-validation-quality.md` |
-| Implementation | `issue-{N}-impl-{agent}.md` | `issue-42-impl-backend.md` |
-| Verification | `issue-{N}-verify-{agent}.md` | `issue-42-verify-architect.md` |
-| Quality Reports | `issue-{N}-verify-{role}.md` | `issue-42-verify-security-auditor.md` |
-| Wireframes | `wireframes/issue-{N}-{slug}.html` | `issue-42-user-dashboard.html` |
+| Plan (specialists) | `issue-{N}-plan-{role}.md` | `issue-42-plan-backend.md` |
+| Plan (UI) | `issue-{N}-plan-ui.md` | `issue-42-plan-ui.md` |
+| Plan (consolidated) | `issue-{N}-plan-consolidated.md` | `issue-42-plan-consolidated.md` |
+| Implementation | `issue-{N}-impl-{role}.md` | `issue-42-impl-frontend.md` |
+| Verification | `issue-{N}-verify-{role}.md` | `issue-42-verify-test-engineer.md` |
+| Wireframes | `wireframes/issue-{N}-{slug}.html` | `wireframes/issue-42-reports.html` |

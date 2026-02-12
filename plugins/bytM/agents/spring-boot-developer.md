@@ -164,72 +164,12 @@ in Schritt 1 parallel aufloesen, dann in Schritt 2 parallel Docs laden.
 
 ---
 
-## Maven-Befehle - KRITISCHE REGELN
+## Maven-Befehle
 
-### NIEMALS tun:
-- Maven im Background starten (`run_in_background: true`)
-- Pipes die Fehler verschlucken (`mvn verify | grep` oder `| tail`)
-- Bei Fehler denselben Befehl mit laengerem Timeout wiederholen
-- Mehrere Maven-Laeufe nacheinander (test, dann nochmal test, dann verify)
-- `-q` (quiet) Flag - versteckt wichtige Fehlermeldungen
-
-### IMMER tun:
-- Maven DIREKT ausfuehren (kein Background)
-- Vollstaendigen Output lesen (kein grep/tail)
-- Bei Fehler: **Analysieren** und **fixen**, nicht wiederholen
-- **EIN** `mvn verify` am Ende (beinhaltet compile + test)
-- Timeout: 5 Minuten reicht fuer Unit-Tests
-
-### Korrekter Ablauf:
-
-```bash
-# 1. Nach Code-Aenderungen: Compile pruefen
-mvn clean compile
-
-# 2. Bei Compile-Fehler: STOP, analysieren, fixen
-
-# 3. Nach Fix: Tests laufen lassen
-mvn test
-
-# 4. Bei Test-Fehler: STOP, analysieren, fixen
-
-# 5. Erst wenn alles gruen: verify (fuer Integration Tests)
-mvn verify
-```
-
-### Bei Fehler - Analyse statt Retry:
-
-```
-FALSCH:
-   mvn test -> Fehler -> mvn test (nochmal) -> mvn test -X -> ...
-
-RICHTIG:
-   mvn test -> Fehler -> Fehlermeldung lesen -> Code fixen -> mvn test
-```
-
----
-
-## Cloud Deployment Readiness
-
-- Health checks: Actuator endpoints (/health, /readiness, /liveness)
-- Graceful shutdown: Handle SIGTERM properly
-- Stateless design: No local session state (use Redis/DB for sessions)
-- Externalized config: Environment variables, ConfigMaps
-- Docker optimization: Multi-stage builds, minimal base images
-- Kubernetes ready: Resource limits, probes configured
-- Observability: Structured logging, metrics, tracing
-- 12-Factor App: Follow principles for cloud-native apps
-
----
-
-## Optional: DDD (for growing complexity)
-
-When the domain grows complex (multiple aggregates, cross-entity invariants):
-
-- Aggregates: Group entities with shared invariants (e.g., Order + OrderItems)
-- Value Objects: Immutable domain concepts (e.g., Money, Address, DateRange)
-- Domain Events: Decouple bounded contexts (e.g., OrderPlaced, PaymentReceived)
-- Bounded Contexts: Separate concerns (e.g., Sales, Inventory, Shipping)
+- DIREKT ausfuehren (kein `run_in_background`, kein `| grep`, kein `-q`)
+- Bei Fehler: Output LESEN → Code fixen → erneut (kein blindes Retry)
+- Ablauf: `mvn clean compile` → `mvn test` → `mvn verify`
+- EIN `mvn verify` am Ende genuegt (beinhaltet compile + test)
 
 ---
 

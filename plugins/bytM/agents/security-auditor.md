@@ -73,200 +73,30 @@ grep -r "csrf\|CSRF" backend/src --include="*.java"
 
 ## OWASP TOP 10 (2021) CHECKLIST
 
-### A01: Broken Access Control
+Focus on **A01, A03, A07** — the most common vulnerabilities in web apps.
 
-**Check Points:**
-- [ ] Role-based access control (RBAC) implemented
-- [ ] Method-level security annotations used
-- [ ] Resource ownership validated before operations
-- [ ] JWT claims verified on each request
-- [ ] Session invalidated on logout
-
-**Backend Patterns:**
-```java
-// CORRECT: Method-level security
-@PreAuthorize("hasRole('ADMIN') or @securityService.isOwner(#id)")
-@GetMapping("/{id}")
-public ResponseEntity<TimeEntry> getEntry(@PathVariable UUID id) {
-    // ...
-}
-
-// CORRECT: Ownership check in service
-public TimeEntryDto getEntry(UUID userId, UUID entryId) {
-    TimeEntry entry = repository.findById(entryId)
-        .orElseThrow(() -> new ResourceNotFoundException("Entry not found"));
-
-    if (!entry.getUser().getId().equals(userId)) {
-        throw new AccessDeniedException("Not authorized");
-    }
-
-    return toDto(entry);
-}
-```
-
-**Vulnerabilities to Find:**
-```java
-// VULNERABLE: No ownership check
-@GetMapping("/{id}")
-public ResponseEntity<TimeEntry> getEntry(@PathVariable UUID id) {
-    return ResponseEntity.ok(repository.findById(id).orElseThrow());
-}
-```
-
-### A02: Cryptographic Failures
-
-**Check Points:**
-- [ ] Passwords hashed with BCrypt (cost factor >= 10)
-- [ ] JWT secret is strong and environment-specific
-- [ ] HTTPS enforced in production
-- [ ] Sensitive data not logged
-- [ ] Database credentials not in code
-
-### A03: Injection
-
-**Check Points:**
-- [ ] Parameterized queries used (JPA, JPQL)
-- [ ] No string concatenation in queries
-- [ ] Input validated with Bean Validation
-- [ ] Command injection prevented
-
-**Safe Patterns:**
-```java
-// CORRECT: Parameterized JPQL
-@Query("SELECT t FROM TimeEntry t WHERE t.user.id = :userId AND t.date = :date")
-Optional<TimeEntry> findByUserAndDate(
-    @Param("userId") UUID userId,
-    @Param("date") LocalDate date
-);
-```
-
-**Vulnerabilities to Find:**
-```java
-// VULNERABLE: SQL injection
-@Query("SELECT * FROM time_entries WHERE user_id = '" + userId + "'", nativeQuery = true)
-List<TimeEntry> findByUserId(String userId);
-```
-
-### A04: Insecure Design
-
-**Check Points:**
-- [ ] Rate limiting implemented
-- [ ] Business logic validated server-side
-- [ ] Fail-secure defaults
-- [ ] Defense in depth
-
-### A05: Security Misconfiguration
-
-**Check Points:**
-- [ ] Debug mode disabled in production
-- [ ] Default credentials changed
-- [ ] Error messages don't expose internals
-- [ ] Security headers configured
-- [ ] Unnecessary endpoints disabled
-
-### A06: Vulnerable Components
-
-**Check Points:**
-- [ ] Dependencies up to date
-- [ ] No known vulnerabilities in dependencies
-- [ ] Security advisories monitored
-
-**Dependency Check:**
-```bash
-# Maven dependency check
-cd backend
-mvn org.owasp:dependency-check-maven:check
-
-# npm audit
-cd frontend
-npm audit
-```
-
-### A07: Authentication Failures
-
-**Check Points:**
-- [ ] Multi-factor authentication available
-- [ ] Session timeout configured
-- [ ] Account lockout after failed attempts
-- [ ] Secure password requirements
-- [ ] Session fixation prevented
-
-### A08: Software and Data Integrity Failures
-
-**Check Points:**
-- [ ] Dependencies verified (checksums)
-- [ ] CI/CD pipeline secured
-- [ ] Signed commits
-
-### A09: Security Logging and Monitoring
-
-**Check Points:**
-- [ ] Authentication events logged
-- [ ] Authorization failures logged
-- [ ] Input validation failures logged
-- [ ] No sensitive data in logs
-
-### A10: Server-Side Request Forgery (SSRF)
-
-**Check Points:**
-- [ ] No user-controlled URLs in HTTP requests
-- [ ] URL validation and allowlisting
-- [ ] Internal network access restricted
+| Category | Key Checks |
+|----------|------------|
+| **A01: Access Control** | RBAC, method-level `@PreAuthorize`, ownership checks, JWT validation, session invalidation |
+| **A02: Crypto** | BCrypt (cost>=10), strong JWT secret, HTTPS, no secrets in code/logs |
+| **A03: Injection** | Parameterized queries (JPA/JPQL), Bean Validation, no string concat in queries |
+| **A04: Insecure Design** | Rate limiting, server-side business logic, fail-secure defaults |
+| **A05: Misconfiguration** | Debug off in prod, no default creds, no internal info in errors, security headers |
+| **A06: Vulnerable Components** | `mvn org.owasp:dependency-check-maven:check`, `npm audit` |
+| **A07: Auth Failures** | Session timeout, account lockout, secure password policy, session fixation |
+| **A08: Integrity** | Dependency checksums, CI/CD secured |
+| **A09: Logging** | Auth events logged, no sensitive data in logs |
+| **A10: SSRF** | No user-controlled URLs, allowlisting |
 
 ---
 
 ## FRONTEND SECURITY (Angular)
 
-### XSS Prevention
-
-```typescript
-// VULNERABLE: Using innerHTML
-@Component({
-  template: `<div [innerHTML]="userContent"></div>`
-})
-export class UnsafeComponent {
-  userContent = '<script>alert("XSS")</script>';
-}
-
-// SAFE: Using Angular's built-in sanitization
-@Component({
-  template: `<div>{{ userContent }}</div>` // Auto-escaped
-})
-export class SafeComponent {
-  userContent = '<script>alert("XSS")</script>';
-  // Rendered as text, not executed
-}
-```
-
-### CSRF Protection
-
-```typescript
-// Angular automatically includes XSRF token
-// Ensure backend is configured to validate it
-
-// Backend configuration
-@Bean
-public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    http.csrf(csrf -> csrf
-        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-        .csrfTokenRequestHandler(new XorCsrfTokenRequestAttributeHandler())
-    );
-    return http.build();
-}
-```
-
-### Secure Storage
-
-```typescript
-// VULNERABLE: Storing sensitive data in localStorage
-localStorage.setItem('creditCard', '1234-5678-9012-3456');
-
-// BETTER: Use session-only storage for sensitive data
-sessionStorage.setItem('tempData', 'non-sensitive');
-
-// BEST: Don't store sensitive data client-side
-// Use HTTP-only cookies for tokens (BFF pattern)
-```
+| Risk | Check |
+|------|-------|
+| **XSS** | No `[innerHTML]`, no `bypassSecurityTrust*`, use interpolation `{{ }}` |
+| **CSRF** | Backend `CookieCsrfTokenRepository` configured, Angular sends XSRF token |
+| **Storage** | No sensitive data in `localStorage`, use HTTP-only cookies (BFF pattern) |
 
 ---
 
