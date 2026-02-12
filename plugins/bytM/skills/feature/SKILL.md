@@ -191,16 +191,17 @@ Launch these 5 `Task` calls in a **single message** (parallel):
 >
 > PROCESS:
 > 1. Wait for all 4 summaries (they arrive as messages). Track: backend [ ] frontend [ ] ui-designer [ ] quality [ ]
-> 2. After receiving all 4, use their SUMMARIES (already in your context) for initial consistency check:
+> 2. After receiving all 4, read the full plans from disk INCREMENTALLY (one at a time, not all at once):
+>    - Read `issue-{N}-plan-backend.md` — note endpoints, DTOs, migrations
+>    - Read `issue-{N}-plan-frontend.md` — note services, routes, component structure
+>    - Read `issue-{N}-plan-ui.md` — note data-testid list, layout decisions
+>    - Read `issue-{N}-plan-quality.md` — note test scenarios, coverage targets
+>    - Do NOT read the wireframe HTML (too large — plan-ui.md has the relevant info)
+> 3. Validate consistency:
 >    - Backend endpoints match Frontend service calls?
 >    - DTOs aligned (field names, types)?
->    - Any obvious architectural conflicts?
-> 3. Read full plans SELECTIVELY — only the files you need for details:
->    - If API mismatch suspected → read `issue-{N}-plan-backend.md` + `issue-{N}-plan-frontend.md`
->    - If test coverage gap → read `issue-{N}-plan-quality.md`
->    - `issue-{N}-plan-ui.md` is small, read if needed for data-testid alignment
->    - Do NOT read the wireframe HTML (too large)
->    - Do NOT read all 4 plan files by default — only those needed to resolve ambiguities
+>    - data-testid from plan-ui.md match test scenarios?
+>    - Any architectural conflicts?
 > 4. If conflicts found: send fix request to the relevant specialist via SendMessage, wait for updated summary.
 > 5. Write CONSOLIDATED TECH SPEC to `.workflow/specs/issue-{N}-plan-consolidated.md` containing:
 >    - **`## Implementation Scope`** (FIRST section, REQUIRED): One of `backend-only`, `frontend-only`, or `full-stack`. This determines which agents are spawned in Round 2.
