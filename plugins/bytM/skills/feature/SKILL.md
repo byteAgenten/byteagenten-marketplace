@@ -208,7 +208,7 @@ Launch these 5 `Task` calls in a **single message** (parallel):
 
 1. Wait for architect's "Consolidated spec ready" message
 2. Verify files exist: `ls .workflow/specs/issue-{N}-plan-consolidated.md .workflow/specs/issue-{N}-plan-backend.md .workflow/specs/issue-{N}-plan-frontend.md .workflow/specs/issue-{N}-plan-ui.md .workflow/specs/issue-{N}-plan-quality.md`
-3. Send `shutdown_request` to all 5 teammates
+3. Send `shutdown_request` to all 5 teammates — do NOT wait for confirmations
 4. WIP commit: `git add -A && git diff --cached --quiet || git commit -m "wip(#${N}/plan): ${TITLE}"`
 5. Update state: `currentRound = "plan_approval"`
 
@@ -288,7 +288,7 @@ Read the `## Implementation Scope` section from the consolidated spec. Only spaw
 ### After Round 2
 
 1. Verify impl files exist (only for spawned agents)
-2. Send `shutdown_request` to all round teammates
+2. Send `shutdown_request` to all round teammates — do NOT wait for confirmations
 3. WIP commit: `git add -A && git diff --cached --quiet || git commit -m "wip(#${N}/implement): ${TITLE}"`
 4. Update state: `currentRound = "verify"`
 
@@ -342,7 +342,7 @@ Update state: `currentRound = "verify"`. Spawn 3 fresh specialist agents:
    - All PASS/APPROVED → proceed to Round 3.5
    - WARNs → include in user summary
    - BLOCK/CHANGES_REQUIRED → re-spawn implementer with fix details, then re-verify (max 2 cycles)
-4. Send `shutdown_request` to all 3 teammates
+4. Send `shutdown_request` to all 3 teammates — do NOT wait for confirmations
 5. WIP commit
 
 ---
@@ -371,16 +371,22 @@ Options:
 ## ROUND 4: SHIP (Team Lead Direct)
 
 ### Build gate
+
+Run each command DIRECTLY — no `| tail`, no `| grep`, no `2>&1`. Read the full output.
+
 ```bash
 cd backend && mvn verify && cd ..
 cd frontend && npm test -- --no-watch --browsers=ChromeHeadless && npm run build && cd ..
 ```
 
 ### Push + PR
+
+Do NOT create a final squash commit. The WIP commits from each round preserve the workflow history (plan → implement → verify). Push them directly.
+
 ```bash
 jq '.currentRound = "ship" | .pushApproved = true' \
   .workflow/workflow-state.json > /tmp/wf-tmp.json && mv /tmp/wf-tmp.json .workflow/workflow-state.json
-git add -A && git commit -m "feat(#{N}): {ISSUE_TITLE}" && git push -u origin {BRANCH}
+git push -u origin {BRANCH}
 gh pr create --title "feat(#{N}): {ISSUE_TITLE}" --body "$(cat <<'EOF'
 ## Summary
 Implements #{N}: {ISSUE_TITLE}
@@ -401,7 +407,11 @@ EOF
 ```
 
 ### Complete
-Set `status = "completed"`, `currentRound = "done"`. Delete team: `TeamDelete`. Report PR URL to user.
+
+1. Set `status = "completed"`, `currentRound = "done"`
+2. Send `shutdown_request` to any remaining teammates
+3. Try `TeamDelete`. If it fails (zombie agent), proceed anyway — cleanup is non-critical
+4. Report PR URL to user
 
 ---
 
@@ -414,7 +424,13 @@ Set `status = "completed"`, `currentRound = "done"`. Delete team: `TeamDelete`. 
 | Agent returns without output file | Re-spawn agent (max 2 retries) |
 | Build/test failure in Implement | Re-spawn agent with error output (max 3 retries) |
 | BLOCK in Verify | Re-spawn implementer with fix details, re-verify (max 2 cycles) |
+| **Agent ignores shutdown_request** | Do NOT wait with `sleep`. Proceed to next round immediately. Zombie agents don't block the workflow — fresh agents in the next round work independently. |
+| TeamDelete fails (active members) | Proceed anyway. Report to user that `~/.claude/teams/bytm-{N}/` can be cleaned manually. |
 | All retries exhausted | Escalate to user |
+
+### Shutdown Protocol (all rounds)
+
+After each round, send `shutdown_request` to all round teammates. **Do NOT block on confirmations.** Proceed to WIP commit and next round immediately. Zombie agents from previous rounds do not affect fresh agents in new rounds — each Task spawn creates an independent instance.
 
 ---
 
