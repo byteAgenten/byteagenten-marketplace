@@ -272,11 +272,16 @@ Read the `## Implementation Scope` section from the consolidated spec. Only spaw
 
 **backend** → `Task(bytM:spring-boot-developer, name: "backend", team_name: "bytm-{N}", model: "{MODEL}")`:
 > ROUND 2: IMPLEMENT for Issue #{N} - {TITLE}.
-> Read the consolidated spec: `.workflow/specs/issue-{N}-plan-consolidated.md`
-> Read your plan: `.workflow/specs/issue-{N}-plan-backend.md`
+> Read ONLY the consolidated spec: `.workflow/specs/issue-{N}-plan-consolidated.md` (do NOT read individual plan files — consolidated already contains everything).
 > Implement: entities, repositories, services, controllers, migrations, tests.
 > File domain: `backend/**` ONLY.
-> Run `mvn test` (NOT `mvn verify` — full build runs in VERIFY round). Fix failures if any.
+>
+> CONTEXT MANAGEMENT — CRITICAL:
+> - Read source files INCREMENTALLY: read only what you need for the current subtask, implement it, then move to the next.
+> - Do NOT read all source files at once before starting — this wastes context window.
+> - Pipe ALL Bash output through `| tail -50` to limit context usage.
+>
+> Run `mvn test -pl :backend 2>&1 | tail -50` (NOT `mvn verify` — full build runs in VERIFY round). Fix failures if any.
 > If you need clarification about frontend expectations, send a message to teammate "frontend".
 > Write implementation report to `.workflow/specs/issue-{N}-impl-backend.md`.
 > Say 'Done.'
@@ -285,12 +290,17 @@ Read the `## Implementation Scope` section from the consolidated spec. Only spaw
 
 **frontend** → `Task(bytM:angular-frontend-developer, name: "frontend", team_name: "bytm-{N}", model: "{MODEL}")`:
 > ROUND 2: IMPLEMENT for Issue #{N} - {TITLE}.
-> Read the consolidated spec: `.workflow/specs/issue-{N}-plan-consolidated.md`
-> Read your plan: `.workflow/specs/issue-{N}-plan-frontend.md`
-> Read wireframe: `wireframes/issue-{N}-{slug}.html`
+> Read ONLY the consolidated spec: `.workflow/specs/issue-{N}-plan-consolidated.md` (do NOT read individual plan files — consolidated already contains everything).
+> Read wireframe ONLY for data-testid reference: `wireframes/issue-{N}-{slug}.html`
 > Implement: components, services, routing, tests. Ensure all data-testid from wireframe are present.
 > File domain: `frontend/**` ONLY.
-> Run `npm run build` before reporting done (tests run in VERIFY round). Fix build errors if any.
+>
+> CONTEXT MANAGEMENT — CRITICAL:
+> - Read source files INCREMENTALLY: read one component, implement changes, then move to the next.
+> - Do NOT read all source files at once before starting — this wastes context window.
+> - Pipe ALL Bash output through `| tail -50` to limit context usage.
+>
+> Run `npm run build 2>&1 | tail -50` before reporting done (tests run in VERIFY round). Fix build errors if any.
 > If you need clarification about backend endpoints/DTOs, send a message to teammate "backend".
 > Write implementation report to `.workflow/specs/issue-{N}-impl-frontend.md`.
 > Say 'Done.'
@@ -315,9 +325,11 @@ Update state: `currentRound = "verify"`. Spawn 3 fresh specialist agents:
 >
 > Tasks:
 > 1. Write E2E tests (Playwright, Page Object pattern) using data-testid selectors
-> 2. Run E2E tests: `cd frontend && npx playwright test`
-> 3. Run unit tests: Backend `cd backend && mvn test`, Frontend `cd frontend && npm test`
+> 2. Run E2E tests: `cd frontend && npx playwright test 2>&1 | tail -50`
+> 3. Run unit tests: Backend `cd backend && mvn test 2>&1 | tail -50`, Frontend `cd frontend && npm test -- --no-watch --browsers=ChromeHeadless 2>&1 | tail -30`
 > 4. Measure coverage
+>
+> CRITICAL: Pipe ALL test/build output through `| tail -50`. Never run unpiped — it fills the context window.
 >
 > Update `.workflow/workflow-state.json` field `context.testResults`:
 > `{ "allPassed": true/false, "e2e": "X/Y", "unitBackend": "X/Y", "unitFrontend": "X/Y", "coverage": "Z%" }`
@@ -330,14 +342,17 @@ Update state: `currentRound = "verify"`. Spawn 3 fresh specialist agents:
 > OWASP security audit of all changed files.
 > Use `git diff {FROM_BRANCH}..HEAD --name-only` to scope the audit.
 > Do NOT call Context7 MCP tools — review code directly.
+> Read files INCREMENTALLY — do NOT read all changed files at once.
 > Report: PASS/WARN/BLOCK per OWASP category. Focus on A01 (Access Control), A03 (Injection), A07 (Auth Failures).
 > Output: `.workflow/specs/issue-{N}-verify-security-auditor.md`
 > Say 'Done.'
 
 **code-reviewer** → `Task(bytM:code-reviewer, name: "code-reviewer", team_name: "bytm-{N}", model: "{MODEL}")`:
 > ROUND 3: VERIFY for Issue #{N} - {TITLE}.
-> Full code review of all changes: `git diff {FROM_BRANCH}..HEAD`
-> Run build gate: `cd backend && mvn verify` then `cd frontend && npm test -- --no-watch --browsers=ChromeHeadless && npm run build`
+> Review changes: `git diff {FROM_BRANCH}..HEAD` (read incrementally per file, NOT all at once)
+> Run build gate — pipe ALL output:
+> `cd backend && mvn verify 2>&1 | tail -50`
+> `cd frontend && npm test -- --no-watch --browsers=ChromeHeadless 2>&1 | tail -30 && npm run build 2>&1 | tail -50`
 > Check: clean code, correct patterns, no TODOs, proper error handling.
 > Report: APPROVED / CHANGES_REQUIRED.
 > Update `.workflow/workflow-state.json` field `context.reviewFeedback`.
