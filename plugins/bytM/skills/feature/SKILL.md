@@ -81,17 +81,27 @@ fi
 
 ### Step 2: Gather info from user
 
-Parse `$ARGUMENTS` for issue number. If not provided, ask:
-1. GitHub issue number (required)
-2. Base branch (default: main)
-3. Coverage target (default: 70%)
-4. Model tier: `fast` or `quality` (default: fast)
+Parse `$ARGUMENTS` for issue number. If not provided, ask for it.
 
-Use `AskUserQuestion` with these options:
-- **fast (Recommended)**: Sonnet — schnell und kosteneffizient. Fuer Standard-Features, CRUD, einfache UI.
-- **quality**: Opus — maximale Code-Qualitaet. Fuer komplexe Business-Logik, verschachtelte State-Patterns, Performance-kritischen Code.
+Then use `AskUserQuestion` to collect ALL 3 settings in ONE call (3 questions):
 
-Store the chosen tier. Map: `fast` → `MODEL = "sonnet"`, `quality` → `MODEL = "opus"`.
+**Question 1 — Base Branch:**
+- header: "Branch"
+- question: "Von welchem Branch soll abgezweigt werden?"
+- options: `main (Recommended)` | `develop`
+- (User kann auch eigenen Branch eingeben via "Other")
+
+**Question 2 — Coverage Target:**
+- header: "Coverage"
+- question: "Welches Test-Coverage-Ziel?"
+- options: `70% (Recommended)` | `80%` | `90%`
+
+**Question 3 — Model Tier:**
+- header: "Model"
+- question: "Welches Model-Tier fuer die Agents?"
+- options: `fast (Recommended)` — Sonnet, schnell und kosteneffizient | `quality` — Opus, maximale Code-Qualitaet fuer komplexe Logik
+
+Store all values. Map model tier: `fast` → `MODEL = "sonnet"`, `quality` → `MODEL = "opus"`.
 
 ### Step 3: Load issue + create branch
 
