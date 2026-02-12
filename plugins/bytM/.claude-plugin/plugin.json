@@ -1,6 +1,6 @@
 {
   "name": "bytM",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Agent Team-based full-stack development workflow for Angular 21 + Spring Boot 4. Fixed 4-agent team with cross-validation.",
   "author": { "name": "byteAgenten" },
   "keywords": ["angular", "spring-boot", "fullstack", "workflow", "agent-teams", "cross-validation"]
