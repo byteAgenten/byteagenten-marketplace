@@ -196,11 +196,11 @@ Launch these 5 `Task` calls in a **single message** (parallel):
 >    - `.workflow/specs/issue-{N}-plan-frontend.md`
 >    - `.workflow/specs/issue-{N}-plan-ui.md`
 >    - `.workflow/specs/issue-{N}-plan-quality.md`
->    - `wireframes/issue-{N}-{slug}.html`
+>    - Do NOT read the wireframe HTML — use the UI-Designer's summary and plan-ui.md instead (wireframe is too large for context)
 > 3. Validate consistency:
 >    - Backend endpoints match Frontend service calls?
 >    - DTOs aligned (field names, types)?
->    - Wireframe data-testid attributes match test scenarios?
+>    - data-testid from plan-ui.md match test scenarios?
 >    - Any architectural conflicts?
 > 4. If conflicts found: send fix request to the relevant specialist via SendMessage, wait for updated summary.
 > 5. Write CONSOLIDATED TECH SPEC to `.workflow/specs/issue-{N}-plan-consolidated.md` containing:
@@ -321,7 +321,7 @@ Update state: `currentRound = "verify"`. Spawn 3 fresh specialist agents:
 **test-engineer** → `Task(bytM:test-engineer, name: "test-engineer", team_name: "bytm-{N}", model: "{MODEL}")`:
 > ROUND 3: VERIFY for Issue #{N} - {TITLE}.
 > Read consolidated spec: `.workflow/specs/issue-{N}-plan-consolidated.md`
-> Read wireframe: `wireframes/issue-{N}-{slug}.html` (for data-testid selectors)
+> Do NOT read the wireframe HTML (too large). Instead, find data-testid selectors directly in the implemented code: `Grep("data-testid", "frontend/src/**/*.html")`
 >
 > Tasks:
 > 1. Write E2E tests (Playwright, Page Object pattern) using data-testid selectors
