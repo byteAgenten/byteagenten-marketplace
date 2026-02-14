@@ -101,7 +101,7 @@ plugins/bytA/
 │   └── plugin.json                    # Plugin-Metadaten (Name, Version)
 ├── .mcp.json                          # MCP Server (Context7, Angular CLI)
 ├── agents/                            # 10 spezialisierte Agents
-│   ├── architect-planner.md           # Phase 0: Technical Specification
+│   ├── architect-planner.md           # Phase 0: Hub-Consolidator + Technical Spec
 │   ├── ui-designer.md                 # Phase 1: Wireframes
 │   ├── api-architect.md               # Phase 2: API Design
 │   ├── postgresql-architect.md        # Phase 3: Migrations
@@ -119,16 +119,19 @@ plugins/bytA/
 │   ├── ONBOARDING.md                  # ← Dieses Dokument
 │   └── REFACTORING-PROPOSAL-BOOMERANG-RALPH.md
 ├── hooks/
-│   └── hooks.json                     # Plugin-Level Hooks (4 Stueck)
+│   └── hooks.json                     # Plugin-Level Hooks (9 Stueck)
 ├── scripts/
 │   ├── wf_orchestrator.sh             # Stop Hook: Ralph-Loop Orchestrator
 │   ├── wf_verify.sh                   # Externe Done-Verifikation
+│   ├── wf_advance.sh                  # Deterministic Approval-Advance (v3.7.0)
 │   ├── wf_prompt_builder.sh           # Deterministische Agent-Prompts
 │   ├── wf_user_prompt.sh              # UserPromptSubmit: Approval Gates
 │   ├── wf_cleanup.sh                  # Startup: Workflow aufraeumen
 │   ├── guard_git_push.sh              # PreToolUse/Bash: Push Guard
 │   ├── block_orchestrator_code_edit.sh # PreToolUse/Edit|Write: Code-Edit-Blocker
+│   ├── block_orchestrator_code_read.sh # PreToolUse/Read: Code-Read-Blocker
 │   ├── block_orchestrator_explore.sh  # PreToolUse/Task: Explore-Blocker
+│   ├── subagent_start.sh              # SubagentStart: Marker setzen
 │   ├── subagent_done.sh               # SubagentStop: WIP-Commits
 │   └── session_recovery.sh            # SessionStart: Context Recovery
 ├── skills/
@@ -146,7 +149,7 @@ Wird waehrend eines Workflows im **Projekt-Root** erstellt (nicht im Plugin-Verz
 ├── bytA-session                       # Session-Marker (Skill aktiv?)
 ├── workflow-state.json                # Zentraler State
 ├── specs/                             # Agent-Reports als MD-Dateien
-│   ├── issue-42-ph00-architect-planner.md
+│   ├── issue-42-plan-consolidated.md
 │   ├── issue-42-ph02-api-architect.md
 │   ├── issue-42-ph04-spring-boot-developer.md
 │   └── ...
@@ -174,14 +177,17 @@ Wird waehrend eines Workflows im **Projekt-Root** erstellt (nicht im Plugin-Verz
 |---|---|---|
 | `wf_orchestrator.sh` | **Stop** | Herzstuck: Verify → Advance/Retry → Agent-Dispatch |
 | `wf_verify.sh` | (wird von Orchestrator aufgerufen) | Externe Done-Pruefung (kein LLM!) |
-| `wf_prompt_builder.sh` | (wird von Orchestrator aufgerufen) | Baut Agent-Prompts aus State + Templates |
+| `wf_advance.sh` | (wird von User-Prompt aufgerufen) | Deterministic Approval-Advance (approve/feedback/rollback) |
+| `wf_prompt_builder.sh` | (wird von Orchestrator/Advance aufgerufen) | Baut Agent-Prompts aus State + Templates |
 | `wf_user_prompt.sh` | **UserPromptSubmit** | Injiziert Approval-Gate-Kontext in Claudes Sichtfeld |
 | `wf_cleanup.sh` | (wird von SKILL.md aufgerufen) | Startup: Alten Workflow aufraeumen |
 | `guard_git_push.sh` | **PreToolUse/Bash** | Blockiert Push ohne `pushApproved` Flag |
-| `block_orchestrator_code_edit.sh` | **PreToolUse/Edit\|Write** (Skill-Level) | Orchestrator darf keinen Code aendern |
-| `block_orchestrator_explore.sh` | **PreToolUse/Task** (Skill-Level) | Orchestrator darf nicht explorieren |
-| `subagent_done.sh` | **SubagentStop** | Deterministische WIP-Commits |
-| `session_recovery.sh` | **SessionStart** | Context Recovery nach Overflow |
+| `block_orchestrator_code_edit.sh` | **PreToolUse/Edit\|Write** | Orchestrator darf keinen Code aendern |
+| `block_orchestrator_code_read.sh` | **PreToolUse/Read** | Orchestrator darf keinen Code lesen |
+| `block_orchestrator_explore.sh` | **PreToolUse/Task** | Orchestrator darf nicht explorieren |
+| `subagent_start.sh` | **SubagentStart** | Setzt `.subagent-active` Marker |
+| `subagent_done.sh` | **SubagentStop** | WIP-Commits + Marker-Cleanup |
+| `session_recovery.sh` | **SessionStart** | Recovery nach Session-Start UND Compaction |
 
 ### 4.3 Agenten
 
@@ -192,13 +198,13 @@ Jeder Agent ist in einer `.md`-Datei unter `agents/` definiert. Die Agent-Datei 
 
 | Agent | Phase | Spezialisierung | Model |
 |---|---|---|---|
-| `architect-planner` | 0 | Technical Spec, 5x Warum, Architektur | inherit |
-| `ui-designer` | 1 | HTML Wireframes, Angular Material | sonnet |
+| `architect-planner` | 0 (Hub) | Hub-Consolidator: konsolidiert Specialist-Plaene, prueft Konsistenz, Phase-Skipping | inherit |
+| `spring-boot-developer` | 0 (Spoke), 4 | Backend-Plan (Phase 0), Implementation (Phase 4) | inherit |
+| `angular-frontend-developer` | 0 (Spoke), 5 | Frontend-Plan (Phase 0), Implementation (Phase 5) | inherit |
+| `test-engineer` | 0 (Spoke), 6 | Test Impact Analysis (Phase 0), E2E Tests (Phase 6) | inherit |
+| `ui-designer` | 0 (optional Spoke), 1 | Wireframe-Plan (Phase 0), HTML Wireframes (Phase 1) | sonnet |
 | `api-architect` | 2 | REST API Design (Markdown, kein YAML) | inherit |
 | `postgresql-architect` | 3 | Flyway SQL Migrations, Schema | inherit |
-| `spring-boot-developer` | 4 | Spring Boot 4 Backend | inherit |
-| `angular-frontend-developer` | 5 | Angular 21 Frontend (Signals, Standalone) | inherit |
-| `test-engineer` | 6 | E2E + Integration Tests | inherit |
 | `security-auditor` | 7 | OWASP Top 10 Audit | inherit |
 | `code-reviewer` | 8 | Code Quality Gate | inherit |
 | `architect-reviewer` | - | Eskalation bei Architektur-Concerns | inherit |
@@ -221,22 +227,24 @@ Die Phasen sind in `config/phases.conf` deklarativ definiert. Format:
 PHASE_NUMMER|AGENT_NAME|PHASE_TYP|DONE_KRITERIUM
 ```
 
-### Phase 0: Technical Specification (architect-planner)
+### Phase 0: Technical Specification (Team Planning)
 
 | Eigenschaft | Wert |
 |---|---|
 | **Typ** | APPROVAL (User muss approven) |
-| **Done-Kriterium** | `GLOB:.workflow/specs/issue-*-ph00-architect-planner.md` |
-| **Input** | Issue-Nummer, Issue-Titel, Coverage-Ziel |
-| **Output** | Spec-MD-Datei + Pfad in `context.technicalSpec.specFile` |
+| **Done-Kriterium** | `GLOB:.workflow/specs/issue-*-plan-consolidated.md` |
+| **Input** | Issue-Nummer, Issue-Titel, Coverage-Ziel, Model-Tier, UI-Designer |
+| **Output** | Consolidated Spec + Specialist-Plaene + Pfad in `context.technicalSpec.specFile` |
 
 **Was passiert:**
-1. Agent liest das Issue, analysiert die Codebase
-2. Fuehrt "5x Warum" Root-Cause-Analyse durch
-3. Nutzt MCP-Tools (Context7, Angular CLI) fuer aktuelle Doku
-4. Schreibt Technical Specification als `.workflow/specs/issue-42-ph00-architect-planner.md`
+1. Specialist-Agents (Backend, Frontend, Quality, optional UI-Designer) planen parallel
+2. Jeder Specialist schreibt seinen Plan und sendet Summary an den Architect (Hub)
+3. Architect konsolidiert alle Plaene, prueft Konsistenz
+4. Schreibt Consolidated Spec als `.workflow/specs/issue-42-plan-consolidated.md`
 5. Speichert den Pfad in `workflow-state.json` unter `context.technicalSpec.specFile`
 6. Zeigt Approval Gate: "Spec OK? Soll ich fortfahren?"
+
+**Fallback:** Wenn Agent Teams nicht aktiviert → Single architect-planner wie bisher.
 
 **Danach:** User reviewed, gibt Approval oder Feedback. Bei Approval → Phase 1.
 
@@ -245,7 +253,7 @@ PHASE_NUMMER|AGENT_NAME|PHASE_TYP|DONE_KRITERIUM
 | Eigenschaft | Wert |
 |---|---|
 | **Typ** | APPROVAL (User muss approven) |
-| **Done-Kriterium** | `GLOB:wireframes/*.html` |
+| **Done-Kriterium** | `GLOB:wireframes/issue-*.html` |
 | **Input** | Technical Spec (Dateipfad) |
 | **Output** | HTML-Wireframe-Dateien in `wireframes/` |
 
@@ -332,17 +340,18 @@ PHASE_NUMMER|AGENT_NAME|PHASE_TYP|DONE_KRITERIUM
 | Eigenschaft | Wert |
 |---|---|
 | **Typ** | AUTO |
-| **Done-Kriterium** | `STATE:context.testResults.allPassed==true` |
+| **Done-Kriterium** | `STATE:context.testResults.allPassed==true` + `GLOB:...ph06-test-engineer.md` (Compound) |
 | **Input** | Technical Spec + optionale Backend/Frontend Reports (Dateipfade) |
-| **Output** | Tests + `context.testResults.allPassed = true` in State |
+| **Output** | Tests + `context.testResults.allPassed = true` in State + Report-MD |
 
 **Was passiert:**
 1. Agent liest Specs
 2. Schreibt JUnit 5 + Mockito (Backend), Jasmine + TestBed (Frontend), Playwright E2E
 3. Fuehrt `mvn verify` + `npm test` + `npx playwright test` aus
 4. Setzt `context.testResults.allPassed = true` NUR wenn ALLE Tests gruen sind
+5. Schreibt Report als `.workflow/specs/issue-42-ph06-test-engineer.md`
 
-**Wichtig:** Das Done-Kriterium ist KEIN Datei-Check, sondern ein **Wert-Check**: `allPassed == true`. Der Agent kann den Key nicht einfach setzen ohne Tests auszufuehren — `wf_verify.sh` prueft den **Wert**, nicht nur die Existenz.
+**Wichtig:** Das Done-Kriterium ist ein **Compound-Check** (v3.3.0): SOWOHL `allPassed == true` ALS AUCH die Report-Datei muessen existieren. Der Agent kann den State-Key nicht einfach setzen ohne Report zu schreiben — beide Pruefungen muessen bestehen.
 
 **Danach:** WIP-Commit. Auto-Advance zu Phase 7.
 
@@ -368,7 +377,7 @@ PHASE_NUMMER|AGENT_NAME|PHASE_TYP|DONE_KRITERIUM
 | Eigenschaft | Wert |
 |---|---|
 | **Typ** | APPROVAL |
-| **Done-Kriterium** | `STATE:context.reviewFeedback.userApproved==true` |
+| **Done-Kriterium** | `GLOB:.workflow/specs/issue-*-ph08-code-reviewer.md` |
 | **Input** | Alle verfuegbaren Spec-Pfade + Coverage-Ziel |
 | **Output** | Review-Report-MD + `context.reviewFeedback` in State |
 
@@ -406,24 +415,30 @@ Hooks sind Event-Handler in Claude Code. Wenn ein bestimmtes Event eintritt, fue
 
 ### 6.1 Plugin-Level Hooks (`hooks/hooks.json`)
 
-Diese feuern **immer**, egal ob der Skill aktiv ist oder nicht.
+**Alle 9 Hooks sind Plugin-Level** (in `hooks.json`). Skill-Level Hooks in Plugins feuern nicht zuverlaessig (GitHub #17688), daher wurden alle Hooks nach Plugin-Level verschoben (v3.9.0).
+
+Plugin-Level Hooks feuern **global** fuer JEDES Event — daher hat jedes Script einen **Ownership Guard** (`workflow == "bytA-feature"`) und **Session Isolation** (`ownerSessionId`).
 
 | Hook-Event | Script | Wann feuert es? |
 |---|---|---|
 | **Stop** | `wf_orchestrator.sh` | Wenn Claude "fertig" sein will (aufhoeren moechte) |
 | **UserPromptSubmit** | `wf_user_prompt.sh` | Wenn der User eine Nachricht sendet |
 | **PreToolUse/Bash** | `guard_git_push.sh` | Bevor Claude einen Bash-Befehl ausfuehrt |
-| **SubagentStop** | `subagent_done.sh` | Wenn ein Subagent fertig ist |
-| **SessionStart** | `session_recovery.sh` | Wenn eine neue Claude-Session startet |
-
-### 6.2 Skill-Level Hooks (SKILL.md Frontmatter)
-
-Diese feuern **nur**, wenn der Skill aktiv ist (d.h. `/bytA:feature` wurde aufgerufen).
-
-| Hook-Event | Script | Wann feuert es? |
-|---|---|---|
 | **PreToolUse/Edit\|Write** | `block_orchestrator_code_edit.sh` | Bevor Claude eine Datei editiert/schreibt |
+| **PreToolUse/Read** | `block_orchestrator_code_read.sh` | Bevor Claude eine Datei liest |
 | **PreToolUse/Task** | `block_orchestrator_explore.sh` | Bevor Claude einen Subagent startet |
+| **SubagentStart** | `subagent_start.sh` | Wenn ein Subagent gestartet wird |
+| **SubagentStop** | `subagent_done.sh` | Wenn ein Subagent fertig ist |
+| **SessionStart** | `session_recovery.sh` | Bei Session-Start, Resume oder Compaction |
+
+### 6.2 Orchestrator-Blocker (v3.9.0)
+
+Die PreToolUse-Blocker (Edit/Write, Read, Task) verhindern, dass der Orchestrator Code direkt liest/schreibt. Vier Schichten:
+
+1. **Ownership Guard** — Nur bei aktivem `bytA-feature` Workflow mit Status `active`/`paused`/`awaiting_approval`
+2. **Session Isolation (v3.9.2)** — `ownerSessionId` identifiziert die Workflow-Session. Andere Sessions werden nicht blockiert.
+3. **Subagent-Active Marker** — `SubagentStart` setzt `.workflow/.subagent-active`, `SubagentStop` entfernt ihn. Blocker erlauben Tool-Aufrufe wenn der Marker existiert (Subagents DUERFEN Code bearbeiten)
+4. **JSON deny Pattern** — `permissionDecision: "deny"` statt `exit 2` (zuverlaessiger, GitHub #13744)
 
 ### 6.3 Hook-Output-Kanaele
 
@@ -444,12 +459,16 @@ Hooks kommunizieren ueber drei Kanaele:
 
 ### 7.1 `wf_orchestrator.sh` — Das Herzstuck (Stop Hook)
 
-**Datei:** `scripts/wf_orchestrator.sh` (~457 Zeilen)
+**Datei:** `scripts/wf_orchestrator.sh`
 **Feuert:** Bei jedem Stop-Event (Claude moechte aufhoeren)
 
 **Ablauf:**
 
 ```
+0. Advancing Guard pruefen (.workflow/.advancing Lock-Datei)
+   └── Lock existiert? → exit 0 (anderer Orchestrator-Aufruf laeuft)
+   └── Sonst → Lock setzen, weiter
+
 1. Session-Marker pruefen (.workflow/bytA-session)
    └── Existiert, aber kein State? → BLOCK: "Startup unvollstaendig"
    └── Beides fehlt? → exit 0 (nichts zu tun)
@@ -460,7 +479,7 @@ Hooks kommunizieren ueber drei Kanaele:
 3. Status pruefen
    └── completed → exit 0 (Session-Marker entfernen, Sound)
    └── paused/idle → exit 0
-   └── awaiting_approval → exit 0
+   └── awaiting_approval → GLOB-Bypass-Guard (v3.3.0), exit 0
    └── active → weiter zu Schritt 4
 
 4. Phase-Skip-Guard (detect_skipped_phase)
@@ -468,7 +487,7 @@ Hooks kommunizieren ueber drei Kanaele:
 
 5. VERIFY: wf_verify.sh aufrufen
    └── DONE + APPROVAL → status = "awaiting_approval", exit 0 (Sound)
-   └── DONE + AUTO → currentPhase++, wf_prompt_builder.sh, output_block()
+   └── DONE + AUTO → currentPhase++, wf_prompt_builder.sh, build_dispatch_msg()
    └── NOT DONE → weiter zu Schritt 6
 
 6. Phase 8 Spezial: CHANGES_REQUESTED?
@@ -476,7 +495,7 @@ Hooks kommunizieren ueber drei Kanaele:
 
 7. RALPH LOOP: Retry-Counter pruefen
    └── >= MAX_RETRIES → Workflow pausieren
-   └── < MAX_RETRIES → increment_retry, wf_prompt_builder.sh, output_block()
+   └── < MAX_RETRIES → increment_retry, wf_prompt_builder.sh, build_dispatch_msg()
 ```
 
 **Wichtige Funktionen im Script:**
@@ -484,8 +503,8 @@ Hooks kommunizieren ueber drei Kanaele:
 | Funktion | Was sie tut |
 |---|---|
 | `output_block(reason)` | Gibt JSON `{"decision":"block","reason":"..."}` aus. Inkrementiert Block-Counter. |
+| `build_dispatch_msg(phase, prompt)` | Phase-aware Dispatch: Phase 0 → inline Team Planning Protocol, Phasen 1-8 → `Task(bytA:agent, 'prompt')` |
 | `mark_phase_completed(phase)` | Setzt `phases[N].status = "completed"` mit Timestamp |
-| `create_wip_commit(phase)` | `git add -A && git commit -m "wip(#N/phase-X): ..."` |
 | `get_retry_count(phase)` | Liest `recovery.phase_N_attempts` aus State |
 | `increment_retry(phase)` | Zaehlt hoch, gibt neuen Wert zurueck |
 | `reset_retry(phase)` | Loescht den Retry-Counter |
@@ -531,21 +550,21 @@ Hooks kommunizieren ueber drei Kanaele:
 
 | Phase | Criterion | Typ | Was wird geprueft |
 |---|---|---|---|
-| 0 | `GLOB:.workflow/specs/issue-*-ph00-architect-planner.md` | Datei | Spec existiert? |
-| 1 | `GLOB:wireframes/*.html` | Datei | Wireframe existiert? |
+| 0 | `GLOB:.workflow/specs/issue-*-plan-consolidated.md` | Datei | Consolidated Spec existiert? |
+| 1 | `GLOB:wireframes/issue-*.html` | Datei | Wireframe existiert? |
 | 2 | `GLOB:.workflow/specs/issue-*-ph02-api-architect.md` | Datei | API-Spec existiert? |
 | 3 | `GLOB:backend/src/main/resources/db/migration/V*.sql` | Datei | Migration existiert? |
 | 4 | `GLOB:.workflow/specs/issue-*-ph04-spring-boot-developer.md` | Datei | Backend-Report existiert? |
 | 5 | `GLOB:.workflow/specs/issue-*-ph05-angular-frontend-developer.md` | Datei | Frontend-Report existiert? |
-| 6 | `STATE:context.testResults.allPassed==true` | JSON-Wert | Tests alle gruen? |
+| 6 | `STATE:...allPassed==true` + `GLOB:...ph06-*.md` | Compound | Tests gruen UND Report-Datei existiert |
 | 7 | `GLOB:.workflow/specs/issue-*-ph07-security-auditor.md` | Datei | Audit-Report existiert? |
-| 8 | `STATE:context.reviewFeedback.userApproved==true` | JSON-Wert | User hat approved? |
+| 8 | `GLOB:.workflow/specs/issue-*-ph08-code-reviewer.md` | Datei | Review-Datei existiert? |
 | 9 | `STATE:phases["9"].prUrl` | JSON-Key | PR URL vorhanden? |
 
 ### 7.3 `wf_prompt_builder.sh` — Deterministische Agent-Prompts
 
-**Datei:** `scripts/wf_prompt_builder.sh` (~281 Zeilen)
-**Aufgerufen von:** `wf_orchestrator.sh`
+**Datei:** `scripts/wf_prompt_builder.sh`
+**Aufgerufen von:** `wf_orchestrator.sh`, `wf_advance.sh`
 **Aufruf:** `wf_prompt_builder.sh <phase_number> [hotfix_feedback]`
 
 **Aufgabe:** Baut den Prompt-Text, den ein Agent bekommt, deterministisch aus dem Workflow-State zusammen. **Kein LLM beteiligt.**
@@ -556,7 +575,7 @@ Hooks kommunizieren ueber drei Kanaele:
 1. phases.conf laden (fuer Phase-Namen, Kriterien)
 
 2. State lesen:
-   - Issue-Nr, Titel, Coverage-Ziel (Metadaten direkt im Prompt)
+   - Issue-Nr, Titel, Coverage-Ziel, Model-Tier, UI-Designer (Metadaten)
    - Spec-Pfade: technicalSpec, apiDesign, migrations, wireframes,
      backendImpl, frontendImpl, testReport, securityReport
      (NUR PFADE — nie den Datei-Inhalt!)
@@ -566,20 +585,34 @@ Hooks kommunizieren ueber drei Kanaele:
    - RETRY_SECTION (wenn retry_count > 0 und kein Hotfix)
 
 4. Phase-spezifisches Template (case $PHASE):
-   - Aufgabenbeschreibung
-   - Liste der SPEC FILES mit Pfaden
-   - Workflow-Metadaten (Issue, Coverage)
+   - Phase 0: TEAM PLANNING PROTOCOL (Hub-and-Spoke, siehe unten)
+   - Phasen 1-8: Aufgabenbeschreibung + SPEC FILES + Metadaten
+   - Phase 9: Push & PR Anweisungen
 
 5. ACCEPTANCE CRITERIA + RETURN PROTOCOL (automatisch angehaengt):
    - Menschenlesbare Version des Done-Kriteriums aus phases.conf
    - "Your last message MUST be exactly: Done."
 ```
 
+**Phase 0 — Team Planning Protocol:**
+
+Phase 0 generiert ein strukturiertes Protokoll mit:
+- `=== PHASE 0: TEAM PLANNING PROTOCOL ===` Header
+- `TEAM_NAME`, `MODEL`, `SPECIALIST_COUNT` Metadaten
+- `--- SPECIALIST: backend/frontend/quality ---` Bloecke mit je einem Agent-Prompt
+- `--- SPECIALIST: ui-designer ---` (optional, wenn `uiDesigner: true`)
+- `--- HUB: architect ---` Block mit Consolidator-Prompt
+- `--- VERIFY ---` Block mit erwarteten Spec-Dateien
+- `--- CLEANUP ---` Block mit Shutdown-Anweisungen
+
+Claude (Transport-Layer) parsed dieses Protokoll und fuehrt es aus:
+TeamCreate → Alle Agents parallel spawnen → Warten → Verifizieren → Shutdown → Done.
+
 **Welche Specs bekommt welcher Agent? (Dependency Map)**
 
 | Phase | Bekommt diese Spec-Pfade |
 |---|---|
-| 0 (Tech Spec) | Keine (erste Phase) |
+| 0 (Team Planning) | Keine (erste Phase) — produziert: plan-consolidated.md + plan-backend/frontend/quality.md |
 | 1 (Wireframes) | `technicalSpec.specFile` |
 | 2 (API Design) | `technicalSpec.specFile` |
 | 3 (Migrations) | `technicalSpec.specFile` + `apiDesign.apiDesignFile` |
@@ -595,7 +628,7 @@ Hooks kommunizieren ueber drei Kanaele:
 Phase 4: Implement Backend for Issue #42: User Dashboard
 
 ## SPEC FILES (LIES DIESE ZUERST mit dem Read-Tool!)
-- Technical Spec: .workflow/specs/issue-42-ph00-architect-planner.md
+- Technical Spec: .workflow/specs/issue-42-plan-consolidated.md
 - API Design: .workflow/specs/issue-42-ph02-api-architect.md
 - Database Design: .workflow/specs/issue-42-ph03-postgresql-architect.md
 
@@ -636,17 +669,17 @@ The orchestrator does NOT read your summary — it verifies externally.
 
    paused → "WORKFLOW PAUSIERT | Optionen: resume/retry-reset/skip"
 
-   awaiting_approval → Phase-spezifische Anweisungen:
-     Phase 0: "BEI APPROVAL: Phase 1 starten. BEI FEEDBACK: architect-planner erneut."
-     Phase 1: "BEI APPROVAL: Phase 2 starten (Auto-Advance bis Phase 7). BEI FEEDBACK: ui-designer erneut."
-     Phase 7: "BEI APPROVAL: Phase 8 starten. BEI SECURITY-FIXES: Rollback."
-     Phase 8: "BEI APPROVAL: Phase 9. BEI FEEDBACK: Rollback mit Option C Heuristik."
-     Phase 9: "BEI APPROVAL: Push + PR. Pre-Push Build Gate PFLICHT!"
+   awaiting_approval → Phase-spezifische Anweisungen (via wf_advance.sh):
+     Phase 0: "BEI APPROVAL: wf_advance.sh approve. BEI FEEDBACK: wf_advance.sh feedback 'MSG'."
+     Phase 1: "BEI APPROVAL: wf_advance.sh approve. BEI FEEDBACK: wf_advance.sh feedback 'MSG'."
+     Phase 7: "BEI APPROVAL: wf_advance.sh approve. BEI SECURITY-FIXES: wf_advance.sh rollback TARGET 'MSG'."
+     Phase 8: "BEI APPROVAL: wf_advance.sh approve. BEI FEEDBACK: wf_advance.sh rollback TARGET 'MSG'."
+     Phase 9: "BEI APPROVAL: Push + PR. Pre-Push Build Gate PFLICHT! wf_advance.sh complete."
 
    active → "Workflow laeuft. Bei Phase-Aktionen: lies workflow-state.json."
 ```
 
-**Wichtig:** Die Anweisungen enthalten exakte `jq`-Befehle und `Task()`-Aufrufe. Claude muss sie **woertlich** befolgen — es interpretiert nichts selbst.
+**Wichtig:** Die Anweisungen enthalten exakte `wf_advance.sh`-Befehle. Claude fuehrt den Befehl aus, liest den `EXECUTE:`-Output, und fuehrt den darin enthaltenen `Task()`-Aufruf oder Team Planning Protocol woertlich aus — es interpretiert nichts selbst.
 
 ### 7.5 `wf_cleanup.sh` — Startup-Check
 
@@ -671,29 +704,62 @@ Erlaubt wenn:
 - Status completed/idle
 - `pushApproved = true` (Phase 9)
 
-### 7.7 `block_orchestrator_code_edit.sh` — Code-Edit-Blocker
+### 7.7 `wf_advance.sh` — Deterministic Approval-Advance (v3.7.0)
 
-**Datei:** `scripts/block_orchestrator_code_edit.sh` (~34 Zeilen)
+**Datei:** `scripts/wf_advance.sh`
+**Aufgerufen von:** Claude (auf Anweisung von `wf_user_prompt.sh`)
 
-**Skill-scoped:** Feuert NUR fuer den Orchestrator (Claude im Skill-Kontext), NICHT fuer Subagents.
+**Aufgabe:** Kapselt ALLE State-Manipulation fuer Approval-Phasen. Claude fuehrt nur noch EINEN Bash-Befehl aus statt 3-4 manuelle jq-Befehle.
+
+**Subcommands:**
+
+| Subcommand | Was es tut |
+|---|---|
+| `approve` | Status → active, Phase completed, currentPhase++, Prompt bauen |
+| `feedback 'MSG'` | Status → active, Specs aufraeumen, Prompt mit Feedback bauen |
+| `rollback TARGET 'MSG'` | Status → active, Context + Specs ab Target loeschen, Prompt bauen |
+| `complete` | Status → completed, Workflow abschliessen |
+
+**Output:** Jeder Subcommand gibt `EXECUTE: Task(bytA:agent, 'prompt')` oder `EXECUTE: TEAM PLANNING PROTOCOL ...` aus. Claude fuehrt die Anweisung woertlich aus.
+
+**Phase-0-Awareness:** Bei Feedback/Rollback zu Phase 0 wird das Team Planning Protocol inline eingebettet (nicht `Task(bytA:team-planning, ...)`), da `team-planning` kein gueltiger Agent-Name ist.
+
+### 7.8 `block_orchestrator_code_edit.sh` — Code-Edit-Blocker
+
+**Datei:** `scripts/block_orchestrator_code_edit.sh`
+
+**Plugin-Level:** Feuert fuer JEDES Edit/Write-Event. Blockiert nur im Orchestrator-Kontext (kein `.subagent-active` Marker).
 
 Erlaubt: `.json`, `.md`, `.yml`, `.yaml`, `.sh`, `.gitignore`, `.txt`
 Blockiert: Alles andere (`.java`, `.ts`, `.html`, `.scss`, `.sql`, `.xml`, etc.)
 
 **Warum?** Der Orchestrator soll keinen Code schreiben — das ist Aufgabe der Agenten.
 
-### 7.8 `block_orchestrator_explore.sh` — Explore-Blocker
+### 7.9 `block_orchestrator_code_read.sh` — Code-Read-Blocker
 
-**Datei:** `scripts/block_orchestrator_explore.sh` (~41 Zeilen)
+**Datei:** `scripts/block_orchestrator_code_read.sh`
 
-**Skill-scoped:** Feuert NUR fuer den Orchestrator.
+**Plugin-Level:** Gleiche Logik wie Code-Edit-Blocker, aber fuer Read-Events.
+
+### 7.10 `block_orchestrator_explore.sh` — Explore-Blocker
+
+**Datei:** `scripts/block_orchestrator_explore.sh`
+
+**Plugin-Level:** Feuert fuer JEDES Task-Event. Blockiert nur im Orchestrator-Kontext.
 
 Erlaubt: `bytA:*` Agents (spezialisierte Phase-Agents)
 Blockiert: `Explore`, `general-purpose`
 
 **Warum?** Der Orchestrator soll nicht herumforschen — er soll Agents dispatchen.
 
-### 7.9 `subagent_done.sh` — WIP-Commits
+### 7.11 `subagent_start.sh` — Subagent-Marker
+
+**Datei:** `scripts/subagent_start.sh`
+**Feuert:** Wenn ein Subagent gestartet wird (SubagentStart Event)
+
+Erstellt `.workflow/.subagent-active` Marker. Dieser Marker signalisiert den PreToolUse-Blockern, dass Tool-Aufrufe vom Subagent (nicht vom Orchestrator) kommen und erlaubt werden sollen.
+
+### 7.12 `subagent_done.sh` — WIP-Commits
 
 **Datei:** `scripts/subagent_done.sh` (~58 Zeilen)
 **Feuert:** Wenn ein Subagent fertig ist (SubagentStop Event)
@@ -783,7 +849,7 @@ User ──> /bytA:feature ──> SKILL.md ──> Claude (Transport-Layer)
   "issue": { "number": 42, "title": "User Dashboard" },
   "targetCoverage": 70,
   "context": {
-    "technicalSpec": { "specFile": ".workflow/specs/issue-42-ph00-architect-planner.md" },
+    "technicalSpec": { "specFile": ".workflow/specs/issue-42-plan-consolidated.md" },
     "apiDesign": { "apiDesignFile": ".workflow/specs/issue-42-ph02-api-architect.md" },
     "migrations": { "databaseFile": ".workflow/specs/issue-42-ph03-postgresql-architect.md" }
   }
@@ -800,7 +866,7 @@ Das Script liest NUR die Pfade aus dem State (nicht den Inhalt der Spec-Dateien!
 Phase 4: Implement Backend for Issue #42: User Dashboard
 
 ## SPEC FILES (LIES DIESE ZUERST mit dem Read-Tool!)
-- Technical Spec: .workflow/specs/issue-42-ph00-architect-planner.md
+- Technical Spec: .workflow/specs/issue-42-plan-consolidated.md
 - API Design: .workflow/specs/issue-42-ph02-api-architect.md
 - Database Design: .workflow/specs/issue-42-ph03-postgresql-architect.md
 ...
@@ -858,6 +924,9 @@ Der Orchestrator sieht nie den Inhalt einer Spec-Datei. Er kennt nur den **Pfad*
   "branch": "feature/issue-42-user-dashboard",
   "fromBranch": "develop",
   "targetCoverage": 70,
+  "modelTier": "fast",
+  "uiDesigner": false,
+  "ownerSessionId": "abc-123-def",
   "currentPhase": 4,
   "startedAt": "2026-02-07T10:00:00Z",
   "phases": {
@@ -867,7 +936,7 @@ Der Orchestrator sieht nie den Inhalt einer Spec-Datei. Er kennt nur den **Pfad*
     "3": { "name": "Migrations", "status": "completed", "completedAt": "..." }
   },
   "context": {
-    "technicalSpec": { "specFile": ".workflow/specs/issue-42-ph00-architect-planner.md" },
+    "technicalSpec": { "specFile": ".workflow/specs/issue-42-plan-consolidated.md" },
     "wireframes": { "paths": ["wireframes/dashboard.html"] },
     "apiDesign": { "apiDesignFile": ".workflow/specs/issue-42-ph02-api-architect.md" },
     "migrations": { "databaseFile": ".workflow/specs/issue-42-ph03-postgresql-architect.md" }
@@ -901,6 +970,9 @@ Der Orchestrator sieht nie den Inhalt einer Spec-Datei. Er kennt nur den **Pfad*
 | `recovery.*` | `wf_orchestrator.sh` (increment/reset_retry) | `wf_orchestrator.sh`, `wf_prompt_builder.sh` |
 | `stopHookBlockCount` | `wf_orchestrator.sh` (output_block) | `wf_orchestrator.sh` (Loop-Prevention) |
 | `pushApproved` | Claude (laut UserPromptSubmit-Anweisung) | `guard_git_push.sh` |
+| `modelTier` | SKILL.md (Startup, User-Wahl) | `wf_prompt_builder.sh` (Phase 0 Model-Auswahl) |
+| `uiDesigner` | SKILL.md (Startup, User-Wahl) | `wf_prompt_builder.sh` (Phase 0 Specialist-Count) |
+| `ownerSessionId` | `wf_orchestrator.sh` (Session Claim), `session_recovery.sh` (Resume) | Alle Blocker-Scripts (Session Isolation) |
 
 ---
 
@@ -919,17 +991,21 @@ Der Orchestrator sieht nie den Inhalt einer Spec-Datei. Er kennt nur den **Pfad*
 │ 2. STARTUP (SKILL.md Anweisungen)                                       │
 │    a) mkdir -p .workflow && echo "$(date)" > .workflow/bytA-session      │
 │    b) wf_cleanup.sh → OK oder BLOCKED                                   │
-│    c) User fragen: Branch? Coverage-Ziel?                               │
-│    d) workflow-state.json erstellen                                     │
+│    c) User fragen: Branch? Coverage? Model-Tier? UI-Designer?           │
+│    d) workflow-state.json erstellen (inkl. modelTier, uiDesigner)       │
 │    e) git checkout -b feature/issue-42-...                              │
-│    f) Task(bytA:architect-planner, 'Phase 0...')                        │
+│    f) wf_prompt_builder.sh 0 → Team Planning Protocol                   │
+│    g) TeamCreate → Specialists + Hub parallel spawnen → Done.           │
+│    (Fallback: Single architect-planner wenn Teams nicht aktiviert)       │
 └───────────────────────────────┬──────────────────────────────────────────┘
                                 │
 ┌───────────────────────────────▼──────────────────────────────────────────┐
-│ 3. PHASE 0 (architect-planner)                                          │
-│    Agent arbeitet... schreibt Spec + updatet State                      │
+│ 3. PHASE 0 (Team Planning — Hub-and-Spoke)                              │
+│    3-4 Specialists planen parallel (Backend, Frontend, Quality, UI)     │
+│    Jeder schreibt Plan + sendet Summary an Architect (Hub)              │
+│    Architect konsolidiert → plan-consolidated.md + Context-Update        │
 │    SubagentStop → (kein WIP-Commit fuer Phase 0)                        │
-│    Stop Hook → wf_verify.sh → Spec existiert? → JA                     │
+│    Stop Hook → wf_verify.sh → plan-consolidated.md existiert? → JA     │
 │    → APPROVAL-Phase → status = "awaiting_approval"                      │
 │    → Claude stoppt, Sound spielt                                        │
 └───────────────────────────────┬──────────────────────────────────────────┘
@@ -1021,8 +1097,8 @@ An bestimmten Phasen stoppt der Workflow und wartet auf den User. Der User kann:
 7. UserPromptSubmit Hook feuert: wf_user_prompt.sh
 8. Script erkennt: status=awaiting_approval, Phase=7
 9. Script injiziert Anweisungen:
-   "BEI APPROVAL: status=active, currentPhase=8, Task(bytA:code-reviewer, '...')"
-10. Claude befolgt die Anweisung woertlich
+   "BEI APPROVAL: wf_advance.sh approve → gibt EXECUTE: Task(bytA:code-reviewer, '...') aus"
+10. Claude fuehrt wf_advance.sh aus, dann den EXECUTE-Befehl woertlich
 ```
 
 ---
@@ -1126,9 +1202,11 @@ detect_skipped_phase(4)
 
 ---
 
-## 14. Session Recovery nach Context Overflow
+## 14. Session Recovery und Compact Recovery
 
-Wenn Claudes Context-Fenster voll wird, startet eine neue Session. Der `SessionStart` Hook erkennt das:
+### 14.1 Session Recovery (Session-Start/Resume)
+
+Wenn eine neue Claude-Session startet oder eine alte resumed wird. Der `SessionStart` Hook erkennt `source=startup` oder `source=resume`:
 
 ```
 1. session_recovery.sh feuert
@@ -1145,7 +1223,28 @@ Wenn Claudes Context-Fenster voll wird, startet eine neue Session. Der `SessionS
 5. Stop Hook springt an → Ralph-Loop setzt automatisch fort
 ```
 
-**Warum so einfach?** Der gesamte State liegt auf Disk. Der Orchestrator braucht keinen Context — nur den Skill und die Hooks.
+### 14.2 Compact Recovery (Context-Compaction, v3.9.0)
+
+Wenn Claudes Context komprimiert wird (nahe am Limit). Der `SessionStart` Hook erkennt `source=compact`:
+
+```
+1. session_recovery.sh feuert mit source=compact
+2. NICHT /bytA:feature aufrufen (wf_cleanup.sh wuerde aktiven Workflow blocken!)
+3. Stattdessen: Re-inject starke Transport-Layer-Instruktionen:
+   "Du bist ein TRANSPORT-LAYER. Sage 'Done.' — der Stop-Hook uebernimmt."
+4. PreToolUse-Blocker schuetzen deterministisch (brauchen kein SKILL.md)
+5. Claude sagt "Done." → Stop Hook springt an → normaler Ablauf
+```
+
+**Warum zwei Pfade?** Bei `startup`/`resume` existiert kein aktiver Skill — er muss neu geladen werden. Bei `compact` ist der Skill noch aktiv, aber das Context-Wissen (SKILL.md-Inhalt) ist verloren — die Hooks schuetzen trotzdem.
+
+### 14.3 Session Isolation (`ownerSessionId`, v3.9.2)
+
+Plugin-Level Hooks feuern fuer ALLE Sessions im Projekt. Ohne Isolation wuerden Blocker auch in Sessions feuern, die keinen Workflow besitzen (z.B. Issue-Erstellung in einer zweiten Session):
+
+- **Stop Hook** setzt `ownerSessionId` beim ersten Fire (Session Claim)
+- **SessionStart Hook** aktualisiert `ownerSessionId` bei `resume`/`startup` (neue ID bei Resume)
+- **Alle Blocker** pruefen: `session_id == ownerSessionId`? Wenn nein → nicht blockieren
 
 ---
 
@@ -1175,7 +1274,7 @@ bytA ist das Nachfolge-Plugin von byt8. Der Kernunterschied:
 | **Session Recovery** | Komplexer Recovery-Prompt | Trivial (State auf Disk) |
 | **SKILL.md** | ~270 Zeilen Orchestrator-Logik | ~170 Zeilen ("Befolge Hooks") |
 | **Fehlerklasse** | LLM vergisst Regeln nach 30 Min | Shell hat keine Regeln zu vergessen |
-| **Hooks** | 6 (reagierend auf LLM-Fehler) | 5 (steuernd — LLM wird gesteuert) |
+| **Hooks** | 6 (reagierend auf LLM-Fehler) | 9 (steuernd — LLM wird gesteuert) |
 | **Agent-Isolation** | File Reference Protocol | Vollstaendige Boomerang-Isolation |
 | **Agents** | Identisch (10 spezialisierte) | Identisch (unveraendert) |
 

@@ -84,6 +84,18 @@ in Schritt 1 parallel auflösen, dann in Schritt 2 parallel Docs laden.
 
 ---
 
+## Bestehende Tests pflegen (KRITISCH!)
+
+Wenn du Code aenderst, MUSST du die zugehoerigen Tests pruefen und anpassen:
+
+1. **Fuer JEDE geaenderte Datei:** Pruefe ob Tests existieren: `Glob("**/{Klassenname}Test.java")` und `Glob("**/{Klassenname}IT.java")`
+2. **Tests gefunden?** → Lies die Tests. Identifiziere Tests die durch deine Aenderung brechen (z.B. geaenderte Method-Signatures, neue Pflichtfelder, entfernte Endpoints).
+3. **Tests anpassen:** Aktualisiere ALLE betroffenen Assertions und Mocks. Eine Aenderung an der Service-Signatur bricht JEDEN Test der die alte Signatur mockt!
+4. **Tests ausfuehren:** `mvn test -pl :backend 2>&1 | tail -50` — MUSS gruen sein bevor du "Done" sagst.
+5. **Niemals kaputte Tests hinterlassen.** Du bist verantwortlich fuer gruene Tests — nicht der Test Engineer in der naechsten Runde.
+
+---
+
 ## Focus Areas
 
 - RESTful APIs with Spring MVC
@@ -269,7 +281,7 @@ Before submitting code for commit, verify:
 Du erhältst vom Orchestrator **DATEIPFADE** zu Spec-Dateien. LIES SIE SELBST!
 
 Typische Spec-Dateien:
-- **Technical Spec**: `.workflow/specs/issue-*-ph00-architect-planner.md`
+- **Technical Spec**: `.workflow/specs/issue-*-plan-consolidated.md`
 - **API Design**: `.workflow/specs/issue-*-ph02-api-architect.md`
 - **Database Design**: `.workflow/specs/issue-*-ph03-postgresql-architect.md`
 

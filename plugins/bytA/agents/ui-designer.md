@@ -341,7 +341,7 @@ When creating wireframes, provide:
 Du erhältst vom Orchestrator **DATEIPFADE** zu Spec-Dateien. LIES SIE SELBST!
 
 Typische Spec-Dateien:
-- **Technical Spec**: `.workflow/specs/issue-*-ph00-architect-planner.md`
+- **Technical Spec**: `.workflow/specs/issue-*-plan-consolidated.md`
 
 Metadaten direkt im Prompt: Issue-Nr, Coverage-Ziel.
 

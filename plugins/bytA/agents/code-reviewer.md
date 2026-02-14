@@ -427,7 +427,7 @@ Issue identified during review
 Du erhältst vom Orchestrator **DATEIPFADE** zu Spec-Dateien. LIES SIE SELBST!
 
 Typische Spec-Dateien:
-- **Technical Spec**: `.workflow/specs/issue-*-ph00-architect-planner.md`
+- **Technical Spec**: `.workflow/specs/issue-*-plan-consolidated.md`
 - **API Design**: `.workflow/specs/issue-*-ph02-api-architect.md`
 - **Backend Report**: `.workflow/specs/issue-*-ph04-spring-boot-developer.md`
 - **Frontend Report**: `.workflow/specs/issue-*-ph05-angular-frontend-developer.md`

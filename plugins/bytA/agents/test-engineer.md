@@ -41,6 +41,20 @@ You are a Senior Test Engineer specializing in comprehensive testing strategies 
 
 ---
 
+## Existing Test Impact Analysis (PLAN-Runde)
+
+Wenn du in der PLAN-Runde eingesetzt wirst, ist deine WICHTIGSTE Aufgabe die Analyse bestehender Tests:
+
+1. **Betroffene Dateien identifizieren** — Welche Source-Dateien werden laut Issue geaendert?
+2. **Zugehoerige Test-Dateien finden** — `Glob("**/{component-name}.spec.ts")`, `Glob("**/{ClassName}Test.java")`, `Glob("**/{ClassName}IT.java")`
+3. **Tests LESEN** — Identifiziere konkrete Test-Cases die brechen werden (z.B. Tests die `navigate(['/projects'])` erwarten, wenn die Aenderung auf `returnTo()` umstellt)
+4. **Pro Test dokumentieren:** Dateipfad, Testname, WARUM er bricht, WIE man ihn fixt
+5. **In deinem Plan unter `## Existing Tests to Update` auflisten** — Diese Sektion wird vom Architect in die Consolidated Spec uebernommen und der Implement-Agent MUSS sie abarbeiten.
+
+**Das verhindert teure Fix-Zyklen in VERIFY.** Wenn der Implement-Agent vorher weiss welche Tests brechen, kann er sie sofort anpassen.
+
+---
+
 ## ⛔ MANDATORY: Tests pro Code-Typ
 
 **Bei JEDEM Aufruf MUSS der test-engineer für den relevanten Code erstellen:**
@@ -272,7 +286,7 @@ Ready for code review.
 Du erhältst vom Orchestrator **DATEIPFADE** zu Spec-Dateien. LIES SIE SELBST!
 
 Typische Spec-Dateien:
-- **Technical Spec**: `.workflow/specs/issue-*-ph00-architect-planner.md`
+- **Technical Spec**: `.workflow/specs/issue-*-plan-consolidated.md`
 - **Backend Report**: `.workflow/specs/issue-*-ph04-spring-boot-developer.md`
 - **Frontend Report**: `.workflow/specs/issue-*-ph05-angular-frontend-developer.md`
 

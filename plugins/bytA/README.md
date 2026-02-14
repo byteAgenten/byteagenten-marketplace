@@ -1,8 +1,8 @@
 # bytA Plugin
 
-**Version 3.9.2** | Deterministic Orchestration: Boomerang + Ralph-Loop
+**Version 4.0.0** | Deterministic Orchestration: Boomerang + Ralph-Loop + Team Planning
 
-Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 10-Phasen-Workflow.
+Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 10-Phasen-Workflow und Team-basiertem Planning.
 
 ## Architektur
 
@@ -13,6 +13,7 @@ Der Orchestrator ist ein **Bash-Script**, kein LLM. Claude dient nur als Transpo
 | **Ralph-Loop** | `while !done; do spawn_agent; verify; done` — Externe Verifikation |
 | **Boomerang** | Vollstaendige Kontext-Isolation pro Agent — kein Context Rot |
 | **Deterministisch** | Shell-Scripts steuern, LLM fuehrt aus |
+| **Hub-and-Spoke** | Phase 0: 3-4 Spezialisten planen parallel → Architect konsolidiert (v4.0) |
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -54,7 +55,7 @@ Der Orchestrator ist ein **Bash-Script**, kein LLM. Claude dient nur als Transpo
 
 | Phase | Agent | Typ | Done-Kriterium |
 |-------|-------|-----|----------------|
-| 0 | architect-planner | APPROVAL | Spec-Datei existiert |
+| 0 | team-planning (Hub-and-Spoke) | APPROVAL | Consolidated Spec existiert |
 | 1 | ui-designer | APPROVAL | Issue-prefixed Wireframe HTML existiert |
 | 2 | api-architect | AUTO | API-Spec existiert |
 | 3 | postgresql-architect | AUTO | Migration SQL existiert |
@@ -68,10 +69,35 @@ Der Orchestrator ist ein **Bash-Script**, kein LLM. Claude dient nur als Transpo
 **APPROVAL** = User muss approven (Workflow pausiert)
 **AUTO** = Externe Verifikation, dann naechste Phase automatisch
 
+### Phase 0: Hub-and-Spoke Team Planning (v4.0)
+
+```
+Phase 0 — Team Planning (Hub-and-Spoke):
+
+  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
+  │ Backend  │  │ Frontend │  │ Quality  │  │UI-Design │
+  │ Dev      │  │ Dev      │  │ Engineer │  │(optional)│
+  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘
+       │             │             │             │
+       └──── SendMessage ──────────┘─────────────┘
+                     │
+                     ▼
+              ┌─────────────┐
+              │  Architect  │  ← Konsolidiert, prueft Konsistenz
+              │  (Hub)      │  ← Schreibt plan-consolidated.md
+              └─────────────┘
+```
+
+Jeder Spezialist schreibt einen Plan auf Disk + sendet Summary an den Architect.
+Der Architect wartet auf ALLE Summaries, liest volle Plaene, validiert Konsistenz,
+und schreibt die konsolidierte Spec. Der User-Model-Tier bestimmt ob Sonnet oder Opus.
+
+**Fallback:** Wenn Agent Teams nicht aktiviert, laeuft Phase 0 als single architect-planner.
+
 ### Ablauf-Diagramm
 
 ```
-Phase 0 (Tech Spec) ──[User Approval]──→ Phase 1 (Wireframes)
+Phase 0 (Team Plan) ──[User Approval]──→ Phase 1 (Wireframes)
                                               │
                                         [User Approval]
                                               │
@@ -134,13 +160,13 @@ Nach Context-Compaction verliert Claude die SKILL.md-Instruktionen. Der `Session
 
 | Agent | Phase | Aufgabe |
 |-------|-------|---------|
-| architect-planner | 0 | Technical Specification, 5x Warum, Architektur |
-| ui-designer | 1 | HTML Wireframes mit Angular Material + data-testid |
+| architect-planner | 0 (Hub) | Konsolidierung, Konsistenz-Pruefung, Phase-Skipping, Tech Spec |
+| spring-boot-developer | 0 (Spoke), 4 | Backend-Plan (Phase 0), Implementation (Phase 4) |
+| angular-frontend-developer | 0 (Spoke), 5 | Frontend-Plan (Phase 0), Implementation (Phase 5) |
+| test-engineer | 0 (Spoke), 6 | Test Impact Analysis (Phase 0), E2E Tests (Phase 6) |
+| ui-designer | 0 (optional), 1 | Wireframe-Plan (Phase 0), Wireframes (Phase 1) |
 | api-architect | 2 | REST API Design (Markdown-Sketch, kein YAML) |
 | postgresql-architect | 3 | Flyway SQL Migrations, Schema, Indexes |
-| spring-boot-developer | 4 | Spring Boot 4 Backend (Controller, Service, Tests) |
-| angular-frontend-developer | 5 | Angular 21 Frontend (Signals, Standalone Components) |
-| test-engineer | 6 | E2E + Integration Tests (Playwright, JUnit, Jasmine) |
 | security-auditor | 7 | OWASP Top 10 Security Audit |
 | code-reviewer | 8 | Code Quality Gate (SOLID, Coverage, Architecture) |
 | architect-reviewer | - | Eskalation bei Architektur-Concerns |
@@ -151,7 +177,7 @@ Done-Kriterien werden von `wf_verify.sh` extern geprueft:
 
 | Phase | Pruefung | Methode |
 |-------|----------|---------|
-| 0 | Spec-Datei | `ls .workflow/specs/*-ph00-*.md` |
+| 0 | Consolidated Spec | `ls .workflow/specs/*-plan-consolidated.md` |
 | 1 | Wireframe | `ls wireframes/issue-*.html` |
 | 2 | API-Spec | `ls .workflow/specs/*-ph02-*.md` |
 | 3 | Migration | `ls backend/.../V*.sql` |
@@ -207,9 +233,14 @@ wf_advance.sh complete             # Workflow abschliessen (nach Push+PR)
 Das Script uebernimmt: State-Update, Context-Cleanup, Spec-Cleanup, Prompt-Bau via `wf_prompt_builder.sh`,
 und gibt eine `EXECUTE: Task(bytA:agent, 'prompt')` Anweisung aus die Claude direkt ausfuehrt.
 
+### Advancing Guard (v4.0)
+
+Waehrend Phase 0 (Team Planning) koennen mehrere SubagentStop-Events gleichzeitig den Stop-Hook
+triggern. Die Lock-Datei `.workflow/.advancing` verhindert re-entrant Orchestrator-Aufrufe.
+
 ### Phase Skipping (v3.3.0)
 
-Phase 0 (architect-planner) kann Phasen als `"skipped"` markieren, wenn sie nicht benoetigt werden
+Phase 0 (Architect im Team) kann Phasen als `"skipped"` markieren, wenn sie nicht benoetigt werden
 (z.B. keine DB-Aenderungen → Phase 3 skippen). Der Orchestrator (`wf_orchestrator.sh`) erkennt
 pre-geskippte Phasen und ueberspringt sie automatisch — auch ueber APPROVAL-Gates hinweg.
 
@@ -224,7 +255,10 @@ Der Orchestrator sieht nur den **Dateipfad** (wenige Bytes) — kein Context-Wac
 
 ```
 .workflow/specs/
-├── issue-42-ph00-architect-planner.md     ← Technical Spec
+├── issue-42-plan-consolidated.md          ← Consolidated Spec (v4.0 Team Planning)
+├── issue-42-plan-backend.md               ← Backend Plan (Phase 0 Spoke)
+├── issue-42-plan-frontend.md              ← Frontend Plan (Phase 0 Spoke)
+├── issue-42-plan-quality.md               ← Quality Plan (Phase 0 Spoke)
 ├── issue-42-ph02-api-architect.md         ← API Design
 ├── issue-42-ph03-postgresql-architect.md   ← Database Design
 ├── issue-42-ph04-spring-boot-developer.md  ← Backend Report

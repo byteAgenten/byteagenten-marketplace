@@ -114,6 +114,10 @@ cleanup_context() {
 # Spec-Dateien ab einer Phase loeschen (verhindert stale GLOB-Matches)
 cleanup_specs() {
   local from_phase=$1
+  # Phase 0 Team Planning: plan-*.md statt ph00-*.md
+  if [ "$from_phase" -le 0 ]; then
+    rm -f .workflow/specs/issue-*-plan-*.md 2>/dev/null || true
+  fi
   local p=$from_phase
   while [ "$p" -le 8 ]; do
     local pf
@@ -207,7 +211,8 @@ approve)
     FILE_LIST=$(git diff --stat "$FROM_BRANCH"..HEAD 2>/dev/null | head -30)
 
     # ─── Vorhandene Spec-Dateien auflisten ───────────────────────────
-    SPEC_FILES=$(ls .workflow/specs/issue-${ISSUE_NUM}-ph*.md 2>/dev/null || echo "")
+    # Phase 0 Team Planning: plan-consolidated.md statt ph00-*.md
+    SPEC_FILES=$(ls .workflow/specs/issue-${ISSUE_NUM}-plan-consolidated.md .workflow/specs/issue-${ISSUE_NUM}-ph*.md 2>/dev/null || echo "")
 
     # ─── Phasen-Status-Tabelle bauen ─────────────────────────────────
     PHASE_TABLE=""
@@ -216,6 +221,9 @@ approve)
       local_pf=$(printf "%02d" "$p")
       if jq -e ".phases[\"$p\"].status == \"skipped\"" "$WORKFLOW_FILE" >/dev/null 2>&1; then
         PHASE_TABLE="${PHASE_TABLE}  Phase $p ($local_pn): SKIPPED\n"
+      elif [ "$p" = "0" ] && ls .workflow/specs/issue-${ISSUE_NUM}-plan-consolidated.md >/dev/null 2>&1; then
+        # Phase 0 Team Planning: plan-consolidated.md statt ph00-*.md
+        PHASE_TABLE="${PHASE_TABLE}  Phase $p ($local_pn): DONE\n"
       elif ls .workflow/specs/issue-${ISSUE_NUM}-ph${local_pf}-*.md >/dev/null 2>&1; then
         PHASE_TABLE="${PHASE_TABLE}  Phase $p ($local_pn): DONE\n"
       fi
@@ -305,8 +313,13 @@ feedback)
   log_transition "user_advance" "action=feedback phase=$APPROVAL_PHASE"
 
   # ─── Spec-Datei der aktuellen Phase loeschen (Agent muss neue schreiben) ─
-  local_pf=$(printf "%02d" "$APPROVAL_PHASE")
-  rm -f .workflow/specs/issue-*-ph${local_pf}-*.md 2>/dev/null || true
+  if [ "$APPROVAL_PHASE" = "0" ]; then
+    # Phase 0 Team Planning: plan-*.md statt ph00-*.md
+    rm -f .workflow/specs/issue-*-plan-*.md 2>/dev/null || true
+  else
+    local_pf=$(printf "%02d" "$APPROVAL_PHASE")
+    rm -f .workflow/specs/issue-*-ph${local_pf}-*.md 2>/dev/null || true
+  fi
 
   # ─── Prompt bauen mit Feedback ────────────────────────────────────────
   PROMPT=$("${SCRIPT_DIR}/wf_prompt_builder.sh" "$APPROVAL_PHASE" "$FEEDBACK")
@@ -314,7 +327,11 @@ feedback)
   echo "=== bytA ADVANCE: feedback ==="
   echo "Phase $APPROVAL_PHASE ($PHASE_NAME) — Re-run with feedback."
   echo ""
-  echo "EXECUTE: Task(bytA:$PHASE_AGENT, '$PROMPT')"
+  if [ "$APPROVAL_PHASE" = "0" ]; then
+    echo "EXECUTE: TEAM PLANNING PROTOCOL — Parse und fuehre das folgende Protokoll DIREKT aus (NICHT nochmal wf_prompt_builder.sh aufrufen! Feedback ist bereits enthalten): 1) TeamCreate(team_name aus TEAM_NAME-Zeile), 2) Spawne ALLE Specialists + HUB parallel via Task(), 3) Warte auf Architect Done, 4) Pruefe VERIFY-Dateien, 5) shutdown_request an alle, 6) TeamDelete, 7) Done. --- PROTOKOLL-START --- $PROMPT --- PROTOKOLL-ENDE ---"
+  else
+    echo "EXECUTE: Task(bytA:$PHASE_AGENT, '$PROMPT')"
+  fi
   ;;
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -372,7 +389,11 @@ rollback)
   echo "Rollback: Phase $APPROVAL_PHASE ($FROM_PHASE_NAME) → Phase $TARGET ($TARGET_NAME)"
   echo "Context & Specs ab Phase $TARGET geloescht."
   echo ""
-  echo "EXECUTE: Task(bytA:$TARGET_AGENT, '$PROMPT')"
+  if [ "$TARGET" = "0" ]; then
+    echo "EXECUTE: TEAM PLANNING PROTOCOL — Parse und fuehre das folgende Protokoll DIREKT aus (NICHT nochmal wf_prompt_builder.sh aufrufen! Rollback-Kontext ist bereits enthalten): 1) TeamCreate(team_name aus TEAM_NAME-Zeile), 2) Spawne ALLE Specialists + HUB parallel via Task(), 3) Warte auf Architect Done, 4) Pruefe VERIFY-Dateien, 5) shutdown_request an alle, 6) TeamDelete, 7) Done. --- PROTOKOLL-START --- $PROMPT --- PROTOKOLL-ENDE ---"
+  else
+    echo "EXECUTE: Task(bytA:$TARGET_AGENT, '$PROMPT')"
+  fi
   ;;
 
 # ═══════════════════════════════════════════════════════════════════════════

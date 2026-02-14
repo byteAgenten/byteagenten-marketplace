@@ -100,6 +100,25 @@ output_block() {
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
+# PHASE-AWARE DISPATCH: Phase 0 uses Team Planning Protocol, not single agent
+# ═══════════════════════════════════════════════════════════════════════════
+build_dispatch_msg() {
+  local phase=$1
+  local prompt=$2
+  local phase_agent
+  phase_agent=$(get_phase_agent "$phase")
+
+  if [ "$phase" = "0" ]; then
+    # Phase 0 = Team Planning Protocol — inline instructions (survive compaction)
+    # WICHTIG: $prompt IST bereits der komplette Output von wf_prompt_builder.sh.
+    # Claude soll ihn DIREKT parsen, NICHT nochmal wf_prompt_builder.sh aufrufen!
+    echo "TEAM PLANNING PROTOCOL — Parse und fuehre das folgende Protokoll DIREKT aus (NICHT nochmal wf_prompt_builder.sh aufrufen!): 1) TeamCreate(team_name aus TEAM_NAME-Zeile), 2) Spawne ALLE Specialists + HUB parallel via Task() mit den Prompts aus den SPECIALIST/HUB-Bloecken, 3) Warte auf Architect Done-Nachricht, 4) Pruefe ob ALLE Spec-Dateien aus VERIFY-Block existieren, 5) Sende shutdown_request an alle Teammates, 6) TeamDelete, 7) Sage Done. --- PROTOKOLL-START --- $prompt --- PROTOKOLL-ENDE ---"
+  else
+    echo "Task(bytA:$phase_agent, '$prompt')"
+  fi
+}
+
+# ═══════════════════════════════════════════════════════════════════════════
 # SOUND NOTIFICATIONS
 # ═══════════════════════════════════════════════════════════════════════════
 CUSTOM_SOUND_DIR="${CLAUDE_PLUGIN_ROOT:-}/assets/sounds"
@@ -218,6 +237,19 @@ if [ "$WORKFLOW_TYPE" != "bytA-feature" ]; then
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
+# ADVANCING GUARD: Prevent re-entrant orchestrator calls
+# During Phase 0 team planning, multiple SubagentStop events can trigger
+# the Stop hook simultaneously. The lock file prevents race conditions.
+# ═══════════════════════════════════════════════════════════════════════════
+LOCK_FILE="${WORKFLOW_DIR}/.advancing"
+if [ -f "$LOCK_FILE" ]; then
+  log "Advancing guard: another orchestrator call in progress, skipping"
+  exit 0
+fi
+touch "$LOCK_FILE"
+trap 'rm -f "$LOCK_FILE"' EXIT
+
+# ═══════════════════════════════════════════════════════════════════════════
 # SESSION CLAIM: Erste Session die den Orchestrator triggert wird Owner.
 # Andere Sessions (z.B. fuer Issue-Erstellung) werden NICHT blockiert.
 # Bei Resume aendert sich die session_id → session_recovery.sh aktualisiert.
@@ -324,7 +356,8 @@ if [ "$STATUS" = "awaiting_approval" ]; then
     fi
 
     PROMPT=$("${SCRIPT_DIR}/wf_prompt_builder.sh" "$PHASE")
-    output_block "GUARD: Phase $PHASE ($PHASE_NAME) als awaiting_approval markiert, aber GLOB-Kriterium NICHT erfuellt (Versuch $RETRY/$MAX_RETRIES). Starte: Task(bytA:$PHASE_AGENT, '$PROMPT')"
+    DISPATCH=$(build_dispatch_msg "$PHASE" "$PROMPT")
+    output_block "GUARD: Phase $PHASE ($PHASE_NAME) als awaiting_approval markiert, aber GLOB-Kriterium NICHT erfuellt (Versuch $RETRY/$MAX_RETRIES). Starte: $DISPATCH"
   fi
 
   log "Stop allowed: awaiting_approval (Phase $PHASE, GLOB verified)"
@@ -391,7 +424,8 @@ if [ -n "$SKIPPED_TO" ]; then
 
   # Build prompt for skipped phase
   PROMPT=$("${SCRIPT_DIR}/wf_prompt_builder.sh" "$SKIPPED_TO")
-  output_block "PHASE-SKIP KORRIGIERT: Phase $SKIPPED_TO ($SKIP_NAME) fehlt. State korrigiert. Starte sofort: Task(bytA:$SKIP_AGENT, '$PROMPT')"
+  DISPATCH=$(build_dispatch_msg "$SKIPPED_TO" "$PROMPT")
+  output_block "PHASE-SKIP KORRIGIERT: Phase $SKIPPED_TO ($SKIP_NAME) fehlt. State korrigiert. Starte sofort: $DISPATCH"
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -515,6 +549,10 @@ if "${SCRIPT_DIR}/wf_verify.sh" "$PHASE"; then
     # Ergebnis-Datei fuer den Approval-Kontext finden
     PHASE_PAD=$(printf "%02d" "$PHASE")
     SPEC_FILE=$(ls .workflow/specs/issue-*-ph${PHASE_PAD}-*.md 2>/dev/null | head -1 || echo "")
+    # Phase 0 hat plan-consolidated.md statt ph00-*.md
+    if [ -z "$SPEC_FILE" ] && [ "$PHASE" = "0" ]; then
+      SPEC_FILE=$(ls .workflow/specs/issue-*-plan-consolidated.md 2>/dev/null | head -1 || echo "")
+    fi
     # Phase 1 hat Wireframes statt Specs
     IS_WIREFRAME=false
     if [ -z "$SPEC_FILE" ] && [ "$PHASE" = "1" ]; then
@@ -593,5 +631,6 @@ else
 
   # Build prompt with retry context
   PROMPT=$("${SCRIPT_DIR}/wf_prompt_builder.sh" "$PHASE")
-  output_block "RALPH-LOOP Phase $PHASE ($PHASE_NAME) nicht fertig (Versuch $RETRY/$MAX_RETRIES). Starte: Task(bytA:$PHASE_AGENT, '$PROMPT')"
+  DISPATCH=$(build_dispatch_msg "$PHASE" "$PROMPT")
+  output_block "RALPH-LOOP Phase $PHASE ($PHASE_NAME) nicht fertig (Versuch $RETRY/$MAX_RETRIES). Starte: $DISPATCH"
 fi

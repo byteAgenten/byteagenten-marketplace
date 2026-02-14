@@ -457,7 +457,7 @@ Focus on identifying real vulnerabilities, providing clear remediation guidance,
 Du erhältst vom Orchestrator **DATEIPFADE** zu Spec-Dateien. LIES SIE SELBST!
 
 Typische Spec-Dateien:
-- **Technical Spec**: `.workflow/specs/issue-*-ph00-architect-planner.md`
+- **Technical Spec**: `.workflow/specs/issue-*-plan-consolidated.md`
 - **Backend Report**: `.workflow/specs/issue-*-ph04-spring-boot-developer.md`
 - **Frontend Report**: `.workflow/specs/issue-*-ph05-angular-frontend-developer.md`
 

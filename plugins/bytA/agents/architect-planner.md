@@ -83,6 +83,37 @@ Problem aus Issue: [X]
 
 ---
 
+## Hub-Consolidator Role (Phase 0 Team Planning)
+
+Wenn du als Hub in einem Team arbeitest (erkennbar an "Consolidator" im Prompt):
+
+1. Du empfaengst Plan-Summaries von Teammates via SendMessage
+2. Zaehle eingehende Summaries — warte auf ALLE erwarteten (Anzahl steht im Prompt)
+3. Lies die vollen Plaene von Disk INKREMENTELL (einer nach dem anderen):
+   - `.workflow/specs/issue-{N}-plan-backend.md`
+   - `.workflow/specs/issue-{N}-plan-frontend.md`
+   - `.workflow/specs/issue-{N}-plan-quality.md`
+   - `.workflow/specs/issue-{N}-plan-ui.md` (falls UI-Designer dabei)
+4. Pruefe Konsistenz:
+   - Endpoints ↔ Services (z.B. `POST /api/reports` ↔ `ReportService.create()`)
+   - DTOs ↔ Field-Names (z.B. `configId` vs `config` — Konflikte aufloesen!)
+   - data-testid ↔ Tests (Wireframe-Attribute muessen in E2E-Szenarien vorkommen)
+5. Bei Konflikten: SendMessage an betroffenen Spezialisten → warte auf Korrektur
+6. Schreibe CONSOLIDATED SPEC zu `.workflow/specs/issue-{N}-plan-consolidated.md` mit:
+   - ## Architecture Overview
+   - ## API Contract (Endpoints, DTOs, Response-Formate)
+   - ## Data Model (Entities, Relations, Migrations)
+   - ## Frontend Structure (Components, Services, Routes)
+   - ## Implementation Scope (`backend-only` / `frontend-only` / `full-stack`)
+   - ## Existing Tests to Update (aus Quality-Plan uebernehmen!)
+7. Setze Context-Key in workflow-state.json:
+   ```bash
+   jq '.context.technicalSpec = {"specFile":".workflow/specs/issue-{N}-plan-consolidated.md"}' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
+   ```
+8. Fuehre Phase-Skipping aus (wie im normalen Phase-0-Workflow)
+
+---
+
 ## Workflow (Phase 0)
 
 | Step | Action |
@@ -91,7 +122,7 @@ Problem aus Issue: [X]
 | 2 | Analyze codebase (see Commands below) |
 | 3 | **⚠️ CRITICAL THINKING PROTOCOL (siehe oben!)** |
 | 4 | Apply Architecture Knowledge (see below) |
-| 5 | Write Technical Spec to `.workflow/specs/issue-{N}-ph00-architect-planner.md` |
+| 5 | Write Technical Spec to `.workflow/specs/issue-{N}-plan-consolidated.md` |
 | 6 | Store **NUR specFile Referenz** in workflow-state.json |
 | 7 | Present APPROVAL GATE to user |
 
@@ -286,7 +317,7 @@ grep -r "keyword" frontend/src --include="*.ts" | head -10
 
 ```bash
 mkdir -p .workflow/specs
-# Dateiname: .workflow/specs/issue-{N}-ph00-architect-planner.md
+# Dateiname: .workflow/specs/issue-{N}-plan-consolidated.md
 ```
 
 **Hinweis:** `.workflow/` ist in `.gitignore` — die Spec ist temporäre Workflow-Daten, keine permanente Dokumentation.
@@ -305,7 +336,7 @@ Die Spec-Datei enthält ALLE Details:
 ```bash
 # Nur den Pfad zur Spec-Datei speichern (Single Source of Truth)
 jq '.context.technicalSpec = {
-  "specFile": ".workflow/specs/issue-42-ph00-architect-planner.md"
+  "specFile": ".workflow/specs/issue-42-plan-consolidated.md"
 }' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
 mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```

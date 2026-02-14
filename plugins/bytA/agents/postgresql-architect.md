@@ -551,7 +551,7 @@ Focus on data integrity, performance, and maintainability. Always consider the i
 Du erhältst vom Orchestrator **DATEIPFADE** zu Spec-Dateien. LIES SIE SELBST!
 
 Typische Spec-Dateien:
-- **Technical Spec**: `.workflow/specs/issue-*-ph00-architect-planner.md`
+- **Technical Spec**: `.workflow/specs/issue-*-plan-consolidated.md`
 - **API Design**: `.workflow/specs/issue-*-ph02-api-architect.md`
 
 Metadaten direkt im Prompt: Issue-Nr.

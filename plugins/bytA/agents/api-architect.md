@@ -212,7 +212,7 @@ Focus on clear, concise API sketches. The spring-boot-developer will implement f
 Du erhältst vom Orchestrator **DATEIPFADE** zu Spec-Dateien. LIES SIE SELBST!
 
 Typische Spec-Dateien:
-- **Technical Spec**: `.workflow/specs/issue-*-ph00-architect-planner.md`
+- **Technical Spec**: `.workflow/specs/issue-*-plan-consolidated.md`
 
 Metadaten direkt im Prompt: Issue-Nr.
 

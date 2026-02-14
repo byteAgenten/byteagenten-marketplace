@@ -89,6 +89,18 @@ mcp__plugin_bytA_context7__query-docs libraryId="[ID aus resolve]" query="[spezi
 
 ---
 
+## Bestehende Tests pflegen (KRITISCH!)
+
+Wenn du Code aenderst, MUSST du die zugehoerigen Tests pruefen und anpassen:
+
+1. **Fuer JEDE geaenderte Datei:** Pruefe ob ein `.spec.ts` existiert: `Glob("**/{dateiname}.spec.ts")`
+2. **Spec gefunden?** → Lies die Tests. Identifiziere Tests die durch deine Aenderung brechen (z.B. geaenderte Navigation-Targets, entfernte Elemente, neue Parameter).
+3. **Tests anpassen:** Aktualisiere ALLE betroffenen Expectations. Eine Aenderung an `navigate(['/projects'])` → `this.returnTo()` bricht JEDEN Test der `navigate` mit `/projects` erwartet!
+4. **Tests ausfuehren:** `npm test --prefix frontend -- --no-watch --browsers=ChromeHeadless 2>&1 | tail -30` — MUSS gruen sein bevor du "Done" sagst.
+5. **Niemals kaputte Tests hinterlassen.** Du bist verantwortlich fuer gruene Tests — nicht der Test Engineer in der naechsten Runde.
+
+---
+
 ## data-testid Konvention (PFLICHT!)
 
 **Jedes interaktive Element MUSS ein `data-testid` Attribut haben:**
@@ -186,7 +198,7 @@ npm run lint && npm test -- --no-watch --browsers=ChromeHeadless && npm run buil
 Du erhältst vom Orchestrator **DATEIPFADE** zu Spec-Dateien. LIES SIE SELBST!
 
 Typische Spec-Dateien:
-- **Technical Spec**: `.workflow/specs/issue-*-ph00-architect-planner.md`
+- **Technical Spec**: `.workflow/specs/issue-*-plan-consolidated.md`
 - **API Design**: `.workflow/specs/issue-*-ph02-api-architect.md`
 - **Wireframes**: `wireframes/issue-*-*.html`
 

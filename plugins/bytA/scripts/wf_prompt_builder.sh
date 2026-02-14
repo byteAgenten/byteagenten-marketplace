@@ -75,42 +75,157 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════
 case $PHASE in
   0)
-    cat << EOF
-Phase 0: Create Technical Specification for Issue #$ISSUE_NUM: $ISSUE_TITLE
+    # ═══════════════════════════════════════════════════════════════════════
+    # PHASE 0: Team Planning Protocol (Hub-and-Spoke)
+    # ═══════════════════════════════════════════════════════════════════════
+    # Lese Team-Konfiguration aus workflow-state.json
+    MODEL_TIER=$(jq -r '.modelTier // "fast"' "$WORKFLOW_FILE")
+    UI_DESIGNER_OPT=$(jq -r '.uiDesigner // false' "$WORKFLOW_FILE")
 
-## WORKFLOW CONTEXT
-- Issue: #$ISSUE_NUM - $ISSUE_TITLE
-- Target Coverage: ${TARGET_COV}%
+    # Model bestimmen
+    if [ "$MODEL_TIER" = "quality" ]; then
+      MODEL="opus"
+    else
+      MODEL="sonnet"
+    fi
 
-## OUTPUT FILE (EXAKTER PFAD — NICHT AENDERN!)
-.workflow/specs/issue-${ISSUE_NUM}-ph00-architect-planner.md
+    # Specialist-Count + UI-Designer Block
+    UI_DESIGNER_BLOCK=""
+    if [ "$UI_DESIGNER_OPT" = "true" ]; then
+      SPECIALIST_COUNT=4
+      UI_DESIGNER_BLOCK="
+--- SPECIALIST: ui ---
+Agent: bytA:ui-designer
+Name: ui
+Prompt: |
+  ROUND 1: PLAN (Wireframe) for Issue #${ISSUE_NUM} - ${ISSUE_TITLE}.
+  Create HTML wireframe with Angular Material components.
+  Include data-testid on ALL interactive elements.
+  Write wireframe to wireframes/issue-${ISSUE_NUM}-plan-ui.html
+  Write plan summary to .workflow/specs/issue-${ISSUE_NUM}-plan-ui.md
+  Then send SHORT SUMMARY (max 20 lines) to teammate \"architect\" via SendMessage.
+  Summary must include: number of data-testid attributes, Material components used.
+  After sending, say 'Done.'
+"
+    else
+      SPECIALIST_COUNT=3
+    fi
 
-## CONTEXT KEY (workflow-state.json — EXAKT SO SETZEN!)
-context.technicalSpec = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-ph00-architect-planner.md"}
-
-## YOUR TASK
-Create a Technical Specification. Apply 5x Warum root cause analysis. Use MCP tools for current docs.
-
+    # Phase-Skipping Block (wiederverwendbar fuer Architect)
+    PHASE_SKIP_BLOCK="
 ## PHASE SKIPPING (PFLICHT bei nicht benoetigten Phasen!)
-Wenn bestimmte Phasen fuer dieses Issue NICHT benoetigt werden, MUSST du sie JETZT pre-skippen.
+Wenn bestimmte Phasen fuer dieses Issue NICHT benoetigt werden, MUSST du sie pre-skippen.
 Fuehre fuer JEDE nicht benoetigte Phase einen jq-Befehl aus:
 
 Beispiel (Phase 3 skippen — keine DB-Aenderungen):
-  jq '.phases["3"] = {"name":"postgresql-architect","status":"skipped","reason":"Keine DB-Aenderungen"} | .context.migrations = {"skipped":true,"reason":"Keine DB-Aenderungen"}' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
+  jq '.phases[\"3\"] = {\"name\":\"postgresql-architect\",\"status\":\"skipped\",\"reason\":\"Keine DB-Aenderungen\"} | .context.migrations = {\"skipped\":true,\"reason\":\"Keine DB-Aenderungen\"}' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
 
 Skip-Referenz:
 | Phase | Agent | context-Key | Wann skippen? |
 |-------|-------|-------------|---------------|
-| 1 | ui-designer | wireframes | Keine UI-Aenderungen noetig |
+| 1 | ui-designer | wireframes | Keine UI-Aenderungen noetig (MUSS geskippt werden wenn UI-Designer im Team war!) |
 | 2 | api-architect | apiDesign | Kein neues/geaendertes API |
 | 3 | postgresql-architect | migrations | Keine DB-Aenderungen |
 | 4 | spring-boot-developer | backendImpl | Kein Backend betroffen |
 | 5 | angular-frontend-developer | frontendImpl | Kein Frontend betroffen |
 
-NIEMALS skippen: Phase 0, 6 (Tests), 7 (Security), 8 (Review), 9 (Push & PR).
-Nur Phasen skippen die WIRKLICH nicht benoetigt werden. Der Orchestrator ueberspringt pre-geskippte Phasen automatisch.
+NIEMALS skippen: Phase 0, 6 (Tests), 7 (Security), 8 (Review), 9 (Push & PR)."
+
+    cat << TEAM_EOF
+=== PHASE 0: TEAM PLANNING PROTOCOL ===
+
+TEAM_NAME: bytA-plan-${ISSUE_NUM}
+MODEL: ${MODEL}
+SPECIALIST_COUNT: ${SPECIALIST_COUNT}
+
+--- SPECIALIST: backend ---
+Agent: bytA:spring-boot-developer
+Name: backend
+Prompt: |
+  ROUND 1: PLAN for Issue #${ISSUE_NUM} - ${ISSUE_TITLE}.
+  Target Coverage: ${TARGET_COV}%.
+  Analyze the codebase. Plan: DB schema changes, new/modified entities, services, controllers, endpoint signatures, Flyway migrations, test approach.
+  Write full plan to .workflow/specs/issue-${ISSUE_NUM}-plan-backend.md
+  Then send SHORT SUMMARY (max 20 lines) to teammate "architect" via SendMessage.
+  Summary must include: entity count, endpoint count, migration version.
+  After sending, say 'Done.'
+
+--- SPECIALIST: frontend ---
+Agent: bytA:angular-frontend-developer
+Name: frontend
+Prompt: |
+  ROUND 1: PLAN for Issue #${ISSUE_NUM} - ${ISSUE_TITLE}.
+  Target Coverage: ${TARGET_COV}%.
+  Analyze the codebase. Plan: new/modified components, services, routing, state management, data-testid attributes.
+  Write full plan to .workflow/specs/issue-${ISSUE_NUM}-plan-frontend.md
+  Then send SHORT SUMMARY (max 20 lines) to teammate "architect" via SendMessage.
+  Summary must include: component count, new routes, service count.
+  After sending, say 'Done.'
+
+--- SPECIALIST: quality ---
+Agent: bytA:test-engineer
+Name: quality
+Prompt: |
+  ROUND 1: PLAN for Issue #${ISSUE_NUM} - ${ISSUE_TITLE}.
+  Target Coverage: ${TARGET_COV}%.
+  Start with Existing Test Impact Analysis (see your agent instructions!).
+  Plan E2E scenarios, unit test strategy, integration test strategy.
+  Write full plan to .workflow/specs/issue-${ISSUE_NUM}-plan-quality.md
+  MUST include section: ## Existing Tests to Update
+  Then send SHORT SUMMARY (max 20 lines) to teammate "architect" via SendMessage.
+  Summary must include: count of existing tests that will break, new test count, coverage estimate.
+  After sending, say 'Done.'
+${UI_DESIGNER_BLOCK}
+--- HUB: architect ---
+Agent: bytA:architect-planner
+Name: architect
+Prompt: |
+  ROUND 1: PLAN (Consolidator) for Issue #${ISSUE_NUM} - ${ISSUE_TITLE}.
+  Target Coverage: ${TARGET_COV}%.
+
+  You are the HUB in a Hub-and-Spoke planning team.
+  You will receive ${SPECIALIST_COUNT} plan summaries via SendMessage from teammates.
+  WAIT for ALL ${SPECIALIST_COUNT} summaries before proceeding.
+
+  After receiving all summaries:
+  1. Read full plans from disk INCREMENTALLY (one at a time):
+     - .workflow/specs/issue-${ISSUE_NUM}-plan-backend.md
+     - .workflow/specs/issue-${ISSUE_NUM}-plan-frontend.md
+     - .workflow/specs/issue-${ISSUE_NUM}-plan-quality.md$([ "$UI_DESIGNER_OPT" = "true" ] && echo "
+     - .workflow/specs/issue-${ISSUE_NUM}-plan-ui.md")
+  2. Validate CONSISTENCY:
+     - Endpoints match between backend and frontend (field names, types, URLs)
+     - DTOs match (same field names, same types)
+     - data-testid from wireframe match E2E test selectors
+  3. If CONFLICTS found: SendMessage to affected specialist, wait for correction
+  4. Write CONSOLIDATED SPEC to .workflow/specs/issue-${ISSUE_NUM}-plan-consolidated.md
+     MUST contain these sections:
+     - ## Architecture Overview
+     - ## API Contract
+     - ## Data Model
+     - ## Frontend Structure
+     - ## Implementation Scope (backend-only / frontend-only / full-stack)
+     - ## Existing Tests to Update (from quality plan)
+  5. Set context key:
+     jq '.context.technicalSpec = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-plan-consolidated.md"}' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
+  6. Execute Phase Skipping:
+${PHASE_SKIP_BLOCK}
+  After writing consolidated spec and executing phase skipping, say 'Done.'
+
+--- VERIFY ---
+Files that MUST exist after team completes:
+  .workflow/specs/issue-${ISSUE_NUM}-plan-consolidated.md
+  .workflow/specs/issue-${ISSUE_NUM}-plan-backend.md
+  .workflow/specs/issue-${ISSUE_NUM}-plan-frontend.md
+  .workflow/specs/issue-${ISSUE_NUM}-plan-quality.md
+
+--- CLEANUP ---
+After architect says 'Done.':
+1. Send shutdown_request to ALL teammates (backend, frontend, quality$([ "$UI_DESIGNER_OPT" = "true" ] && echo ", ui"), architect)
+2. TeamDelete (ignore errors — agents may already be gone)
+3. Say "Done."
 $RETRY_SECTION$HOTFIX_SECTION
-EOF
+TEAM_EOF
     ;;
 
   1)

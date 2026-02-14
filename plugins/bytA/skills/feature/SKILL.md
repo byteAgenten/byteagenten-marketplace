@@ -18,10 +18,13 @@ Du bist KEIN normaler Assistent. Du bist ein **TRANSPORT-LAYER** fuer einen dete
 
 ## DEIN EINZIGER JOB:
 
-1. **Startup** ausfuehren (Schritte 1-6 unten)
-2. **"Done."** sagen — der Stop-Hook uebernimmt ab hier ALLES
-3. Wenn der Stop-Hook dir `decision:block` gibt: **Fuehre den Task() aus den er dir sagt**
-4. Wenn der UserPromptSubmit-Hook dir Anweisungen gibt: **Befolge sie woertlich**
+1. **Startup** ausfuehren (Schritte 1-7 unten)
+2. **Phase 0** ausfuehren (Team Planning Protocol ODER single-agent Fallback)
+3. **"Done."** sagen — der Stop-Hook uebernimmt ab hier ALLES
+4. Wenn der Stop-Hook dir `decision:block` gibt:
+   - Enthaelt die reason `Task(bytA:...` → **Fuehre den Task() aus**
+   - Enthaelt die reason `TEAM PLANNING PROTOCOL` → **Fuehre das Team-Protokoll aus** (siehe unten)
+5. Wenn der UserPromptSubmit-Hook dir Anweisungen gibt: **Befolge sie woertlich**
 
 **DU BAUST KEINE EIGENEN PROMPTS. DU ENTSCHEIDEST NICHTS. DU FUEHRST NUR AUS.**
 
@@ -57,9 +60,12 @@ grep -q "^\.workflow/" .gitignore 2>/dev/null || echo ".workflow/" >> .gitignore
 git fetch --prune
 ```
 
-**Frage den User (WARTE auf Antwort!):**
-1. "Von welchem Branch soll ich starten?" (Default: main oder develop)
-2. "Welches Coverage-Ziel?" (50% / 70% / 85% / 95%)
+**Frage den User nach 4 Einstellungen (EIN AskUserQuestion-Call, WARTE auf Antwort!):**
+
+1. "Von welchem Branch starten?" — Optionen: main (default) / develop
+2. "Coverage-Ziel?" — Optionen: 50% / 70% (default) / 85% / 95%
+3. "Welches Model fuer Agents?" — Optionen: fast (Sonnet, default) / quality (Opus)
+4. "UI Designer einschliessen? (Wireframe + data-testid)" — Optionen: Nein (default) / Ja
 
 ### Schritt 4: Issue laden
 
@@ -81,6 +87,8 @@ cat > .workflow/workflow-state.json << EOF
   "branch": "feature/issue-ISSUE_NUM-kurzer-name",
   "fromBranch": "FROM_BRANCH",
   "targetCoverage": COVERAGE,
+  "modelTier": "MODEL_TIER",
+  "uiDesigner": UI_DESIGNER_BOOL,
   "currentPhase": 0,
   "startedAt": "$STARTED_AT",
   "phases": {},
@@ -102,11 +110,10 @@ Baue den Prompt mit dem Prompt-Builder:
 ${CLAUDE_PLUGIN_ROOT}/scripts/wf_prompt_builder.sh 0
 ```
 
-Starte Phase 0 mit dem Output des Prompt-Builders:
+Pruefe den Output:
 
-```
-Task(bytA:architect-planner, "<OUTPUT VON wf_prompt_builder.sh>")
-```
+- **Beginnt mit `=== PHASE 0: TEAM PLANNING PROTOCOL ===`** → Fuehre das **Team Planning Protocol** aus (siehe unten)
+- **Andernfalls** → Fuehre aus: `Task(bytA:architect-planner, "<OUTPUT>")`
 
 ### Schritt 7: STOPP
 
@@ -120,6 +127,69 @@ Der Stop-Hook (`wf_orchestrator.sh`) uebernimmt ab hier den GESAMTEN Workflow:
 - Phase Skipping (auto-advance durch pre-skipped Phasen)
 - Rollback bei CHANGES_REQUESTED (deterministisch)
 - Phase 9 Push & PR (Orchestrator-Anweisungen)
+
+---
+
+## Phase 0 — Team Planning Protocol
+
+Wenn der Output von `wf_prompt_builder.sh 0` mit `=== PHASE 0: TEAM PLANNING PROTOCOL ===` beginnt,
+fuehre das folgende Protokoll aus:
+
+### 1. Team erstellen
+
+```
+TeamCreate(team_name: <TEAM_NAME aus Protokoll>)
+```
+
+Wenn TeamCreate fehlschlaegt (Agent Teams nicht aktiviert): → **Fallback** (siehe unten).
+
+### 2. Alle Agents parallel spawnen
+
+Parse ALLE `--- SPECIALIST: ... ---` Bloecke und den `--- HUB: ... ---` Block.
+Spawne ALLE Agents IN PARALLEL in EINEM Aufruf:
+
+```
+Fuer JEDEN Block:
+  Task(subagent_type: <Agent>, name: <Name>, team_name: <TEAM_NAME>,
+       model: <MODEL>, prompt: <Prompt aus Block>)
+```
+
+**Beispiel mit 4 Agents (3 Specialists + 1 Hub):**
+- Task(bytA:spring-boot-developer, name: "backend", team_name: "bytA-plan-42", model: "sonnet", prompt: "...")
+- Task(bytA:angular-frontend-developer, name: "frontend", team_name: "bytA-plan-42", model: "sonnet", prompt: "...")
+- Task(bytA:test-engineer, name: "quality", team_name: "bytA-plan-42", model: "sonnet", prompt: "...")
+- Task(bytA:architect-planner, name: "architect", team_name: "bytA-plan-42", model: "sonnet", prompt: "...")
+
+### 3. Warten
+
+Warte auf den Architect's "Done." Nachricht (er ist der letzte der fertig wird).
+
+### 4. Verifizieren
+
+Pruefe ob ALLE Dateien aus dem `--- VERIFY ---` Block existieren.
+Wenn Dateien fehlen: Warne und fahre trotzdem fort (der Stop-Hook prueft das GLOB nochmal).
+
+### 5. Aufraumen
+
+```
+Sende shutdown_request an ALLE Teammates (Namen aus den Bloecken).
+TeamDelete (Fehler ignorieren — Agents koennten schon weg sein).
+```
+
+### 6. Fertig
+
+Sage **"Done."** — Der Stop-Hook prueft das GLOB und setzt awaiting_approval.
+
+---
+
+## Fallback (wenn TeamCreate fehlschlaegt)
+
+Wenn TeamCreate einen Fehler wirft (z.B. Agent Teams nicht aktiviert):
+
+1. Extrahiere den `--- HUB: architect ---` Block aus dem Protokoll
+2. Entferne alle SendMessage-Referenzen aus dem Prompt
+3. Fuehre aus: `Task(bytA:architect-planner, "<bereinigter Architect-Prompt>")`
+4. Sage "Done." — Phase 0 wird dann wie bisher single-agent ausgefuehrt
 
 ---
 
