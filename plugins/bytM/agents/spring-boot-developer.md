@@ -72,11 +72,23 @@ in Schritt 1 parallel aufloesen, dann in Schritt 2 parallel Docs laden.
 
 ---
 
+## Bestehende Tests pflegen (KRITISCH!)
+
+Wenn du Code aenderst, MUSST du die zugehoerigen Tests pruefen und anpassen:
+
+1. **Fuer JEDE geaenderte Datei:** Pruefe ob Tests existieren: `Glob("**/{Klassenname}Test.java")` und `Glob("**/{Klassenname}IT.java")`
+2. **Tests gefunden?** → Lies die Tests. Identifiziere Tests die durch deine Aenderung brechen (z.B. geaenderte Method-Signatures, neue Pflichtfelder, entfernte Endpoints).
+3. **Tests anpassen:** Aktualisiere ALLE betroffenen Assertions und Mocks. Eine Aenderung an der Service-Signatur bricht JEDEN Test der die alte Signatur mockt!
+4. **Tests ausfuehren:** `mvn test -pl :backend 2>&1 | tail -50` — MUSS gruen sein bevor du "Done" sagst.
+5. **Niemals kaputte Tests hinterlassen.** Du bist verantwortlich fuer gruene Tests — nicht der Test Engineer in der naechsten Runde.
+
+---
+
 ## Constraints (CRITICAL)
 
 - Spring Boot 4.0+ only
 - Java 21+ required (Records, Pattern Matching, Virtual Threads)
-- Tests are MANDATORY
+- Tests are MANDATORY (neue schreiben UND bestehende anpassen)
 - **Swagger-Annotationen PFLICHT** - Live-API-Docs (`/api/v3/api-docs`) sind Single Source of Truth
   - Lade Springdoc-Beispiele via Context7 wenn noetig
   - Jeder Endpoint: `@Operation`, `@ApiResponses`

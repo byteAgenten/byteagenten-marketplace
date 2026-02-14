@@ -49,7 +49,7 @@ The user chooses a **model tier** at startup: `fast` (Sonnet) or `quality` (Opus
 | `bytM:architect-planner` | Tech spec, API design, consolidation | Plan |
 | `bytM:spring-boot-developer` | Spring Boot, DB, backend tests | Plan, Implement |
 | `bytM:angular-frontend-developer` | Angular, routing, state management | Plan, Implement |
-| `bytM:ui-designer` | Wireframes (HTML), Material Design, data-testid | Plan |
+| `bytM:ui-designer` | Wireframes (HTML), Material Design, data-testid | Plan (optional) |
 | `bytM:test-engineer` | E2E tests, test strategy, coverage | Plan, Verify |
 | `bytM:security-auditor` | OWASP security audit | Verify |
 | `bytM:code-reviewer` | Code review, quality gates, build verification | Verify |
@@ -83,7 +83,7 @@ fi
 
 Parse `$ARGUMENTS` for issue number. If not provided, ask for it.
 
-Then use `AskUserQuestion` to collect ALL 3 settings in ONE call (3 questions):
+Then use `AskUserQuestion` to collect ALL 4 settings in ONE call (4 questions):
 
 **Question 1 — Base Branch:**
 - header: "Branch"
@@ -101,7 +101,12 @@ Then use `AskUserQuestion` to collect ALL 3 settings in ONE call (3 questions):
 - question: "Welches Model-Tier fuer die Agents?"
 - options: `fast (Recommended)` — Sonnet, schnell und kosteneffizient | `quality` — Opus, maximale Code-Qualitaet fuer komplexe Logik
 
-Store all values. Map model tier: `fast` → `MODEL = "sonnet"`, `quality` → `MODEL = "opus"`.
+**Question 4 — UI Designer:**
+- header: "UI Design"
+- question: "UI Designer (Wireframe + data-testid) einschließen?"
+- options: `Ja (Recommended)` — Wireframe HTML + data-testid Planung durch UI-Designer Agent | `Nein` — Kein Wireframe, Frontend-Developer plant data-testid selbst
+
+Store all values. Map model tier: `fast` → `MODEL = "sonnet"`, `quality` → `MODEL = "opus"`. Store UI Designer choice as `uiDesigner: true/false`.
 
 ### Step 3: Load issue + create branch
 
@@ -129,6 +134,7 @@ Create `.workflow/workflow-state.json`:
   "fromBranch": "main",
   "coverageTarget": 70,
   "modelTier": "fast",
+  "uiDesigner": true,
   "currentRound": "plan",
   "context": {}
 }
@@ -142,13 +148,13 @@ TeamCreate(team_name: "bytm-{N}")
 
 ---
 
-## ROUND 1: PLAN — Hub-and-Spoke (5 Agents)
+## ROUND 1: PLAN — Hub-and-Spoke (4-5 Agents)
 
-The Architect acts as **hub**: 4 specialists plan their domain, send summaries to the Architect, who consolidates everything into a unified tech spec.
+The Architect acts as **hub**: specialists plan their domain, send summaries to the Architect, who consolidates everything into a unified tech spec. With ui-designer: 4 specialists + 1 architect = 5 agents. Without: 3 specialists + 1 architect = 4 agents.
 
-### Spawn all 5 teammates in parallel
+### Spawn teammates in parallel
 
-Launch these 5 `Task` calls in a **single message** (parallel):
+Launch `Task` calls in a **single message** (parallel). Spawn 5 agents if `uiDesigner: true`, otherwise 4 (skip ui-designer):
 
 **backend** → `Task(bytM:spring-boot-developer, name: "backend", team_name: "bytm-{N}", model: "{MODEL}")`:
 > ROUND 1: PLAN for Issue #{N} - {TITLE}.
@@ -166,7 +172,7 @@ Launch these 5 `Task` calls in a **single message** (parallel):
 > Then send a SHORT SUMMARY (max 20 lines: components, routes, services, key decisions) to teammate "architect" via SendMessage.
 > After sending, say 'Done.'
 
-**ui-designer** → `Task(bytM:ui-designer, name: "ui-designer", team_name: "bytm-{N}", model: "{MODEL}")`:
+**ui-designer** (ONLY if `uiDesigner: true`) → `Task(bytM:ui-designer, name: "ui-designer", team_name: "bytm-{N}", model: "{MODEL}")`:
 > ROUND 1: PLAN for Issue #{N} - {TITLE}.
 > Issue body: {BODY}
 > Create wireframe HTML with data-testid attributes on all interactive elements.
@@ -178,29 +184,28 @@ Launch these 5 `Task` calls in a **single message** (parallel):
 **quality** → `Task(bytM:test-engineer, name: "quality", team_name: "bytm-{N}", model: "{MODEL}")`:
 > ROUND 1: PLAN for Issue #{N} - {TITLE}.
 > Issue body: {BODY}
-> Plan: E2E scenarios, OWASP focus areas, quality gates, coverage strategy for {COVERAGE}%.
-> Write full plan to `.workflow/specs/issue-{N}-plan-quality.md`.
-> Then send a SHORT SUMMARY (max 10 lines: scenario count, coverage target, security focus) to teammate "architect" via SendMessage.
+> Start with your Existing Test Impact Analysis (see your agent instructions). Then plan E2E scenarios, OWASP focus areas, quality gates, coverage strategy for {COVERAGE}%.
+> Write full plan to `.workflow/specs/issue-{N}-plan-quality.md` (MUST include `## Existing Tests to Update`).
+> Then send a SHORT SUMMARY (max 15 lines: BREAKING TESTS count + list, scenario count, coverage target) to teammate "architect" via SendMessage.
 > After sending, say 'Done.'
 
 **architect** → `Task(bytM:architect-planner, name: "architect", team_name: "bytm-{N}", model: "{MODEL}")`:
 > ROUND 1: PLAN (Consolidator) for Issue #{N} - {TITLE}.
 > Issue body: {BODY}
 >
-> YOUR ROLE: You are the HUB. You will receive plan summaries from 4 teammates: backend, frontend, ui-designer, quality.
+> YOUR ROLE: You are the HUB. You will receive plan summaries from teammates: backend, frontend, quality{+ ui-designer if enabled}.
 >
 > PROCESS:
-> 1. Wait for all 4 summaries (they arrive as messages). Track: backend [ ] frontend [ ] ui-designer [ ] quality [ ]
-> 2. After receiving all 4, read the full plans from disk INCREMENTALLY (one at a time, not all at once):
+> 1. Wait for ALL expected summaries (they arrive as messages). You expect exactly {PLAN_SPECIALIST_COUNT} summaries (3 without ui-designer, 4 with). Track each as received.
+> 2. After receiving ALL, read the full plans from disk INCREMENTALLY (one at a time, not all at once):
 >    - Read `issue-{N}-plan-backend.md` — note endpoints, DTOs, migrations
 >    - Read `issue-{N}-plan-frontend.md` — note services, routes, component structure
->    - Read `issue-{N}-plan-ui.md` — note data-testid list, layout decisions
 >    - Read `issue-{N}-plan-quality.md` — note test scenarios, coverage targets
->    - Do NOT read the wireframe HTML (too large — plan-ui.md has the relevant info)
+>    - If ui-designer was included: Read `issue-{N}-plan-ui.md` — note data-testid list, layout decisions. Do NOT read the wireframe HTML (too large).
 > 3. Validate consistency:
 >    - Backend endpoints match Frontend service calls?
 >    - DTOs aligned (field names, types)?
->    - data-testid from plan-ui.md match test scenarios?
+>    - If ui-designer included: data-testid from plan-ui.md match test scenarios?
 >    - Any architectural conflicts?
 > 4. If conflicts found: send fix request to the relevant specialist via SendMessage, wait for updated summary.
 > 5. Write CONSOLIDATED TECH SPEC to `.workflow/specs/issue-{N}-plan-consolidated.md` containing:
@@ -209,16 +214,17 @@ Launch these 5 `Task` calls in a **single message** (parallel):
 >    - API contract (endpoints, DTOs, status codes)
 >    - Data model (entities, relationships, migrations)
 >    - Frontend structure (components, routing, state)
->    - Wireframe reference
->    - Test strategy summary
+>    - Wireframe reference (if ui-designer was included; otherwise note "no wireframe — frontend developer defines data-testid")
+>    - **`## Existing Tests to Update`** (REQUIRED): From the quality agent's analysis — list every existing test that will break, with file path, test name, and required fix. If none, write "No existing tests affected."
+>    - Test strategy summary (new tests to write)
 >    - Resolved conflicts (if any)
 > 6. Send message to team lead: "Consolidated spec ready. Scope: {backend-only|frontend-only|full-stack}. [summary of findings, conflicts resolved: X]"
 
 ### After Round 1
 
 1. Wait for architect's "Consolidated spec ready" message
-2. Verify files exist: `ls .workflow/specs/issue-{N}-plan-consolidated.md .workflow/specs/issue-{N}-plan-backend.md .workflow/specs/issue-{N}-plan-frontend.md .workflow/specs/issue-{N}-plan-ui.md .workflow/specs/issue-{N}-plan-quality.md`
-3. Send `shutdown_request` to all 5 teammates — do NOT wait for confirmations
+2. Verify files exist: `ls .workflow/specs/issue-{N}-plan-consolidated.md .workflow/specs/issue-{N}-plan-backend.md .workflow/specs/issue-{N}-plan-frontend.md .workflow/specs/issue-{N}-plan-quality.md` (+ `issue-{N}-plan-ui.md` if uiDesigner enabled)
+3. Send `shutdown_request` to all round teammates — do NOT wait for confirmations
 4. WIP commit: `git add -A && git diff --cached --quiet || git commit -m "wip(#${N}/plan): ${TITLE}"`
 5. Update state: `currentRound = "plan_approval"`
 
@@ -238,7 +244,7 @@ ARCHITECTURE: {overview from consolidated spec}
 API:          {endpoints + DTOs}
 DATABASE:     {entities + migrations}
 FRONTEND:     {components + routing}
-WIREFRAME:    wireframes/issue-{N}-{slug}.html
+WIREFRAME:    {wireframes/issue-{N}-{slug}.html OR "not included (ui-designer disabled)"}
 TESTS:        {scenario count, coverage target}
 CONFLICTS:    {resolved conflicts or "none"}
 ========================================
@@ -281,7 +287,8 @@ Read the `## Implementation Scope` section from the consolidated spec. Only spaw
 > - Do NOT read all source files at once before starting — this wastes context window.
 > - Pipe ALL Bash output through `| tail -50` to limit context usage.
 >
-> Run `mvn test -pl :backend 2>&1 | tail -50` (NOT `mvn verify` — full build runs in VERIFY round). Fix failures if any.
+> The consolidated spec contains a `## Existing Tests to Update` section — follow it.
+> Run `mvn test -pl :backend 2>&1 | tail -50` after implementation. Fix ALL test failures before reporting done.
 > If you need clarification about frontend expectations, send a message to teammate "frontend".
 > Write implementation report to `.workflow/specs/issue-{N}-impl-backend.md`.
 > Say 'Done.'
@@ -291,8 +298,8 @@ Read the `## Implementation Scope` section from the consolidated spec. Only spaw
 **frontend** → `Task(bytM:angular-frontend-developer, name: "frontend", team_name: "bytm-{N}", model: "{MODEL}")`:
 > ROUND 2: IMPLEMENT for Issue #{N} - {TITLE}.
 > Read ONLY the consolidated spec: `.workflow/specs/issue-{N}-plan-consolidated.md` (do NOT read individual plan files — consolidated already contains everything).
-> Read wireframe ONLY for data-testid reference: `wireframes/issue-{N}-{slug}.html`
-> Implement: components, services, routing, tests. Ensure all data-testid from wireframe are present.
+> If a wireframe exists at `wireframes/issue-{N}-{slug}.html`, read it for data-testid reference and ensure all data-testid from wireframe are present.
+> Implement: components, services, routing, tests.
 > File domain: `frontend/**` ONLY.
 >
 > CONTEXT MANAGEMENT — CRITICAL:
@@ -300,7 +307,8 @@ Read the `## Implementation Scope` section from the consolidated spec. Only spaw
 > - Do NOT read all source files at once before starting — this wastes context window.
 > - Pipe ALL Bash output through `| tail -50` to limit context usage.
 >
-> Run `npm run build 2>&1 | tail -50` before reporting done (tests run in VERIFY round). Fix build errors if any.
+> The consolidated spec contains a `## Existing Tests to Update` section — follow it.
+> Before reporting done, run build AND tests (see your agent instructions for test obligations).
 > If you need clarification about backend endpoints/DTOs, send a message to teammate "backend".
 > Write implementation report to `.workflow/specs/issue-{N}-impl-frontend.md`.
 > Say 'Done.'

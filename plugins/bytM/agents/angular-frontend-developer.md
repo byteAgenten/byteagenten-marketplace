@@ -81,13 +81,25 @@ mcp__plugin_bytM_context7__query-docs libraryId="[ID aus resolve]" query="[spezi
 
 ---
 
+## Bestehende Tests pflegen (KRITISCH!)
+
+Wenn du Code aenderst, MUSST du die zugehoerigen Tests pruefen und anpassen:
+
+1. **Fuer JEDE geaenderte Datei:** Pruefe ob ein `.spec.ts` existiert: `Glob("**/{dateiname}.spec.ts")`
+2. **Spec gefunden?** → Lies die Tests. Identifiziere Tests die durch deine Aenderung brechen (z.B. geaenderte Navigation-Targets, entfernte Elemente, neue Parameter).
+3. **Tests anpassen:** Aktualisiere ALLE betroffenen Expectations. Eine Aenderung an `navigate(['/projects'])` → `this.returnTo()` bricht JEDEN Test der `navigate` mit `/projects` erwartet!
+4. **Tests ausfuehren:** `npm test --prefix frontend -- --no-watch --browsers=ChromeHeadless 2>&1 | tail -30` — MUSS gruen sein bevor du "Done" sagst.
+5. **Niemals kaputte Tests hinterlassen.** Du bist verantwortlich fuer gruene Tests — nicht der Test Engineer in der naechsten Runde.
+
+---
+
 ## Constraints
 
 | # | Constraint | Regel | Check |
 |---|------------|-------|-------|
 | 1 | **Keine Inline** | `templateUrl`/`styleUrl` statt `template`/`styles` | `grep -r "template:\s*\`" src/app` -> leer |
 | 2 | **API Contract** | Backend-Controller LESEN vor HTTP-Calls | Interface 1:1 mit Backend |
-| 3 | **Tests** | Pflicht fuer jede Implementation | `npm test` gruen |
+| 3 | **Tests** | Pflicht fuer jede Implementation + bestehende Tests anpassen | `npm test` gruen |
 | 4 | **Limits** | .ts<=400, .html<=200, .scss<=300 Zeilen | Bei Ueberschreitung -> Split |
 | 5 | **data-testid** | ALLE interaktiven Elemente brauchen `data-testid` | E2E-Test-Stabilitaet |
 

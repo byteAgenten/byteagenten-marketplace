@@ -1,6 +1,6 @@
 # bytM Plugin
 
-**Version 1.3.1** | TeamCreate + Hub-and-Spoke Planning mit Cross-Validation
+**Version 1.5.0** | TeamCreate + Hub-and-Spoke Planning mit Cross-Validation
 
 Full-Stack Development fuer Angular 21 + Spring Boot 4 mit TeamCreate, SendMessage-Kommunikation und runden-frischen Agents.
 
@@ -24,8 +24,8 @@ Der Orchestrator ist ein **LLM Team Lead**. Pro Runde werden frische Agents gesp
 │  ROUND 1 — PLAN (Hub-and-Spoke):                             │
 │                                                              │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐     │
-│  │ Backend  │  │ Frontend │  │ UI-Design│  │ Quality  │     │
-│  │ Dev      │  │ Dev      │  │ er       │  │ Engineer │     │
+│  │ Backend  │  │ Frontend │  │UI-Design │  │ Quality  │     │
+│  │ Dev      │  │ Dev      │  │(optional)│  │ Engineer │     │
 │  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘     │
 │       │             │             │             │             │
 │       └──── SendMessage ──────────┘─────────────┘             │
@@ -69,8 +69,8 @@ Der Orchestrator ist ein **LLM Team Lead**. Pro Runde werden frische Agents gesp
 ```
 /bytM:feature #42
 
-Round 0:   STARTUP      --- Issue laden, Model-Tier wählen, Branch, TeamCreate
-Round 1:   PLAN          --- 5 Agents: 4 Spezialisten → Architect konsolidiert
+Round 0:   STARTUP      --- Issue laden, Model-Tier, Branch, UI-Designer wählen, TeamCreate
+Round 1:   PLAN          --- 4-5 Agents: 3-4 Spezialisten → Architect konsolidiert
 Round 1.5: USER APPROVAL --- Du genehmigst die konsolidierte Spec    <-- DEIN INPUT
 Round 2:   IMPLEMENT     --- 2 Agents (Backend + Frontend) implementieren
 Round 3:   VERIFY        --- 3 Spezialisten (Test + Security + Code Review)
@@ -78,18 +78,18 @@ Round 3.5: USER APPROVAL --- Du genehmigst das Ergebnis              <-- DEIN IN
 Round 4:   SHIP          --- Push & PR
 ```
 
-### Round 1: PLAN — Hub-and-Spoke (5 Agents)
+### Round 1: PLAN — Hub-and-Spoke (4-5 Agents)
 
-4 Spezialisten planen parallel, senden Zusammenfassungen an den Architect:
+3-4 Spezialisten planen parallel, senden Zusammenfassungen an den Architect (UI-Designer ist optional):
 
 | Agent | Plant | SendMessage an Architect |
 |-------|-------|--------------------------|
 | Backend Dev | DB-Schema, Services, Endpoints | *"2 Entities, 3 Endpoints, Flyway V15"* |
 | Frontend Dev | Components, Routing, State | *"ReportListComponent, Route /reports, ReportService"* |
-| UI-Designer | Wireframe HTML mit data-testid | *"Wireframe fertig, 14 data-testid, Material Table"* |
+| UI-Designer *(optional)* | Wireframe HTML mit data-testid | *"Wireframe fertig, 14 data-testid, Material Table"* |
 | Test Engineer | E2E-Szenarien, Coverage | *"8 Szenarien, 80% Coverage-Ziel"* |
 
-Der **Architect** empfaengt alle 4, prueft Konsistenz:
+Der **Architect** empfaengt alle Summaries (3 oder 4), prueft Konsistenz:
 
 ```
 Backend: "POST /api/reports erwartet {title, configId}"
@@ -155,7 +155,7 @@ Team Lead: Build Gate → Push → PR erstellen → TeamDelete → PR-URL anzeig
 
 | Runde | Musst du approven? | Deine Optionen |
 |-------|-------------------|----------------|
-| Round 0: Startup | **Ja** (Infos geben) | Issue-Nr, Branch, Coverage, Model-Tier (fast/quality) |
+| Round 0: Startup | **Ja** (Infos geben) | Issue-Nr, Branch, Coverage, Model-Tier, UI-Designer (ja/nein) |
 | Round 1: Plan | Nein (automatisch) | — |
 | **Round 1.5** | **JA** | Genehmigen / Aendern / Abbrechen |
 | Round 2: Implement | Nein (automatisch) | — |
@@ -177,12 +177,12 @@ Beim Start waehlt der User den **Model-Tier**:
 | **Architect** | Konsolidierung, API-Design, Konflikt-Resolution | Plan |
 | **Backend Dev** | Spring Boot, DB, Migrations, Tests | Plan, Implement |
 | **Frontend Dev** | Angular, Routing, State, Tests | Plan, Implement |
-| **UI-Designer** | Wireframes (HTML), Material Design, data-testid | Plan |
+| **UI-Designer** *(optional)* | Wireframes (HTML), Material Design, data-testid | Plan |
 | **Test Engineer** | Test-Strategie, E2E-Tests, Coverage | Plan, Verify |
 | **Security Auditor** | OWASP-Audit | Verify |
 | **Code Reviewer** | Code Quality, Build Gate | Verify |
 
-**Total: 10 Agent-Spawns** ueber 3 Runden (5 + 2 + 3), jeder mit frischem Context.
+**Total: 9-10 Agent-Spawns** ueber 3 Runden (4-5 + 1-2 + 3), jeder mit frischem Context.
 
 ## Hook-Architektur
 
