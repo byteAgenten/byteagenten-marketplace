@@ -135,7 +135,13 @@ Der Stop-Hook (`wf_orchestrator.sh`) uebernimmt ab hier den GESAMTEN Workflow:
 Wenn der Output von `wf_prompt_builder.sh 0` mit `=== PHASE 0: TEAM PLANNING PROTOCOL ===` beginnt,
 fuehre das folgende Protokoll aus:
 
-### 1. Team erstellen
+### 1. Marker setzen + Team erstellen
+
+```bash
+touch .workflow/.team-planning-active
+```
+
+Dann:
 
 ```
 TeamCreate(team_name: <TEAM_NAME aus Protokoll>)
@@ -176,7 +182,11 @@ Sende shutdown_request an ALLE Teammates (Namen aus den Bloecken).
 TeamDelete (Fehler ignorieren — Agents koennten schon weg sein).
 ```
 
-### 6. Fertig
+### 6. Marker entfernen + Fertig
+
+```bash
+rm -f .workflow/.team-planning-active
+```
 
 Sage **"Done."** — Der Stop-Hook prueft das GLOB und setzt awaiting_approval.
 
@@ -186,10 +196,11 @@ Sage **"Done."** — Der Stop-Hook prueft das GLOB und setzt awaiting_approval.
 
 Wenn TeamCreate einen Fehler wirft (z.B. Agent Teams nicht aktiviert):
 
-1. Extrahiere den `--- HUB: architect ---` Block aus dem Protokoll
-2. Entferne alle SendMessage-Referenzen aus dem Prompt
-3. Fuehre aus: `Task(bytA:architect-planner, "<bereinigter Architect-Prompt>")`
-4. Sage "Done." — Phase 0 wird dann wie bisher single-agent ausgefuehrt
+1. Marker entfernen: `rm -f .workflow/.team-planning-active`
+2. Extrahiere den `--- HUB: architect ---` Block aus dem Protokoll
+3. Entferne alle SendMessage-Referenzen aus dem Prompt
+4. Fuehre aus: `Task(bytA:architect-planner, "<bereinigter Architect-Prompt>")`
+5. Sage "Done." — Phase 0 wird dann wie bisher single-agent ausgefuehrt
 
 ---
 

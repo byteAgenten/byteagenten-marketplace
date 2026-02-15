@@ -87,6 +87,12 @@ if [ "$SOURCE" = "resume" ] || [ "$SOURCE" = "startup" ]; then
   fi
 fi
 
+# ═══════════════════════════════════════════════════════════════════════════
+# STALE MARKER CLEANUP: Team-Planning-Marker kann nicht Session-Grenzen
+# ueberleben. Wenn die Session neu startet/resumed wird, ist das Team weg.
+# ═══════════════════════════════════════════════════════════════════════════
+rm -f "${WORKFLOW_DIR}/.team-planning-active" 2>/dev/null || true
+
 if [ "$SOURCE" = "compact" ]; then
   # ═══════════════════════════════════════════════════════════════════════
   # COMPACT RECOVERY: Starke Transport-Layer Instruktionen

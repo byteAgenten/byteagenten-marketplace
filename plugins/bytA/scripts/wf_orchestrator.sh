@@ -237,9 +237,20 @@ if [ "$WORKFLOW_TYPE" != "bytA-feature" ]; then
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
+# TEAM PLANNING GUARD: Skip orchestrator while Phase 0 team is active.
+# During team planning, the transport layer manages the entire flow
+# (TeamCreate → spawn agents → wait → cleanup → Done). The Stop hook
+# must NOT fire until the transport layer says "Done." after cleanup.
+# The marker is set by SKILL.md before TeamCreate and removed after TeamDelete.
+# ═══════════════════════════════════════════════════════════════════════════
+if [ -f "${WORKFLOW_DIR}/.team-planning-active" ]; then
+  log "Team planning active: skipping orchestrator (transport layer handles Phase 0)"
+  exit 0
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════
 # ADVANCING GUARD: Prevent re-entrant orchestrator calls
-# During Phase 0 team planning, multiple SubagentStop events can trigger
-# the Stop hook simultaneously. The lock file prevents race conditions.
+# The lock file prevents race conditions from concurrent Stop events.
 # ═══════════════════════════════════════════════════════════════════════════
 LOCK_FILE="${WORKFLOW_DIR}/.advancing"
 if [ -f "$LOCK_FILE" ]; then
