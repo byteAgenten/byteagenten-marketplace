@@ -328,7 +328,7 @@ feedback)
   echo "Phase $APPROVAL_PHASE ($PHASE_NAME) — Re-run with feedback."
   echo ""
   if [ "$APPROVAL_PHASE" = "0" ]; then
-    echo "EXECUTE: TEAM PLANNING PROTOCOL — Parse und fuehre das folgende Protokoll DIREKT aus (NICHT nochmal wf_prompt_builder.sh aufrufen! Feedback ist bereits enthalten): 1) TeamCreate(team_name aus TEAM_NAME-Zeile), 2) Spawne ALLE Specialists + HUB parallel via Task(), 3) Warte auf Architect Done, 4) Pruefe VERIFY-Dateien, 5) shutdown_request an alle, 6) TeamDelete, 7) Done. --- PROTOKOLL-START --- $PROMPT --- PROTOKOLL-ENDE ---"
+    echo "EXECUTE: TEAM PLANNING PROTOCOL — Parse und fuehre das folgende Protokoll DIREKT aus (NICHT nochmal wf_prompt_builder.sh aufrufen! Feedback ist bereits enthalten): 0) touch .workflow/.team-planning-active, 1) TeamCreate(team_name aus TEAM_NAME-Zeile), 2) Spawne ALLE Specialists + HUB parallel via Task(), 3) Warte auf Architect Done, 4) Pruefe VERIFY-Dateien, 5) shutdown_request an alle, 6) TeamDelete, 7) rm -f .workflow/.team-planning-active, 8) Done. Bei TeamCreate-Fehler: rm -f .workflow/.team-planning-active, dann Fallback auf single Task(bytA:architect-planner). --- PROTOKOLL-START --- $PROMPT --- PROTOKOLL-ENDE ---"
   else
     echo "EXECUTE: Task(bytA:$PHASE_AGENT, '$PROMPT')"
   fi
@@ -390,7 +390,7 @@ rollback)
   echo "Context & Specs ab Phase $TARGET geloescht."
   echo ""
   if [ "$TARGET" = "0" ]; then
-    echo "EXECUTE: TEAM PLANNING PROTOCOL — Parse und fuehre das folgende Protokoll DIREKT aus (NICHT nochmal wf_prompt_builder.sh aufrufen! Rollback-Kontext ist bereits enthalten): 1) TeamCreate(team_name aus TEAM_NAME-Zeile), 2) Spawne ALLE Specialists + HUB parallel via Task(), 3) Warte auf Architect Done, 4) Pruefe VERIFY-Dateien, 5) shutdown_request an alle, 6) TeamDelete, 7) Done. --- PROTOKOLL-START --- $PROMPT --- PROTOKOLL-ENDE ---"
+    echo "EXECUTE: TEAM PLANNING PROTOCOL — Parse und fuehre das folgende Protokoll DIREKT aus (NICHT nochmal wf_prompt_builder.sh aufrufen! Rollback-Kontext ist bereits enthalten): 0) touch .workflow/.team-planning-active, 1) TeamCreate(team_name aus TEAM_NAME-Zeile), 2) Spawne ALLE Specialists + HUB parallel via Task(), 3) Warte auf Architect Done, 4) Pruefe VERIFY-Dateien, 5) shutdown_request an alle, 6) TeamDelete, 7) rm -f .workflow/.team-planning-active, 8) Done. Bei TeamCreate-Fehler: rm -f .workflow/.team-planning-active, dann Fallback auf single Task(bytA:architect-planner). --- PROTOKOLL-START --- $PROMPT --- PROTOKOLL-ENDE ---"
   else
     echo "EXECUTE: Task(bytA:$TARGET_AGENT, '$PROMPT')"
   fi

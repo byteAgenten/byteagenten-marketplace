@@ -112,7 +112,7 @@ build_dispatch_msg() {
     # Phase 0 = Team Planning Protocol — inline instructions (survive compaction)
     # WICHTIG: $prompt IST bereits der komplette Output von wf_prompt_builder.sh.
     # Claude soll ihn DIREKT parsen, NICHT nochmal wf_prompt_builder.sh aufrufen!
-    echo "TEAM PLANNING PROTOCOL — Parse und fuehre das folgende Protokoll DIREKT aus (NICHT nochmal wf_prompt_builder.sh aufrufen!): 1) TeamCreate(team_name aus TEAM_NAME-Zeile), 2) Spawne ALLE Specialists + HUB parallel via Task() mit den Prompts aus den SPECIALIST/HUB-Bloecken, 3) Warte auf Architect Done-Nachricht, 4) Pruefe ob ALLE Spec-Dateien aus VERIFY-Block existieren, 5) Sende shutdown_request an alle Teammates, 6) TeamDelete, 7) Sage Done. --- PROTOKOLL-START --- $prompt --- PROTOKOLL-ENDE ---"
+    echo "TEAM PLANNING PROTOCOL — Parse und fuehre das folgende Protokoll DIREKT aus (NICHT nochmal wf_prompt_builder.sh aufrufen!): 0) touch .workflow/.team-planning-active, 1) TeamCreate(team_name aus TEAM_NAME-Zeile), 2) Spawne ALLE Specialists + HUB parallel via Task() mit den Prompts aus den SPECIALIST/HUB-Bloecken, 3) Warte auf Architect Done-Nachricht, 4) Pruefe ob ALLE Spec-Dateien aus VERIFY-Block existieren, 5) Sende shutdown_request an alle Teammates, 6) TeamDelete, 7) rm -f .workflow/.team-planning-active, 8) Sage Done. Bei TeamCreate-Fehler: rm -f .workflow/.team-planning-active, dann Fallback auf single Task(bytA:architect-planner). --- PROTOKOLL-START --- $prompt --- PROTOKOLL-ENDE ---"
   else
     echo "Task(bytA:$phase_agent, '$prompt')"
   fi
