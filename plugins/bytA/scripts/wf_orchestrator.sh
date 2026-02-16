@@ -524,7 +524,8 @@ if "${SCRIPT_DIR}/wf_verify.sh" "$PHASE"; then
       [ "$ROLLBACK_TARGET" -le 2 ] && CLEAR_CMD="$CLEAR_CMD | del(.context.backendImpl)"
       [ "$ROLLBACK_TARGET" -le 1 ] && CLEAR_CMD="$CLEAR_CMD | del(.context.migrations)"
 
-      jq "$CLEAR_CMD | .currentPhase = $ROLLBACK_TARGET | .status = \"active\"" \
+      jq --arg fb "$FIXES_TEXT" --argjson tgt "$ROLLBACK_TARGET" \
+        "$CLEAR_CMD | .currentPhase = \$tgt | .status = \"active\" | .recovery.rollbackContext = {\"feedback\": \$fb, \"targetPhase\": \$tgt}" \
         "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
 
       # Spec-Dateien ab Rollback-Ziel loeschen (verhindert stale GLOB-Matches)
@@ -556,7 +557,7 @@ if "${SCRIPT_DIR}/wf_verify.sh" "$PHASE"; then
     # ═══════════════════════════════════════════════════════════════════════
     # APPROVAL GATE → Claude darf stoppen, User antwortet
     # ═══════════════════════════════════════════════════════════════════════
-    jq '.status = "awaiting_approval" | .awaitingApprovalFor = .currentPhase' \
+    jq '.status = "awaiting_approval" | .awaitingApprovalFor = .currentPhase | del(.recovery.rollbackContext)' \
       "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
 
     log "APPROVAL GATE: Phase $PHASE ($PHASE_NAME) done. awaiting_approval gesetzt."

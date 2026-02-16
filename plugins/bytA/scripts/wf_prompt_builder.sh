@@ -58,6 +58,25 @@ $HOTFIX_FEEDBACK
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
+# DOWNSTREAM-KONTEXT (wenn Phase NACH einem Rollback-Target laeuft)
+# ═══════════════════════════════════════════════════════════════════════════
+DOWNSTREAM_SECTION=""
+if [ -z "$HOTFIX_FEEDBACK" ]; then
+  # Nur wenn KEIN direktes Hotfix-Feedback (dann ist es die Ziel-Phase selbst)
+  ROLLBACK_FB=$(jq -r '.recovery.rollbackContext.feedback // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+  ROLLBACK_TGT=$(jq -r '.recovery.rollbackContext.targetPhase // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+  if [ -n "$ROLLBACK_FB" ] && [ -n "$ROLLBACK_TGT" ] && [ "$PHASE" -gt "$ROLLBACK_TGT" ] 2>/dev/null; then
+    DOWNSTREAM_SECTION="
+
+## ROLLBACK CONTEXT (upstream change)
+Phase $ROLLBACK_TGT was re-run due to the following feedback:
+$ROLLBACK_FB
+Your phase runs AFTER this fix. Pay special attention to changes that may affect your work.
+"
+  fi
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════
 # RETRY-KONTEXT (wenn Agent schon mal lief)
 # ═══════════════════════════════════════════════════════════════════════════
 RETRY_SECTION=""
@@ -225,7 +244,7 @@ After architect says 'Done.':
 1. Send shutdown_request to ALL teammates (backend, frontend, quality$([ "$UI_DESIGNER_OPT" = "true" ] && echo ", ui"), architect)
 2. TeamDelete (ignore errors — agents may already be gone)
 3. Say "Done."
-$RETRY_SECTION$HOTFIX_SECTION
+$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
 TEAM_EOF
     ;;
 
@@ -247,7 +266,7 @@ context.migrations = {"databaseFile":"backend/src/main/resources/db/migration/V[
 
 ## YOUR TASK
 Create Flyway SQL migrations. Normalize schema (3NF). Add indexes and constraints.
-$RETRY_SECTION$HOTFIX_SECTION
+$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
 EOF
     ;;
 
@@ -271,7 +290,7 @@ context.backendImpl = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-ph02-sprin
 
 ## YOUR TASK
 Implement Spring Boot 4 REST controllers, services, repositories. Add Swagger annotations. Run mvn verify before completing. MANDATORY: Load current docs via Context7 BEFORE coding.
-$RETRY_SECTION$HOTFIX_SECTION
+$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
 EOF
     ;;
 
@@ -295,7 +314,7 @@ context.frontendImpl = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-ph03-angu
 
 ## YOUR TASK
 Implement Angular 21+ components, services, routing. Use Signals, inject(). Add data-testid on ALL interactive elements. Run npm test before completing. MANDATORY: Load current docs via Context7 + Angular CLI MCP BEFORE coding.
-$RETRY_SECTION$HOTFIX_SECTION
+$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
 EOF
     ;;
 
@@ -321,7 +340,7 @@ WICHTIG: allPassed MUSS true sein! NUR setzen wenn ALLE Tests bestanden haben!
 
 ## YOUR TASK
 Write comprehensive tests: JUnit 5 + Mockito (backend), Jasmine + TestBed (frontend), Playwright E2E. Run mvn verify + npm test + npx playwright test.
-$RETRY_SECTION$HOTFIX_SECTION
+$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
 EOF
     ;;
 
@@ -345,7 +364,7 @@ context.securityAudit = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-ph05-sec
 
 ## YOUR TASK
 Perform OWASP Top 10 (2021) security audit. Check A01-A10. Report findings with severity levels.
-$RETRY_SECTION$HOTFIX_SECTION
+$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
 EOF
     ;;
 
@@ -373,7 +392,7 @@ context.reviewFeedback = {"reviewFile":".workflow/specs/issue-${ISSUE_NUM}-ph06-
 
 ## YOUR TASK
 Independent code quality review. Verify coverage targets. Check SOLID, DRY, KISS.
-$RETRY_SECTION$HOTFIX_SECTION
+$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
 EOF
     ;;
 
@@ -391,7 +410,7 @@ Phase 7: Push & PR for Issue #$ISSUE_NUM: $ISSUE_TITLE
 ## YOUR TASK (KEIN SUBAGENT — wird direkt vom Orchestrator ausgefuehrt)
 Phase 7 wird durch den UserPromptSubmit-Hook gesteuert.
 Sage "Done." und folge den Anweisungen des Hooks.
-$RETRY_SECTION$HOTFIX_SECTION
+$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
 EOF
     ;;
 

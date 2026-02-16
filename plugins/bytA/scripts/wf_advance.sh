@@ -372,8 +372,14 @@ rollback)
   # ─── Context aufraeumen + retry counter reset ────────────────────────
   CLEAR_CMD=$(cleanup_context "$TARGET")
 
-  jq "$CLEAR_CMD | del(.recovery.phase_${TARGET}_attempts) | .currentPhase = $TARGET | .status = \"active\"" \
-    "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+  if [ -n "$FEEDBACK" ]; then
+    jq --arg fb "$FEEDBACK" --argjson tgt "$TARGET" \
+      "$CLEAR_CMD | del(.recovery.phase_${TARGET}_attempts) | .currentPhase = \$tgt | .status = \"active\" | .recovery.rollbackContext = {\"feedback\": \$fb, \"targetPhase\": \$tgt}" \
+      "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+  else
+    jq "$CLEAR_CMD | del(.recovery.phase_${TARGET}_attempts) | .currentPhase = $TARGET | .status = \"active\" | del(.recovery.rollbackContext)" \
+      "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+  fi
 
   # Phase 0: Marker setzen BEVOR output, damit Stop-Hook-Race-Condition verhindert wird.
   if [ "$TARGET" = "0" ]; then
