@@ -113,20 +113,8 @@ if [ "$STATUS" = "awaiting_approval" ]; then
       echo "  Fuehre die EXECUTE-Anweisung aus dem Output aus."
       ;;
 
-    1)
-      echo "Der User antwortet auf die Wireframes (Phase 1)."
-      echo ""
-      echo "BEI APPROVAL (Ja/OK/Weiter):"
-      echo "  Bash: $ADVANCE_CMD approve"
-      echo "  Fuehre die EXECUTE-Anweisung aus dem Output aus."
-      echo ""
-      echo "BEI FEEDBACK (Aenderungswuensche an Wireframes):"
-      echo "  Bash: $ADVANCE_CMD feedback 'USER_FEEDBACK_HIER'"
-      echo "  Fuehre die EXECUTE-Anweisung aus dem Output aus."
-      ;;
-
-    7)
-      echo "Der User antwortet auf das Security Audit Ergebnis (Phase 7)."
+    5)
+      echo "Der User antwortet auf das Security Audit Ergebnis (Phase 5)."
       echo ""
       echo "BEI APPROVAL (Weiter/OK):"
       echo "  Bash: $ADVANCE_CMD approve"
@@ -134,12 +122,12 @@ if [ "$STATUS" = "awaiting_approval" ]; then
       echo ""
       echo "BEI SECURITY-FIXES (Rollback noetig):"
       echo "  Bash: $ADVANCE_CMD rollback ZIEL 'SECURITY_FINDINGS_HIER'"
-      echo "  Ziel: 4=Backend, 5=Frontend, 6=Tests (Default)"
+      echo "  Ziel: 2=Backend, 3=Frontend, 4=Tests (Default)"
       echo "  Fuehre die EXECUTE-Anweisung aus dem Output aus."
       ;;
 
-    8)
-      echo "Der User antwortet auf das Code Review Ergebnis (Phase 8)."
+    6)
+      echo "Der User antwortet auf das Code Review Ergebnis (Phase 6)."
       echo ""
       echo "BEI APPROVAL (Weiter/OK):"
       echo "  Bash: $ADVANCE_CMD approve"
@@ -151,12 +139,12 @@ if [ "$STATUS" = "awaiting_approval" ]; then
       echo ""
       echo "BEI ROLLBACK (zu anderer Phase):"
       echo "  Bash: $ADVANCE_CMD rollback ZIEL 'REVIEW_FINDINGS_HIER'"
-      echo "  Ziel: 3=DB, 4=Backend, 5=Frontend, 6=Tests"
+      echo "  Ziel: 1=DB, 2=Backend, 3=Frontend, 4=Tests"
       echo "  Fuehre die EXECUTE-Anweisung aus dem Output aus."
       ;;
 
-    9)
-      echo "Der User antwortet auf Push & PR (Phase 9)."
+    7)
+      echo "Der User antwortet auf Push & PR (Phase 7)."
       echo ""
       echo "BEI APPROVAL (Ja, pushen):"
       echo "  Bash: $ADVANCE_CMD approve"

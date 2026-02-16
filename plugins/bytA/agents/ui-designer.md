@@ -215,7 +215,7 @@ The actual values from the project are the single source of truth!
 
 ## DATA-TESTID REQUIREMENT (for Playwright E2E Tests)
 
-The test-engineer (Phase 6) requires stable selectors for E2E tests.
+The test-engineer (Phase 4) requires stable selectors for E2E tests.
 
 ### Naming Convention
 
@@ -269,7 +269,7 @@ wireframes/issue-{N}-{feature-name}.html
 
 **Es wird IMMER ein HTML-Wireframe erstellt** - auch bei einfachen Features.
 Es gibt KEINE Ausnahme. Markdown-Dateien, tabellarische Darstellungen oder
-reine Text-Beschreibungen sind KEIN gültiger Output für Phase 1.
+reine Text-Beschreibungen sind KEIN gültiger Output.
 
 **Einziger gültiger Output:** `wireframes/issue-{N}-[feature].html`
 

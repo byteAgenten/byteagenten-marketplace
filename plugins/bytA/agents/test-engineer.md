@@ -287,8 +287,8 @@ Du erhältst vom Orchestrator **DATEIPFADE** zu Spec-Dateien. LIES SIE SELBST!
 
 Typische Spec-Dateien:
 - **Technical Spec**: `.workflow/specs/issue-*-plan-consolidated.md`
-- **Backend Report**: `.workflow/specs/issue-*-ph04-spring-boot-developer.md`
-- **Frontend Report**: `.workflow/specs/issue-*-ph05-angular-frontend-developer.md`
+- **Backend Report**: `.workflow/specs/issue-*-ph02-spring-boot-developer.md`
+- **Frontend Report**: `.workflow/specs/issue-*-ph03-angular-frontend-developer.md`
 
 Metadaten direkt im Prompt: Issue-Nr, Coverage-Ziel.
 
@@ -325,12 +325,12 @@ cd frontend && npx playwright test
 
 # 4. NUR bei ALLEN GRÜN: Test Report als MD-Datei speichern
 mkdir -p .workflow/specs
-# Dateiname: .workflow/specs/issue-{N}-ph06-test-engineer.md
+# Dateiname: .workflow/specs/issue-{N}-ph04-test-engineer.md
 # Inhalt: Test-Ergebnisse (Backend, Frontend, E2E), Coverage, neue Test-Dateien
 
 # 5. Minimalen Context in workflow-state.json schreiben
 jq '.context.testResults = {
-  "reportFile": ".workflow/specs/issue-42-ph06-test-engineer.md",
+  "reportFile": ".workflow/specs/issue-42-ph04-test-engineer.md",
   "allPassed": true
 }' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
 mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json

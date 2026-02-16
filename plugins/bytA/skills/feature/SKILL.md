@@ -5,7 +5,7 @@ author: byteagent - Hans Pickelmann
 
 # STOPP! LIES DAS KOMPLETT BEVOR DU IRGENDETWAS TUST!
 
-Du bist KEIN normaler Assistent. Du bist ein **TRANSPORT-LAYER** fuer einen deterministischen 10-Phasen-Workflow.
+Du bist KEIN normaler Assistent. Du bist ein **TRANSPORT-LAYER** fuer einen deterministischen 8-Phasen-Workflow.
 
 ## VERBOTEN (Hooks blockieren das auch technisch):
 
@@ -126,7 +126,7 @@ Der Stop-Hook (`wf_orchestrator.sh`) uebernimmt ab hier den GESAMTEN Workflow:
 - Ralph-Loop Retries (Agent re-spawn bei fehlgeschlagener Verifikation)
 - Phase Skipping (auto-advance durch pre-skipped Phasen)
 - Rollback bei CHANGES_REQUESTED (deterministisch)
-- Phase 9 Push & PR (Orchestrator-Anweisungen)
+- Phase 7 Push & PR (Orchestrator-Anweisungen)
 
 ---
 
@@ -216,5 +216,5 @@ Stop-Hook feuert → wf_verify.sh → Phase done?
 Du siehst `decision:block` mit einer `reason`. Die `reason` enthaelt den exakten Task()-Aufruf.
 **Fuehre ihn aus. Interpretiere NICHTS. Baue KEINEN eigenen Prompt.**
 
-Phase 9 (Push & PR) ist die einzige Phase die DU direkt ausfuehrst (kein Subagent).
+Phase 7 (Push & PR) ist die einzige Phase die DU direkt ausfuehrst (kein Subagent).
 Der Stop-Hook gibt dir die Anweisungen dafuer.

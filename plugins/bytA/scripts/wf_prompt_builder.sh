@@ -34,7 +34,6 @@ TARGET_COV=$(jq -r '.targetCoverage // 70' "$WORKFLOW_FILE")
 
 # Spec-Pfade extrahieren (File Reference Protocol — alle Agents schreiben MD-Dateien)
 TECH_SPEC=$(jq -r '.context.technicalSpec.specFile // ""' "$WORKFLOW_FILE")
-API_SPEC=$(jq -r '.context.apiDesign.apiDesignFile // ""' "$WORKFLOW_FILE")
 DB_SPEC=$(jq -r '.context.migrations.databaseFile // ""' "$WORKFLOW_FILE")
 WIREFRAMES=$(jq -r '.context.wireframes.paths // [] | join(", ")' "$WORKFLOW_FILE" 2>/dev/null || echo "")
 BACKEND_SPEC=$(jq -r '.context.backendImpl.specFile // ""' "$WORKFLOW_FILE")
@@ -99,7 +98,10 @@ Agent: bytA:ui-designer
 Name: ui
 Prompt: |
   ROUND 1: PLAN (Wireframe) for Issue #${ISSUE_NUM} - ${ISSUE_TITLE}.
-  Create HTML wireframe with Angular Material components.
+  IMPORTANT: Follow your PRE-IMPLEMENTATION CHECKLIST FIRST. Search for existing design tokens
+  (Glob frontend/src/**/*tokens*) and read existing SCSS/styles BEFORE creating the wireframe.
+  Use ONLY actual project token values — never hardcode colors or spacing.
+  Create HTML wireframe with Angular Material components matching the project's design system.
   Include data-testid on ALL interactive elements.
   Write wireframe to wireframes/issue-${ISSUE_NUM}-plan-ui.html
   Write plan summary to .workflow/specs/issue-${ISSUE_NUM}-plan-ui.md
@@ -117,19 +119,17 @@ Prompt: |
 Wenn bestimmte Phasen fuer dieses Issue NICHT benoetigt werden, MUSST du sie pre-skippen.
 Fuehre fuer JEDE nicht benoetigte Phase einen jq-Befehl aus:
 
-Beispiel (Phase 3 skippen — keine DB-Aenderungen):
-  jq '.phases[\"3\"] = {\"name\":\"postgresql-architect\",\"status\":\"skipped\",\"reason\":\"Keine DB-Aenderungen\"} | .context.migrations = {\"skipped\":true,\"reason\":\"Keine DB-Aenderungen\"}' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
+Beispiel (Phase 1 skippen — keine DB-Aenderungen):
+  jq '.phases[\"1\"] = {\"name\":\"postgresql-architect\",\"status\":\"skipped\",\"reason\":\"Keine DB-Aenderungen\"} | .context.migrations = {\"skipped\":true,\"reason\":\"Keine DB-Aenderungen\"}' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
 
 Skip-Referenz:
 | Phase | Agent | context-Key | Wann skippen? |
 |-------|-------|-------------|---------------|
-| 1 | ui-designer | wireframes | Keine UI-Aenderungen noetig (MUSS geskippt werden wenn UI-Designer im Team war!) |
-| 2 | api-architect | apiDesign | Kein neues/geaendertes API |
-| 3 | postgresql-architect | migrations | Keine DB-Aenderungen |
-| 4 | spring-boot-developer | backendImpl | Kein Backend betroffen |
-| 5 | angular-frontend-developer | frontendImpl | Kein Frontend betroffen |
+| 1 | postgresql-architect | migrations | Keine DB-Aenderungen |
+| 2 | spring-boot-developer | backendImpl | Kein Backend betroffen |
+| 3 | angular-frontend-developer | frontendImpl | Kein Frontend betroffen |
 
-NIEMALS skippen: Phase 0, 6 (Tests), 7 (Security), 8 (Review), 9 (Push & PR)."
+NIEMALS skippen: Phase 0, 4 (Tests), 5 (Security), 6 (Review), 7 (Push & PR)."
 
     cat << TEAM_EOF
 === PHASE 0: TEAM PLANNING PROTOCOL ===
@@ -205,9 +205,10 @@ Prompt: |
      - ## Data Model
      - ## Frontend Structure
      - ## Implementation Scope (backend-only / frontend-only / full-stack)
-     - ## Existing Tests to Update (from quality plan)
+     - ## Existing Tests to Update (from quality plan)$([ "$UI_DESIGNER_OPT" = "true" ] && echo "
+     - ## Wireframe Reference (path to wireframe HTML)")
   5. Set context key:
-     jq '.context.technicalSpec = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-plan-consolidated.md"}' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
+     jq '.context.technicalSpec = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-plan-consolidated.md"}$([ "$UI_DESIGNER_OPT" = "true" ] && echo " | .context.wireframes = {\"paths\":[\"wireframes/issue-${ISSUE_NUM}-plan-ui.html\"]}")' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
   6. Execute Phase Skipping:
 ${PHASE_SKIP_BLOCK}
   After writing consolidated spec and executing phase skipping, say 'Done.'
@@ -230,58 +231,10 @@ TEAM_EOF
 
   1)
     cat << EOF
-Phase 1: Create Wireframes for Issue #$ISSUE_NUM: $ISSUE_TITLE
+Phase 1: Create Database Migrations for Issue #$ISSUE_NUM: $ISSUE_TITLE
 
 ## SPEC FILES (LIES DIESE ZUERST mit dem Read-Tool!)
 - Technical Spec: $TECH_SPEC
-
-## WORKFLOW CONTEXT
-- Issue: #$ISSUE_NUM - $ISSUE_TITLE
-- Target Coverage: ${TARGET_COV}%
-
-## OUTPUT FILE (EXAKTER PFAD — NICHT AENDERN!)
-wireframes/issue-${ISSUE_NUM}-[slug].html
-(Ersetze [slug] durch einen kurzen Slug des Issue-Titels, z.B. issue-${ISSUE_NUM}-login-form.html)
-WICHTIG: Die Datei MUSS eine .html Datei sein, KEIN Markdown!
-
-## CONTEXT KEY (workflow-state.json — EXAKT SO SETZEN!)
-context.wireframes = {"paths":["wireframes/issue-${ISSUE_NUM}-[slug].html"]}
-
-## YOUR TASK
-Create HTML wireframes with Angular Material components. Include data-testid on ALL interactive elements.
-$RETRY_SECTION$HOTFIX_SECTION
-EOF
-    ;;
-
-  2)
-    cat << EOF
-Phase 2: Design API for Issue #$ISSUE_NUM: $ISSUE_TITLE
-
-## SPEC FILES (LIES DIESE ZUERST mit dem Read-Tool!)
-- Technical Spec: $TECH_SPEC
-
-## WORKFLOW CONTEXT
-- Issue: #$ISSUE_NUM - $ISSUE_TITLE
-
-## OUTPUT FILE (EXAKTER PFAD — NICHT AENDERN!)
-.workflow/specs/issue-${ISSUE_NUM}-ph02-api-architect.md
-
-## CONTEXT KEY (workflow-state.json — EXAKT SO SETZEN!)
-context.apiDesign = {"apiDesignFile":".workflow/specs/issue-${ISSUE_NUM}-ph02-api-architect.md"}
-
-## YOUR TASK
-Design REST API endpoints. Create concise API sketch (no full OpenAPI YAML).
-$RETRY_SECTION$HOTFIX_SECTION
-EOF
-    ;;
-
-  3)
-    cat << EOF
-Phase 3: Create Database Migrations for Issue #$ISSUE_NUM: $ISSUE_TITLE
-
-## SPEC FILES (LIES DIESE ZUERST mit dem Read-Tool!)
-- Technical Spec: $TECH_SPEC
-- API Design: $API_SPEC
 
 ## WORKFLOW CONTEXT
 - Issue: #$ISSUE_NUM - $ISSUE_TITLE
@@ -298,13 +251,12 @@ $RETRY_SECTION$HOTFIX_SECTION
 EOF
     ;;
 
-  4)
+  2)
     cat << EOF
-Phase 4: Implement Backend for Issue #$ISSUE_NUM: $ISSUE_TITLE
+Phase 2: Implement Backend for Issue #$ISSUE_NUM: $ISSUE_TITLE
 
 ## SPEC FILES (LIES DIESE ZUERST mit dem Read-Tool!)
 - Technical Spec: $TECH_SPEC
-- API Design: $API_SPEC
 - Database Design: $DB_SPEC
 
 ## WORKFLOW CONTEXT
@@ -312,10 +264,10 @@ Phase 4: Implement Backend for Issue #$ISSUE_NUM: $ISSUE_TITLE
 - Target Coverage: ${TARGET_COV}%
 
 ## OUTPUT FILE (EXAKTER PFAD — NICHT AENDERN!)
-.workflow/specs/issue-${ISSUE_NUM}-ph04-spring-boot-developer.md
+.workflow/specs/issue-${ISSUE_NUM}-ph02-spring-boot-developer.md
 
 ## CONTEXT KEY (workflow-state.json — EXAKT SO SETZEN!)
-context.backendImpl = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-ph04-spring-boot-developer.md"}
+context.backendImpl = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-ph02-spring-boot-developer.md"}
 
 ## YOUR TASK
 Implement Spring Boot 4 REST controllers, services, repositories. Add Swagger annotations. Run mvn verify before completing. MANDATORY: Load current docs via Context7 BEFORE coding.
@@ -323,24 +275,23 @@ $RETRY_SECTION$HOTFIX_SECTION
 EOF
     ;;
 
-  5)
+  3)
     cat << EOF
-Phase 5: Implement Frontend for Issue #$ISSUE_NUM: $ISSUE_TITLE
+Phase 3: Implement Frontend for Issue #$ISSUE_NUM: $ISSUE_TITLE
 
 ## SPEC FILES (LIES DIESE ZUERST mit dem Read-Tool!)
 - Technical Spec: $TECH_SPEC
-- API Design: $API_SPEC
-- Wireframes: $WIREFRAMES
+$([ -n "$WIREFRAMES" ] && echo "- Wireframes: $WIREFRAMES")
 
 ## WORKFLOW CONTEXT
 - Issue: #$ISSUE_NUM - $ISSUE_TITLE
 - Target Coverage: ${TARGET_COV}%
 
 ## OUTPUT FILE (EXAKTER PFAD — NICHT AENDERN!)
-.workflow/specs/issue-${ISSUE_NUM}-ph05-angular-frontend-developer.md
+.workflow/specs/issue-${ISSUE_NUM}-ph03-angular-frontend-developer.md
 
 ## CONTEXT KEY (workflow-state.json — EXAKT SO SETZEN!)
-context.frontendImpl = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-ph05-angular-frontend-developer.md"}
+context.frontendImpl = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-ph03-angular-frontend-developer.md"}
 
 ## YOUR TASK
 Implement Angular 21+ components, services, routing. Use Signals, inject(). Add data-testid on ALL interactive elements. Run npm test before completing. MANDATORY: Load current docs via Context7 + Angular CLI MCP BEFORE coding.
@@ -348,9 +299,9 @@ $RETRY_SECTION$HOTFIX_SECTION
 EOF
     ;;
 
-  6)
+  4)
     cat << EOF
-Phase 6: Write E2E and Integration Tests for Issue #$ISSUE_NUM: $ISSUE_TITLE
+Phase 4: Write E2E and Integration Tests for Issue #$ISSUE_NUM: $ISSUE_TITLE
 
 ## SPEC FILES (LIES DIESE ZUERST mit dem Read-Tool!)
 - Technical Spec: $TECH_SPEC
@@ -362,10 +313,10 @@ $([ -n "$FRONTEND_SPEC" ] && echo "- Frontend Report: $FRONTEND_SPEC")
 - Target Coverage: ${TARGET_COV}%
 
 ## OUTPUT FILE (EXAKTER PFAD — NICHT AENDERN!)
-.workflow/specs/issue-${ISSUE_NUM}-ph06-test-engineer.md
+.workflow/specs/issue-${ISSUE_NUM}-ph04-test-engineer.md
 
 ## CONTEXT KEY (workflow-state.json — EXAKT SO SETZEN!)
-context.testResults = {"reportFile":".workflow/specs/issue-${ISSUE_NUM}-ph06-test-engineer.md","allPassed":true}
+context.testResults = {"reportFile":".workflow/specs/issue-${ISSUE_NUM}-ph04-test-engineer.md","allPassed":true}
 WICHTIG: allPassed MUSS true sein! NUR setzen wenn ALLE Tests bestanden haben!
 
 ## YOUR TASK
@@ -374,9 +325,9 @@ $RETRY_SECTION$HOTFIX_SECTION
 EOF
     ;;
 
-  7)
+  5)
     cat << EOF
-Phase 7: Security Audit for Issue #$ISSUE_NUM: $ISSUE_TITLE
+Phase 5: Security Audit for Issue #$ISSUE_NUM: $ISSUE_TITLE
 
 ## SPEC FILES (LIES DIESE ZUERST mit dem Read-Tool!)
 - Technical Spec: $TECH_SPEC
@@ -387,10 +338,10 @@ $([ -n "$FRONTEND_SPEC" ] && echo "- Frontend Report: $FRONTEND_SPEC")
 - Issue: #$ISSUE_NUM - $ISSUE_TITLE
 
 ## OUTPUT FILE (EXAKTER PFAD — NICHT AENDERN!)
-.workflow/specs/issue-${ISSUE_NUM}-ph07-security-auditor.md
+.workflow/specs/issue-${ISSUE_NUM}-ph05-security-auditor.md
 
 ## CONTEXT KEY (workflow-state.json — EXAKT SO SETZEN!)
-context.securityAudit = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-ph07-security-auditor.md"}
+context.securityAudit = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-ph05-security-auditor.md"}
 
 ## YOUR TASK
 Perform OWASP Top 10 (2021) security audit. Check A01-A10. Report findings with severity levels.
@@ -398,13 +349,12 @@ $RETRY_SECTION$HOTFIX_SECTION
 EOF
     ;;
 
-  8)
+  6)
     cat << EOF
-Phase 8: Code Review for Issue #$ISSUE_NUM: $ISSUE_TITLE
+Phase 6: Code Review for Issue #$ISSUE_NUM: $ISSUE_TITLE
 
 ## SPEC FILES (LIES DIESE ZUERST mit dem Read-Tool!)
 - Technical Spec: $TECH_SPEC
-- API Design: $API_SPEC
 $([ -n "$BACKEND_SPEC" ] && echo "- Backend Report: $BACKEND_SPEC")
 $([ -n "$FRONTEND_SPEC" ] && echo "- Frontend Report: $FRONTEND_SPEC")
 $([ -n "$TEST_REPORT" ] && echo "- Test Report: $TEST_REPORT")
@@ -415,10 +365,10 @@ $([ -n "$SECURITY_REPORT" ] && echo "- Security Audit: $SECURITY_REPORT")
 - Target Coverage: ${TARGET_COV}%
 
 ## OUTPUT FILE (EXAKTER PFAD — NICHT AENDERN!)
-.workflow/specs/issue-${ISSUE_NUM}-ph08-code-reviewer.md
+.workflow/specs/issue-${ISSUE_NUM}-ph06-code-reviewer.md
 
 ## CONTEXT KEY (workflow-state.json — EXAKT SO SETZEN!)
-context.reviewFeedback = {"reviewFile":".workflow/specs/issue-${ISSUE_NUM}-ph08-code-reviewer.md","status":"APPROVED"}
+context.reviewFeedback = {"reviewFile":".workflow/specs/issue-${ISSUE_NUM}-ph06-code-reviewer.md","status":"APPROVED"}
 (Oder "CHANGES_REQUESTED" bei Aenderungswuenschen. Bei CHANGES_REQUESTED: fixes[].file mit betroffenen Dateipfaden fuer deterministisches Rollback-Routing.)
 
 ## YOUR TASK
@@ -427,11 +377,11 @@ $RETRY_SECTION$HOTFIX_SECTION
 EOF
     ;;
 
-  9)
+  7)
     BRANCH=$(jq -r '.branch // "unknown"' "$WORKFLOW_FILE")
     FROM_BRANCH=$(jq -r '.fromBranch // "main"' "$WORKFLOW_FILE")
     cat << EOF
-Phase 9: Push & PR for Issue #$ISSUE_NUM: $ISSUE_TITLE
+Phase 7: Push & PR for Issue #$ISSUE_NUM: $ISSUE_TITLE
 
 ## WORKFLOW CONTEXT
 - Issue: #$ISSUE_NUM - $ISSUE_TITLE
@@ -439,7 +389,7 @@ Phase 9: Push & PR for Issue #$ISSUE_NUM: $ISSUE_TITLE
 - Target Branch: $FROM_BRANCH
 
 ## YOUR TASK (KEIN SUBAGENT — wird direkt vom Orchestrator ausgefuehrt)
-Phase 9 wird durch den UserPromptSubmit-Hook gesteuert.
+Phase 7 wird durch den UserPromptSubmit-Hook gesteuert.
 Sage "Done." und folge den Anweisungen des Hooks.
 $RETRY_SECTION$HOTFIX_SECTION
 EOF
@@ -453,17 +403,11 @@ esac
 # ═══════════════════════════════════════════════════════════════════════════
 # ACCEPTANCE CRITERIA + RETURN PROTOCOL (an JEDEN Prompt angehaengt)
 # ═══════════════════════════════════════════════════════════════════════════
-# Die Akzeptanzkriterien werden DIREKT aus phases.conf gelesen.
-# Single Source of Truth: phases.conf definiert, Prompt transportiert,
-# wf_verify.sh prueft. Keine Drift moeglich.
-# ═══════════════════════════════════════════════════════════════════════════
-
 CRITERION=$(get_phase_criterion "$PHASE")
 
 # Akzeptanzkriterium menschenlesbar aufbereiten
 case "$CRITERION" in
   *+*)
-    # Compound-Kriterium: criterion1+criterion2 (ALL must pass)
     HUMAN_CRITERION="ALL of these must be true:"
     OLD_IFS="$IFS"
     IFS='+'

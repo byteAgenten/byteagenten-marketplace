@@ -428,11 +428,10 @@ Du erhältst vom Orchestrator **DATEIPFADE** zu Spec-Dateien. LIES SIE SELBST!
 
 Typische Spec-Dateien:
 - **Technical Spec**: `.workflow/specs/issue-*-plan-consolidated.md`
-- **API Design**: `.workflow/specs/issue-*-ph02-api-architect.md`
-- **Backend Report**: `.workflow/specs/issue-*-ph04-spring-boot-developer.md`
-- **Frontend Report**: `.workflow/specs/issue-*-ph05-angular-frontend-developer.md`
-- **Test Report**: `.workflow/specs/issue-*-ph06-test-engineer.md`
-- **Security Audit**: `.workflow/specs/issue-*-ph07-security-auditor.md`
+- **Backend Report**: `.workflow/specs/issue-*-ph02-spring-boot-developer.md`
+- **Frontend Report**: `.workflow/specs/issue-*-ph03-angular-frontend-developer.md`
+- **Test Report**: `.workflow/specs/issue-*-ph04-test-engineer.md`
+- **Security Audit**: `.workflow/specs/issue-*-ph05-security-auditor.md`
 
 Metadaten direkt im Prompt: Issue-Nr, Coverage-Ziel.
 
@@ -442,7 +441,7 @@ Metadaten direkt im Prompt: Issue-Nr, Coverage-Ziel.
 
 ```bash
 mkdir -p .workflow/specs
-# Dateiname: .workflow/specs/issue-{N}-ph08-code-reviewer.md
+# Dateiname: .workflow/specs/issue-{N}-ph06-code-reviewer.md
 # Inhalt: Vollständiger Code Review Report (Issues, Fixes, Empfehlungen)
 ```
 
@@ -454,7 +453,7 @@ mkdir -p .workflow/specs
 
 ```bash
 jq '.context.reviewFeedback = {
-  "reviewFile": ".workflow/specs/issue-42-ph08-code-reviewer.md",
+  "reviewFile": ".workflow/specs/issue-42-ph06-code-reviewer.md",
   "status": "APPROVED",
   "fixes": []
 }' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
@@ -465,7 +464,7 @@ mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 
 ```bash
 jq '.context.reviewFeedback = {
-  "reviewFile": ".workflow/specs/issue-42-ph08-code-reviewer.md",
+  "reviewFile": ".workflow/specs/issue-42-ph06-code-reviewer.md",
   "status": "CHANGES_REQUESTED",
   "fixes": [
     {"type": "backend", "file": "path/to/File.java", "issue": "Add authorization check"},
@@ -476,6 +475,6 @@ mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```
 
 Das `fixes` Array bestimmt den deterministischen Rollback:
-- `type: "database"` → Phase 3 | `type: "backend"` → Phase 4
-- `type: "frontend"` → Phase 5 | `type: "tests"` → Phase 6
+- `type: "database"` → Phase 1 | `type: "backend"` → Phase 2
+- `type: "frontend"` → Phase 3 | `type: "tests"` → Phase 4
 - `file:` Pfad fuer Heuristik (.java → Backend, .ts → Frontend, .sql → DB)

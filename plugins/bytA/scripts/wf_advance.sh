@@ -102,11 +102,9 @@ play_completion() {
 cleanup_context() {
   local from_phase=$1
   local clear_cmd="del(.context.reviewFeedback) | del(.context.securityAudit) | del(.context.testResults)"
-  [ "$from_phase" -le 5 ] && clear_cmd="$clear_cmd | del(.context.frontendImpl)"
-  [ "$from_phase" -le 4 ] && clear_cmd="$clear_cmd | del(.context.backendImpl)"
-  [ "$from_phase" -le 3 ] && clear_cmd="$clear_cmd | del(.context.migrations)"
-  [ "$from_phase" -le 2 ] && clear_cmd="$clear_cmd | del(.context.apiDesign)"
-  [ "$from_phase" -le 1 ] && clear_cmd="$clear_cmd | del(.context.wireframes)"
+  [ "$from_phase" -le 3 ] && clear_cmd="$clear_cmd | del(.context.frontendImpl)"
+  [ "$from_phase" -le 2 ] && clear_cmd="$clear_cmd | del(.context.backendImpl)"
+  [ "$from_phase" -le 1 ] && clear_cmd="$clear_cmd | del(.context.migrations)"
   [ "$from_phase" -le 0 ] && clear_cmd="$clear_cmd | del(.context.technicalSpec)"
   echo "$clear_cmd"
 }
@@ -119,7 +117,7 @@ cleanup_specs() {
     rm -f .workflow/specs/issue-*-plan-*.md 2>/dev/null || true
   fi
   local p=$from_phase
-  while [ "$p" -le 8 ]; do
+  while [ "$p" -le 6 ]; do
     local pf
     pf=$(printf "%02d" "$p")
     rm -f .workflow/specs/issue-*-ph${pf}-*.md 2>/dev/null || true
@@ -156,15 +154,15 @@ approve)
 
   PHASE_NAME=$(get_phase_name "$APPROVAL_PHASE")
 
-  # ─── Phase 9 Spezial: Push & PR ───────────────────────────────────────
-  if [ "$APPROVAL_PHASE" = "9" ]; then
+  # ─── Phase 7 Spezial: Push & PR ───────────────────────────────────────
+  if [ "$APPROVAL_PHASE" = "7" ]; then
     jq '.pushApproved = true' \
       "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
 
-    log "ADVANCE: Phase 9 (Push & PR) approved. pushApproved=true"
-    log_transition "user_advance" "action=approve phase=9"
+    log "ADVANCE: Phase 7 (Push & PR) approved. pushApproved=true"
+    log_transition "user_advance" "action=approve phase=7"
 
-    echo "=== bytA ADVANCE: approve (Phase 9) ==="
+    echo "=== bytA ADVANCE: approve (Phase 7) ==="
     echo "Push + PR approved. pushApproved=true"
     echo ""
     echo "PRE-PUSH BUILD GATE (PFLICHT!):"
@@ -183,8 +181,8 @@ approve)
     exit 0
   fi
 
-  # ─── Phase 8 Spezial: userApproved setzen ─────────────────────────────
-  if [ "$APPROVAL_PHASE" = "8" ]; then
+  # ─── Phase 6 Spezial: userApproved setzen ─────────────────────────────
+  if [ "$APPROVAL_PHASE" = "6" ]; then
     jq '.context.reviewFeedback.userApproved = true' \
       "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
   fi
@@ -194,14 +192,14 @@ approve)
   NEXT_NAME=$(get_phase_name "$NEXT_PHASE")
   NEXT_AGENT=$(get_phase_agent "$NEXT_PHASE")
 
-  # ─── Phase 9: awaiting_approval mit PR-Vorschau ──────────────────────
+  # ─── Phase 7: awaiting_approval mit PR-Vorschau ──────────────────────
   # Push braucht IMMER User-Bestaetigung. Zeige was gepusht wird.
-  if [ "$NEXT_PHASE" = "9" ]; then
-    jq '.currentPhase = 9 | .status = "awaiting_approval" | .awaitingApprovalFor = 9' \
+  if [ "$NEXT_PHASE" = "7" ]; then
+    jq '.currentPhase = 7 | .status = "awaiting_approval" | .awaitingApprovalFor = 7' \
       "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
 
-    log "ADVANCE: Phase $APPROVAL_PHASE ($PHASE_NAME) approved → Phase 9 (Push & PR) awaiting_approval"
-    log_transition "user_advance" "action=approve from=$APPROVAL_PHASE to=9"
+    log "ADVANCE: Phase $APPROVAL_PHASE ($PHASE_NAME) approved → Phase 7 (Push & PR) awaiting_approval"
+    log_transition "user_advance" "action=approve from=$APPROVAL_PHASE to=7"
 
     # ─── Git-Daten sammeln ───────────────────────────────────────────
     PR_TITLE="feat(#$ISSUE_NUM): $ISSUE_TITLE"
@@ -216,7 +214,7 @@ approve)
 
     # ─── Phasen-Status-Tabelle bauen ─────────────────────────────────
     PHASE_TABLE=""
-    for p in 0 1 2 3 4 5 6 7 8; do
+    for p in 0 1 2 3 4 5 6; do
       local_pn=$(get_phase_name "$p")
       local_pf=$(printf "%02d" "$p")
       if jq -e ".phases[\"$p\"].status == \"skipped\"" "$WORKFLOW_FILE" >/dev/null 2>&1; then
@@ -232,7 +230,7 @@ approve)
     echo "=== bytA ADVANCE: approve ==="
     echo "Phase $APPROVAL_PHASE ($PHASE_NAME) approved."
     echo ""
-    echo "=== PHASE 9: PR-VORSCHAU ERSTELLEN ==="
+    echo "=== PHASE 7: PR-VORSCHAU ERSTELLEN ==="
     echo ""
     echo "PR-Titel: $PR_TITLE"
     echo "Branch:   $BRANCH → $FROM_BRANCH"
@@ -255,15 +253,15 @@ approve)
     echo "   ## Summary"
     echo "   Kurze Beschreibung was implementiert wurde und warum (aus Phase 0 Spec)."
     echo "   ## Changes"
-    echo "   - Backend: Was wurde geaendert (aus Phase 4 Report)"
-    echo "   - Frontend: Was wurde geaendert (aus Phase 5 Report, falls vorhanden)"
-    echo "   - Database: Migrationen (aus Phase 3 Report, falls vorhanden)"
+    echo "   - Backend: Was wurde geaendert (aus Phase 2 Report)"
+    echo "   - Frontend: Was wurde geaendert (aus Phase 3 Report, falls vorhanden)"
+    echo "   - Database: Migrationen (aus Phase 1 Report, falls vorhanden)"
     echo "   ## Testing"
-    echo "   Test-Ergebnisse und Coverage (aus Phase 6 Report)."
+    echo "   Test-Ergebnisse und Coverage (aus Phase 4 Report)."
     echo "   ## Security"
-    echo "   Security-Audit-Ergebnis (aus Phase 7 Report)."
+    echo "   Security-Audit-Ergebnis (aus Phase 5 Report)."
     echo "   ## Review"
-    echo "   Code-Review-Ergebnis und offene Suggestions (aus Phase 8 Report)."
+    echo "   Code-Review-Ergebnis und offene Suggestions (aus Phase 6 Report)."
     echo "2. Zeige dem User die VOLLSTAENDIGE PR-Vorschau (Titel + Body) und frage:"
     echo "   'Soll ich mit diesem PR pushen? Aenderungswuensche am PR-Text?'"
     echo "3. Bei Approval: Bash('${SCRIPT_DIR}/wf_advance.sh approve')"
@@ -305,9 +303,16 @@ feedback)
   PHASE_NAME=$(get_phase_name "$APPROVAL_PHASE")
   PHASE_AGENT=$(get_phase_agent "$APPROVAL_PHASE")
 
-  # ─── State: gleiche Phase, status=active ──────────────────────────────
-  jq '.status = "active"' \
+  # ─── State: gleiche Phase, status=active + retry counter reset ────────
+  # Feedback ist ein neuer User-initiierter Zyklus — alte Retries irrelevant.
+  jq "del(.recovery.phase_${APPROVAL_PHASE}_attempts) | .status = \"active\"" \
     "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+
+  # Phase 0: Marker setzen BEVOR output, damit Stop-Hook-Race-Condition verhindert wird.
+  # Ohne Marker: Stop-Hook feuert nach wf_advance.sh, sieht geloeschte Specs → increment_retry!
+  if [ "$APPROVAL_PHASE" = "0" ]; then
+    touch "${WORKFLOW_DIR}/.team-planning-active"
+  fi
 
   log "ADVANCE: Phase $APPROVAL_PHASE ($PHASE_NAME) feedback. Re-running with: ${FEEDBACK:0:100}"
   log_transition "user_advance" "action=feedback phase=$APPROVAL_PHASE"
@@ -345,20 +350,18 @@ rollback)
     echo "ERROR: Rollback-Ziel fehlt. Usage: wf_advance.sh rollback TARGET 'MESSAGE'" >&2
     echo ""
     echo "Verfuegbare Ziele:"
-    echo "  0 = Tech Spec (architect-planner)"
-    echo "  1 = Wireframes (ui-designer)"
-    echo "  2 = API Design (api-architect)"
-    echo "  3 = Database (postgresql-architect)"
-    echo "  4 = Backend (spring-boot-developer)"
-    echo "  5 = Frontend (angular-frontend-developer)"
-    echo "  6 = Tests (test-engineer)"
-    echo "  7 = Security Audit (security-auditor)"
+    echo "  0 = Planning (team-planning)"
+    echo "  1 = Migrations (postgresql-architect)"
+    echo "  2 = Backend (spring-boot-developer)"
+    echo "  3 = Frontend (angular-frontend-developer)"
+    echo "  4 = Tests (test-engineer)"
+    echo "  5 = Security Audit (security-auditor)"
     exit 1
   fi
 
   # Validate target
-  if [ "$TARGET" -lt 0 ] 2>/dev/null || [ "$TARGET" -gt 7 ] 2>/dev/null; then
-    echo "ERROR: Ungueltige Ziel-Phase: $TARGET (erlaubt: 0-7)" >&2
+  if [ "$TARGET" -lt 0 ] 2>/dev/null || [ "$TARGET" -gt 5 ] 2>/dev/null; then
+    echo "ERROR: Ungueltige Ziel-Phase: $TARGET (erlaubt: 0-5)" >&2
     exit 1
   fi
 
@@ -366,11 +369,16 @@ rollback)
   TARGET_AGENT=$(get_phase_agent "$TARGET")
   FROM_PHASE_NAME=$(get_phase_name "$APPROVAL_PHASE")
 
-  # ─── Context aufraeumen ───────────────────────────────────────────────
+  # ─── Context aufraeumen + retry counter reset ────────────────────────
   CLEAR_CMD=$(cleanup_context "$TARGET")
 
-  jq "$CLEAR_CMD | .currentPhase = $TARGET | .status = \"active\"" \
+  jq "$CLEAR_CMD | del(.recovery.phase_${TARGET}_attempts) | .currentPhase = $TARGET | .status = \"active\"" \
     "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+
+  # Phase 0: Marker setzen BEVOR output, damit Stop-Hook-Race-Condition verhindert wird.
+  if [ "$TARGET" = "0" ]; then
+    touch "${WORKFLOW_DIR}/.team-planning-active"
+  fi
 
   # ─── Spec-Dateien ab Rollback-Ziel loeschen ───────────────────────────
   cleanup_specs "$TARGET"

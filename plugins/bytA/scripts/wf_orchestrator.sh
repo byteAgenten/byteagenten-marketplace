@@ -367,6 +367,10 @@ if [ "$STATUS" = "awaiting_approval" ]; then
     fi
 
     PROMPT=$("${SCRIPT_DIR}/wf_prompt_builder.sh" "$PHASE")
+    # Phase 0: Marker setzen BEVOR output_block, damit nachfolgende Stop-Hooks skippen
+    if [ "$PHASE" = "0" ]; then
+      touch "${WORKFLOW_DIR}/.team-planning-active"
+    fi
     DISPATCH=$(build_dispatch_msg "$PHASE" "$PROMPT")
     output_block "GUARD: Phase $PHASE ($PHASE_NAME) als awaiting_approval markiert, aber GLOB-Kriterium NICHT erfuellt (Versuch $RETRY/$MAX_RETRIES). Starte: $DISPATCH"
   fi
@@ -403,14 +407,12 @@ detect_skipped_phase() {
     local has_context=true
     case $i in
       0) jq -e '.context.technicalSpec | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
-      1) jq -e '.context.wireframes | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
-      2) jq -e '.context.apiDesign | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
-      3) jq -e '.context.migrations | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
-      4) jq -e '.context.backendImpl | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
-      5) jq -e '.context.frontendImpl | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
-      6) jq -e '.context.testResults | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
-      7) jq -e '.context.securityAudit | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
-      8) jq -e '.context.reviewFeedback.userApproved == true' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
+      1) jq -e '.context.migrations | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
+      2) jq -e '.context.backendImpl | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
+      3) jq -e '.context.frontendImpl | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
+      4) jq -e '.context.testResults | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
+      5) jq -e '.context.securityAudit | keys | length > 0' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
+      6) jq -e '.context.reviewFeedback.userApproved == true' "$WORKFLOW_FILE" > /dev/null 2>&1 || has_context=false ;;
     esac
 
     if [ "$has_context" = "false" ]; then
@@ -435,6 +437,10 @@ if [ -n "$SKIPPED_TO" ]; then
 
   # Build prompt for skipped phase
   PROMPT=$("${SCRIPT_DIR}/wf_prompt_builder.sh" "$SKIPPED_TO")
+  # Phase 0: Marker setzen BEVOR output_block, damit nachfolgende Stop-Hooks skippen
+  if [ "$SKIPPED_TO" = "0" ]; then
+    touch "${WORKFLOW_DIR}/.team-planning-active"
+  fi
   DISPATCH=$(build_dispatch_msg "$SKIPPED_TO" "$PROMPT")
   output_block "PHASE-SKIP KORRIGIERT: Phase $SKIPPED_TO ($SKIP_NAME) fehlt. State korrigiert. Starte sofort: $DISPATCH"
 fi
@@ -467,11 +473,11 @@ if "${SCRIPT_DIR}/wf_verify.sh" "$PHASE"; then
   fi
 
   # ─────────────────────────────────────────────────────────────────────────
-  # Phase 8 Spezial: CHANGES_REQUESTED → Deterministischer Rollback
+  # Phase 6 Spezial: CHANGES_REQUESTED → Deterministischer Rollback
   # GLOB passed (Review-Datei existiert), aber Review hat Aenderungswuensche.
-  # Muss VOR mark_phase_completed stehen, damit Phase 8 NICHT completed wird.
+  # Muss VOR mark_phase_completed stehen, damit Phase 6 NICHT completed wird.
   # ─────────────────────────────────────────────────────────────────────────
-  if [ "$PHASE" = "8" ]; then
+  if [ "$PHASE" = "6" ]; then
     REVIEW_STATUS=$(jq -r '.context.reviewFeedback.status // "PENDING"' "$WORKFLOW_FILE" 2>/dev/null)
 
     if [ "$REVIEW_STATUS" = "CHANGES_REQUESTED" ]; then
@@ -486,24 +492,24 @@ if "${SCRIPT_DIR}/wf_verify.sh" "$PHASE"; then
       fi
 
       # Rollback-Ziel DETERMINISTISCH aus Dateipfaden bestimmen
-      ROLLBACK_TARGET=6  # Default: Tests
+      ROLLBACK_TARGET=4  # Default: Tests
       FIX_FILES=$(jq -r '.context.reviewFeedback.fixes[]?.file // empty' "$WORKFLOW_FILE" 2>/dev/null || echo "")
 
       if [ -n "$FIX_FILES" ]; then
         if echo "$FIX_FILES" | grep -q '\.sql'; then
-          ROLLBACK_TARGET=3
+          ROLLBACK_TARGET=1
         elif echo "$FIX_FILES" | grep -q '\.java'; then
-          ROLLBACK_TARGET=4
+          ROLLBACK_TARGET=2
         elif echo "$FIX_FILES" | grep -q -E '\.(ts|html|scss)'; then
-          ROLLBACK_TARGET=5
+          ROLLBACK_TARGET=3
         fi
       else
         if jq -e '.context.reviewFeedback.fixes[]? | select(.type == "database")' "$WORKFLOW_FILE" > /dev/null 2>&1; then
-          ROLLBACK_TARGET=3
+          ROLLBACK_TARGET=1
         elif jq -e '.context.reviewFeedback.fixes[]? | select(.type == "backend")' "$WORKFLOW_FILE" > /dev/null 2>&1; then
-          ROLLBACK_TARGET=4
+          ROLLBACK_TARGET=2
         elif jq -e '.context.reviewFeedback.fixes[]? | select(.type == "frontend")' "$WORKFLOW_FILE" > /dev/null 2>&1; then
-          ROLLBACK_TARGET=5
+          ROLLBACK_TARGET=3
         fi
       fi
 
@@ -514,27 +520,27 @@ if "${SCRIPT_DIR}/wf_verify.sh" "$PHASE"; then
 
       # Context ab Rollback-Ziel aufraeumen
       CLEAR_CMD="del(.context.reviewFeedback) | del(.context.securityAudit) | del(.context.testResults)"
-      [ "$ROLLBACK_TARGET" -le 5 ] && CLEAR_CMD="$CLEAR_CMD | del(.context.frontendImpl)"
-      [ "$ROLLBACK_TARGET" -le 4 ] && CLEAR_CMD="$CLEAR_CMD | del(.context.backendImpl)"
-      [ "$ROLLBACK_TARGET" -le 3 ] && CLEAR_CMD="$CLEAR_CMD | del(.context.migrations)"
+      [ "$ROLLBACK_TARGET" -le 3 ] && CLEAR_CMD="$CLEAR_CMD | del(.context.frontendImpl)"
+      [ "$ROLLBACK_TARGET" -le 2 ] && CLEAR_CMD="$CLEAR_CMD | del(.context.backendImpl)"
+      [ "$ROLLBACK_TARGET" -le 1 ] && CLEAR_CMD="$CLEAR_CMD | del(.context.migrations)"
 
       jq "$CLEAR_CMD | .currentPhase = $ROLLBACK_TARGET | .status = \"active\"" \
         "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
 
       # Spec-Dateien ab Rollback-Ziel loeschen (verhindert stale GLOB-Matches)
       p=$ROLLBACK_TARGET
-      while [ "$p" -le 8 ]; do
+      while [ "$p" -le 6 ]; do
         pf=$(printf "%02d" "$p")
         rm -f .workflow/specs/issue-*-ph${pf}-*.md 2>/dev/null || true
         p=$((p + 1))
       done
-      log "Spec files cleaned: phases $ROLLBACK_TARGET-8"
+      log "Spec files cleaned: phases $ROLLBACK_TARGET-6"
 
-      log "REVIEW ROLLBACK: Phase 8 → Phase $ROLLBACK_TARGET ($ROLLBACK_NAME). Retry $RETRY/$MAX_RETRIES"
+      log "REVIEW ROLLBACK: Phase 6 → Phase $ROLLBACK_TARGET ($ROLLBACK_NAME). Retry $RETRY/$MAX_RETRIES"
       log_transition "review_rollback" "target=$ROLLBACK_TARGET retry=$RETRY"
 
       PROMPT=$("${SCRIPT_DIR}/wf_prompt_builder.sh" "$ROLLBACK_TARGET" "$FIXES_TEXT")
-      output_block "Phase 8 Code Review: CHANGES_REQUESTED ($RETRY/$MAX_RETRIES). Rollback zu Phase $ROLLBACK_TARGET ($ROLLBACK_NAME). State korrigiert. Starte sofort: Task(bytA:$ROLLBACK_AGENT, '$PROMPT')"
+      output_block "Phase 6 Code Review: CHANGES_REQUESTED ($RETRY/$MAX_RETRIES). Rollback zu Phase $ROLLBACK_TARGET ($ROLLBACK_NAME). State korrigiert. Starte sofort: Task(bytA:$ROLLBACK_AGENT, '$PROMPT')"
     fi
   fi
 
@@ -564,25 +570,14 @@ if "${SCRIPT_DIR}/wf_verify.sh" "$PHASE"; then
     if [ -z "$SPEC_FILE" ] && [ "$PHASE" = "0" ]; then
       SPEC_FILE=$(ls .workflow/specs/issue-*-plan-consolidated.md 2>/dev/null | head -1 || echo "")
     fi
-    # Phase 1 hat Wireframes statt Specs
-    IS_WIREFRAME=false
-    if [ -z "$SPEC_FILE" ] && [ "$PHASE" = "1" ]; then
-      SPEC_FILE=$(ls wireframes/issue-*.html 2>/dev/null | head -1 || echo "")
-      IS_WIREFRAME=true
-    fi
 
     APPROVAL_MSG="APPROVAL GATE: Phase $PHASE ($PHASE_NAME) ist abgeschlossen."
 
     if [ -n "$SPEC_FILE" ]; then
-      if [ "$IS_WIREFRAME" = "true" ]; then
-        # ─── Wireframe: Nur Pfad anzeigen, NICHT lesen (103K+ chars!) ───
-        APPROVAL_MSG="$APPROVAL_MSG Wireframe erstellt: $SPEC_FILE — Sage dem User er kann das Wireframe im Browser oeffnen (file:// URL oder 'open $SPEC_FILE'). NICHT die HTML-Datei lesen!"
-      else
-        # ─── Spec-Datei: Vorschau aus ersten 40 Zeilen extrahieren ───
-        # Spart ~20K+ Tokens weil Claude die Datei NICHT selbst lesen muss.
-        SPEC_PREVIEW=$(head -40 "$SPEC_FILE" 2>/dev/null || echo "(Vorschau nicht verfuegbar)")
-        APPROVAL_MSG="$APPROVAL_MSG Ergebnis: $SPEC_FILE — VORSCHAU (erste 40 Zeilen, NICHT die Datei lesen!): --- $SPEC_PREVIEW ---"
-      fi
+      # ─── Spec-Datei: Vorschau aus ersten 40 Zeilen extrahieren ───
+      # Spart ~20K+ Tokens weil Claude die Datei NICHT selbst lesen muss.
+      SPEC_PREVIEW=$(head -40 "$SPEC_FILE" 2>/dev/null || echo "(Vorschau nicht verfuegbar)")
+      APPROVAL_MSG="$APPROVAL_MSG Ergebnis: $SPEC_FILE — VORSCHAU (erste 40 Zeilen, NICHT die Datei lesen!): --- $SPEC_PREVIEW ---"
     fi
 
     APPROVAL_MSG="$APPROVAL_MSG Praesentiere dem User die Vorschau/Ergebnisse. Frage dann: 'Soll ich mit dem Workflow fortfahren? (approve/weiter) oder hast du Aenderungswuensche?' WICHTIG: KEINE Datei lesen! Die Vorschau oben reicht. Fuehre KEINE weiteren Aktionen aus — warte auf die Antwort des Users."
@@ -642,6 +637,10 @@ else
 
   # Build prompt with retry context
   PROMPT=$("${SCRIPT_DIR}/wf_prompt_builder.sh" "$PHASE")
+  # Phase 0: Marker setzen BEVOR output_block, damit nachfolgende Stop-Hooks skippen
+  if [ "$PHASE" = "0" ]; then
+    touch "${WORKFLOW_DIR}/.team-planning-active"
+  fi
   DISPATCH=$(build_dispatch_msg "$PHASE" "$PROMPT")
   output_block "RALPH-LOOP Phase $PHASE ($PHASE_NAME) nicht fertig (Versuch $RETRY/$MAX_RETRIES). Starte: $DISPATCH"
 fi

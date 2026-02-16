@@ -10,7 +10,7 @@
 2. [Die drei Architekturprinzipien](#2-die-drei-architekturprinzipien)
 3. [Verzeichnisstruktur](#3-verzeichnisstruktur)
 4. [Die Akteure und ihre Dateien](#4-die-akteure-und-ihre-dateien)
-5. [Die 10 Phasen im Detail](#5-die-10-phasen-im-detail)
+5. [Die 8 Phasen im Detail](#5-die-8-phasen-im-detail)
 6. [Die Hooks im Detail](#6-die-hooks-im-detail)
 7. [Die Scripts im Detail](#7-die-scripts-im-detail)
 8. [Der Datenfluss: Wie Kontext in die Agenten kommt](#8-der-datenfluss-wie-kontext-in-die-agenten-kommt)
@@ -28,7 +28,7 @@
 
 ## 1. Was ist bytA?
 
-bytA ist ein Claude Code Plugin, das einen **deterministischen 10-Phasen-Workflow** fuer Full-Stack Feature-Entwicklung bereitstellt. Es orchestriert 10 spezialisierte KI-Agenten (Architect, UI-Designer, API-Architect, etc.), um aus einem GitHub-Issue ein komplettes Feature zu bauen: Von der technischen Spezifikation ueber Backend/Frontend-Code bis hin zum Pull Request.
+bytA ist ein Claude Code Plugin, das einen **deterministischen 8-Phasen-Workflow** fuer Full-Stack Feature-Entwicklung bereitstellt. Es orchestriert spezialisierte KI-Agenten (Architect, Backend-Developer, Frontend-Developer, etc.), um aus einem GitHub-Issue ein komplettes Feature zu bauen: Von der technischen Spezifikation ueber Backend/Frontend-Code bis hin zum Pull Request.
 
 **Der entscheidende Unterschied:** Der Orchestrator ist kein LLM, sondern ein **Bash-Script**. Claude dient nur als Transport-Layer — es fuehrt die Befehle aus, die die Shell-Scripts ihm geben. Alle Workflow-Entscheidungen sind deterministisch.
 
@@ -102,14 +102,14 @@ plugins/bytA/
 ├── .mcp.json                          # MCP Server (Context7, Angular CLI)
 ├── agents/                            # 10 spezialisierte Agents
 │   ├── architect-planner.md           # Phase 0: Hub-Consolidator + Technical Spec
-│   ├── ui-designer.md                 # Phase 1: Wireframes
-│   ├── api-architect.md               # Phase 2: API Design
-│   ├── postgresql-architect.md        # Phase 3: Migrations
-│   ├── spring-boot-developer.md       # Phase 4: Backend
-│   ├── angular-frontend-developer.md  # Phase 5: Frontend
-│   ├── test-engineer.md               # Phase 6: Tests
-│   ├── security-auditor.md            # Phase 7: Security Audit
-│   ├── code-reviewer.md               # Phase 8: Code Review
+│   ├── postgresql-architect.md        # Phase 1: Migrations
+│   ├── spring-boot-developer.md       # Phase 2: Backend
+│   ├── angular-frontend-developer.md  # Phase 3: Frontend
+│   ├── test-engineer.md               # Phase 4: Tests
+│   ├── security-auditor.md            # Phase 5: Security Audit
+│   ├── code-reviewer.md               # Phase 6: Code Review
+│   ├── ui-designer.md                 # Phase 0 (optional Spoke): Wireframes
+│   ├── api-architect.md               # Standalone: API Design
 │   └── architect-reviewer.md          # Eskalation bei Architektur-Concerns
 ├── commands/
 │   └── feature.md                     # /bytA:feature → Einstiegspunkt
@@ -150,8 +150,7 @@ Wird waehrend eines Workflows im **Projekt-Root** erstellt (nicht im Plugin-Verz
 ├── workflow-state.json                # Zentraler State
 ├── specs/                             # Agent-Reports als MD-Dateien
 │   ├── issue-42-plan-consolidated.md
-│   ├── issue-42-ph02-api-architect.md
-│   ├── issue-42-ph04-spring-boot-developer.md
+│   ├── issue-42-ph02-spring-boot-developer.md
 │   └── ...
 ├── logs/
 │   ├── hooks.log                      # Hook-Aktivitaeten
@@ -167,7 +166,7 @@ Wird waehrend eines Workflows im **Projekt-Root** erstellt (nicht im Plugin-Verz
 
 | Datei | Aufgabe |
 |---|---|
-| `config/phases.conf` | Definiert alle 10 Phasen: Agent, Typ (APPROVAL/AUTO), Done-Kriterium |
+| `config/phases.conf` | Definiert alle 8 Phasen: Agent, Typ (APPROVAL/AUTO), Done-Kriterium |
 | `hooks/hooks.json` | Registriert welches Script bei welchem Claude-Event feuert |
 | `skills/feature/SKILL.md` | Minimale Instruktionen an Claude: "Du bist Transport-Layer" |
 
@@ -199,14 +198,14 @@ Jeder Agent ist in einer `.md`-Datei unter `agents/` definiert. Die Agent-Datei 
 | Agent | Phase | Spezialisierung | Model |
 |---|---|---|---|
 | `architect-planner` | 0 (Hub) | Hub-Consolidator: konsolidiert Specialist-Plaene, prueft Konsistenz, Phase-Skipping | inherit |
-| `spring-boot-developer` | 0 (Spoke), 4 | Backend-Plan (Phase 0), Implementation (Phase 4) | inherit |
-| `angular-frontend-developer` | 0 (Spoke), 5 | Frontend-Plan (Phase 0), Implementation (Phase 5) | inherit |
-| `test-engineer` | 0 (Spoke), 6 | Test Impact Analysis (Phase 0), E2E Tests (Phase 6) | inherit |
-| `ui-designer` | 0 (optional Spoke), 1 | Wireframe-Plan (Phase 0), HTML Wireframes (Phase 1) | sonnet |
-| `api-architect` | 2 | REST API Design (Markdown, kein YAML) | inherit |
-| `postgresql-architect` | 3 | Flyway SQL Migrations, Schema | inherit |
-| `security-auditor` | 7 | OWASP Top 10 Audit | inherit |
-| `code-reviewer` | 8 | Code Quality Gate | inherit |
+| `spring-boot-developer` | 0 (Spoke), 2 | Backend-Plan (Phase 0), Implementation (Phase 2) | inherit |
+| `angular-frontend-developer` | 0 (Spoke), 3 | Frontend-Plan (Phase 0), Implementation (Phase 3) | inherit |
+| `test-engineer` | 0 (Spoke), 4 | Test Impact Analysis (Phase 0), E2E Tests (Phase 4) | inherit |
+| `ui-designer` | 0 (optional Spoke) | Wireframe-Plan + data-testid (Phase 0) | sonnet |
+| `postgresql-architect` | 1 | Flyway SQL Migrations, Schema | inherit |
+| `security-auditor` | 5 | OWASP Top 10 Audit | inherit |
+| `code-reviewer` | 6 | Code Quality Gate | inherit |
+| `api-architect` | - | REST API Design (standalone, kein YAML) | inherit |
 | `architect-reviewer` | - | Eskalation bei Architektur-Concerns | inherit |
 
 **Wichtig:** Alle Agenten haben das gleiche **Input Protocol**:
@@ -219,7 +218,7 @@ Jeder Agent ist in einer `.md`-Datei unter `agents/` definiert. Die Agent-Datei 
 
 ---
 
-## 5. Die 10 Phasen im Detail
+## 5. Die 8 Phasen im Detail
 
 Die Phasen sind in `config/phases.conf` deklarativ definiert. Format:
 
@@ -248,99 +247,66 @@ PHASE_NUMMER|AGENT_NAME|PHASE_TYP|DONE_KRITERIUM
 
 **Danach:** User reviewed, gibt Approval oder Feedback. Bei Approval → Phase 1.
 
-### Phase 1: Wireframes (ui-designer)
-
-| Eigenschaft | Wert |
-|---|---|
-| **Typ** | APPROVAL (User muss approven) |
-| **Done-Kriterium** | `GLOB:wireframes/issue-*.html` |
-| **Input** | Technical Spec (Dateipfad) |
-| **Output** | HTML-Wireframe-Dateien in `wireframes/` |
-
-**Was passiert:**
-1. Agent liest die Technical Spec ueber den Dateipfad
-2. Erstellt HTML-Wireframes mit Angular Material CSS
-3. Alle interaktiven Elemente bekommen `data-testid` (fuer Playwright E2E Tests)
-4. Speichert Wireframe-Pfade in `context.wireframes.paths`
-
-**Danach:** User oeffnet HTML im Browser, reviewed, gibt Approval oder Feedback.
-
-### Phase 2: API Design (api-architect)
-
-| Eigenschaft | Wert |
-|---|---|
-| **Typ** | AUTO (kein User-Approval noetig) |
-| **Done-Kriterium** | `GLOB:.workflow/specs/issue-*-ph02-api-architect.md` |
-| **Input** | Technical Spec (Dateipfad) |
-| **Output** | API-Design-MD-Datei + Pfad in `context.apiDesign.apiDesignFile` |
-
-**Was passiert:**
-1. Agent liest Technical Spec
-2. Designt REST API Endpoints (Markdown-Sketch, kein vollstaendiges OpenAPI YAML)
-3. Speichert in `.workflow/specs/issue-42-ph02-api-architect.md`
-
-**Danach:** Auto-Advance zu Phase 3 (wf_orchestrator.sh prueft Datei, findet sie, weiter).
-
-### Phase 3: Database Migrations (postgresql-architect)
+### Phase 1: Database Migrations (postgresql-architect)
 
 | Eigenschaft | Wert |
 |---|---|
 | **Typ** | AUTO |
 | **Done-Kriterium** | `GLOB:backend/src/main/resources/db/migration/V*.sql` |
-| **Input** | Technical Spec + API Design (Dateipfade) |
+| **Input** | Technical Spec (Dateipfad) |
 | **Output** | Flyway SQL-Migrationsdateien |
 
 **Was passiert:**
-1. Agent liest Technical Spec und API Design
+1. Agent liest Technical Spec
 2. Erstellt Flyway-kompatible SQL-Migrations (`V001__create_xyz.sql`)
 3. Schema-Normalisierung (3NF), Indexes, Constraints
 
-**Danach:** Auto-Advance zu Phase 4.
+**Danach:** Auto-Advance zu Phase 2.
 
-### Phase 4: Backend Implementation (spring-boot-developer)
+### Phase 2: Backend Implementation (spring-boot-developer)
 
 | Eigenschaft | Wert |
 |---|---|
 | **Typ** | AUTO |
-| **Done-Kriterium** | `GLOB:.workflow/specs/issue-*-ph04-spring-boot-developer.md` |
-| **Input** | Technical Spec + API Design + Database Design (Dateipfade) |
+| **Done-Kriterium** | `GLOB:.workflow/specs/issue-*-ph02-spring-boot-developer.md` |
+| **Input** | Technical Spec + Database Design (Dateipfade) |
 | **Output** | Java-Code (Controller, Service, Repository) + Report-MD |
 
 **Was passiert:**
-1. Agent liest alle drei vorherigen Specs
+1. Agent liest Technical Spec und Database Design
 2. Implementiert Spring Boot 4 REST Controller, Services, Repositories
 3. Fuegt Swagger/OpenAPI-Annotationen hinzu
 4. Fuehrt `mvn verify` aus
 5. Nutzt Context7 MCP fuer aktuelle Spring Boot Doku
 6. Schreibt Report-MD und speichert Pfad in `context.backendImpl.specFile`
 
-**Danach:** SubagentStop Hook macht WIP-Commit. Auto-Advance zu Phase 5.
+**Danach:** SubagentStop Hook macht WIP-Commit. Auto-Advance zu Phase 3.
 
-### Phase 5: Frontend Implementation (angular-frontend-developer)
+### Phase 3: Frontend Implementation (angular-frontend-developer)
 
 | Eigenschaft | Wert |
 |---|---|
 | **Typ** | AUTO |
-| **Done-Kriterium** | `GLOB:.workflow/specs/issue-*-ph05-angular-frontend-developer.md` |
-| **Input** | Technical Spec + API Design + Wireframes (Dateipfade) |
+| **Done-Kriterium** | `GLOB:.workflow/specs/issue-*-ph03-angular-frontend-developer.md` |
+| **Input** | Technical Spec (Dateipfad, optional Wireframes) |
 | **Output** | TypeScript/HTML/SCSS-Code + Report-MD |
 
 **Was passiert:**
-1. Agent liest Specs und Wireframes
+1. Agent liest Technical Spec (und optional Wireframes)
 2. Implementiert Angular 21+ Components (Signals, Standalone, inject())
 3. Alle interaktiven Elemente bekommen `data-testid`
 4. Fuehrt `npm test` aus
 5. Nutzt Context7 + Angular CLI MCP fuer aktuelle Doku
 6. Schreibt Report-MD und speichert Pfad in `context.frontendImpl.specFile`
 
-**Danach:** WIP-Commit. Auto-Advance zu Phase 6.
+**Danach:** WIP-Commit. Auto-Advance zu Phase 4.
 
-### Phase 6: E2E und Integration Tests (test-engineer)
+### Phase 4: E2E und Integration Tests (test-engineer)
 
 | Eigenschaft | Wert |
 |---|---|
 | **Typ** | AUTO |
-| **Done-Kriterium** | `STATE:context.testResults.allPassed==true` + `GLOB:...ph06-test-engineer.md` (Compound) |
+| **Done-Kriterium** | `STATE:context.testResults.allPassed==true` + `GLOB:...ph04-test-engineer.md` (Compound) |
 | **Input** | Technical Spec + optionale Backend/Frontend Reports (Dateipfade) |
 | **Output** | Tests + `context.testResults.allPassed = true` in State + Report-MD |
 
@@ -349,18 +315,18 @@ PHASE_NUMMER|AGENT_NAME|PHASE_TYP|DONE_KRITERIUM
 2. Schreibt JUnit 5 + Mockito (Backend), Jasmine + TestBed (Frontend), Playwright E2E
 3. Fuehrt `mvn verify` + `npm test` + `npx playwright test` aus
 4. Setzt `context.testResults.allPassed = true` NUR wenn ALLE Tests gruen sind
-5. Schreibt Report als `.workflow/specs/issue-42-ph06-test-engineer.md`
+5. Schreibt Report als `.workflow/specs/issue-42-ph04-test-engineer.md`
 
 **Wichtig:** Das Done-Kriterium ist ein **Compound-Check** (v3.3.0): SOWOHL `allPassed == true` ALS AUCH die Report-Datei muessen existieren. Der Agent kann den State-Key nicht einfach setzen ohne Report zu schreiben — beide Pruefungen muessen bestehen.
 
-**Danach:** WIP-Commit. Auto-Advance zu Phase 7.
+**Danach:** WIP-Commit. Auto-Advance zu Phase 5.
 
-### Phase 7: Security Audit (security-auditor)
+### Phase 5: Security Audit (security-auditor)
 
 | Eigenschaft | Wert |
 |---|---|
 | **Typ** | APPROVAL |
-| **Done-Kriterium** | `GLOB:.workflow/specs/issue-*-ph07-security-auditor.md` |
+| **Done-Kriterium** | `GLOB:.workflow/specs/issue-*-ph05-security-auditor.md` |
 | **Input** | Technical Spec + optionale Backend/Frontend Reports (Dateipfade) |
 | **Output** | Security-Audit-Report-MD |
 
@@ -370,14 +336,14 @@ PHASE_NUMMER|AGENT_NAME|PHASE_TYP|DONE_KRITERIUM
 3. Scannt Frontend (XSS, unsichere Storage, etc.)
 4. Schreibt Audit-Report mit Severity-Levels
 
-**Danach:** User reviewed Security-Findings. Bei Problemen: Rollback zu Phase 4/5/6.
+**Danach:** User reviewed Security-Findings. Bei Problemen: Rollback zu Phase 2/3/4.
 
-### Phase 8: Code Review (code-reviewer)
+### Phase 6: Code Review (code-reviewer)
 
 | Eigenschaft | Wert |
 |---|---|
 | **Typ** | APPROVAL |
-| **Done-Kriterium** | `GLOB:.workflow/specs/issue-*-ph08-code-reviewer.md` |
+| **Done-Kriterium** | `GLOB:.workflow/specs/issue-*-ph06-code-reviewer.md` |
 | **Input** | Alle verfuegbaren Spec-Pfade + Coverage-Ziel |
 | **Output** | Review-Report-MD + `context.reviewFeedback` in State |
 
@@ -390,12 +356,12 @@ PHASE_NUMMER|AGENT_NAME|PHASE_TYP|DONE_KRITERIUM
 
 **Danach:** User approved oder gibt Feedback. Bei CHANGES_REQUESTED → Rollback.
 
-### Phase 9: Push & PR (Orchestrator direkt)
+### Phase 7: Push & PR (Orchestrator direkt)
 
 | Eigenschaft | Wert |
 |---|---|
 | **Typ** | APPROVAL |
-| **Done-Kriterium** | `STATE:phases["9"].prUrl` |
+| **Done-Kriterium** | `STATE:phases["7"].prUrl` |
 | **Input** | (kein Agent — Orchestrator/Claude fuehrt direkt aus) |
 | **Output** | Git Push + PR URL in State |
 
@@ -490,7 +456,7 @@ Hooks kommunizieren ueber drei Kanaele:
    └── DONE + AUTO → currentPhase++, wf_prompt_builder.sh, build_dispatch_msg()
    └── NOT DONE → weiter zu Schritt 6
 
-6. Phase 8 Spezial: CHANGES_REQUESTED?
+6. Phase 6 Spezial: CHANGES_REQUESTED?
    └── Ja → Rollback-Ziel bestimmen, Context aufraeumen, Agent starten
 
 7. RALPH LOOP: Retry-Counter pruefen
@@ -503,7 +469,7 @@ Hooks kommunizieren ueber drei Kanaele:
 | Funktion | Was sie tut |
 |---|---|
 | `output_block(reason)` | Gibt JSON `{"decision":"block","reason":"..."}` aus. Inkrementiert Block-Counter. |
-| `build_dispatch_msg(phase, prompt)` | Phase-aware Dispatch: Phase 0 → inline Team Planning Protocol, Phasen 1-8 → `Task(bytA:agent, 'prompt')` |
+| `build_dispatch_msg(phase, prompt)` | Phase-aware Dispatch: Phase 0 → inline Team Planning Protocol, Phasen 1-6 → `Task(bytA:agent, 'prompt')` |
 | `mark_phase_completed(phase)` | Setzt `phases[N].status = "completed"` mit Timestamp |
 | `get_retry_count(phase)` | Liest `recovery.phase_N_attempts` aus State |
 | `increment_retry(phase)` | Zaehlt hoch, gibt neuen Wert zurueck |
@@ -551,15 +517,13 @@ Hooks kommunizieren ueber drei Kanaele:
 | Phase | Criterion | Typ | Was wird geprueft |
 |---|---|---|---|
 | 0 | `GLOB:.workflow/specs/issue-*-plan-consolidated.md` | Datei | Consolidated Spec existiert? |
-| 1 | `GLOB:wireframes/issue-*.html` | Datei | Wireframe existiert? |
-| 2 | `GLOB:.workflow/specs/issue-*-ph02-api-architect.md` | Datei | API-Spec existiert? |
-| 3 | `GLOB:backend/src/main/resources/db/migration/V*.sql` | Datei | Migration existiert? |
-| 4 | `GLOB:.workflow/specs/issue-*-ph04-spring-boot-developer.md` | Datei | Backend-Report existiert? |
-| 5 | `GLOB:.workflow/specs/issue-*-ph05-angular-frontend-developer.md` | Datei | Frontend-Report existiert? |
-| 6 | `STATE:...allPassed==true` + `GLOB:...ph06-*.md` | Compound | Tests gruen UND Report-Datei existiert |
-| 7 | `GLOB:.workflow/specs/issue-*-ph07-security-auditor.md` | Datei | Audit-Report existiert? |
-| 8 | `GLOB:.workflow/specs/issue-*-ph08-code-reviewer.md` | Datei | Review-Datei existiert? |
-| 9 | `STATE:phases["9"].prUrl` | JSON-Key | PR URL vorhanden? |
+| 1 | `GLOB:backend/src/main/resources/db/migration/V*.sql` | Datei | Migration existiert? |
+| 2 | `GLOB:.workflow/specs/issue-*-ph02-spring-boot-developer.md` | Datei | Backend-Report existiert? |
+| 3 | `GLOB:.workflow/specs/issue-*-ph03-angular-frontend-developer.md` | Datei | Frontend-Report existiert? |
+| 4 | `STATE:...allPassed==true` + `GLOB:...ph04-*.md` | Compound | Tests gruen UND Report-Datei existiert |
+| 5 | `GLOB:.workflow/specs/issue-*-ph05-security-auditor.md` | Datei | Audit-Report existiert? |
+| 6 | `GLOB:.workflow/specs/issue-*-ph06-code-reviewer.md` | Datei | Review-Datei existiert? |
+| 7 | `STATE:phases["7"].prUrl` | JSON-Key | PR URL vorhanden? |
 
 ### 7.3 `wf_prompt_builder.sh` — Deterministische Agent-Prompts
 
@@ -576,7 +540,7 @@ Hooks kommunizieren ueber drei Kanaele:
 
 2. State lesen:
    - Issue-Nr, Titel, Coverage-Ziel, Model-Tier, UI-Designer (Metadaten)
-   - Spec-Pfade: technicalSpec, apiDesign, migrations, wireframes,
+   - Spec-Pfade: technicalSpec, migrations,
      backendImpl, frontendImpl, testReport, securityReport
      (NUR PFADE — nie den Datei-Inhalt!)
 
@@ -586,8 +550,8 @@ Hooks kommunizieren ueber drei Kanaele:
 
 4. Phase-spezifisches Template (case $PHASE):
    - Phase 0: TEAM PLANNING PROTOCOL (Hub-and-Spoke, siehe unten)
-   - Phasen 1-8: Aufgabenbeschreibung + SPEC FILES + Metadaten
-   - Phase 9: Push & PR Anweisungen
+   - Phasen 1-6: Aufgabenbeschreibung + SPEC FILES + Metadaten
+   - Phase 7: Push & PR Anweisungen
 
 5. ACCEPTANCE CRITERIA + RETURN PROTOCOL (automatisch angehaengt):
    - Menschenlesbare Version des Done-Kriteriums aus phases.conf
@@ -613,24 +577,21 @@ TeamCreate → Alle Agents parallel spawnen → Warten → Verifizieren → Shut
 | Phase | Bekommt diese Spec-Pfade |
 |---|---|
 | 0 (Team Planning) | Keine (erste Phase) — produziert: plan-consolidated.md + plan-backend/frontend/quality.md |
-| 1 (Wireframes) | `technicalSpec.specFile` |
-| 2 (API Design) | `technicalSpec.specFile` |
-| 3 (Migrations) | `technicalSpec.specFile` + `apiDesign.apiDesignFile` |
-| 4 (Backend) | `technicalSpec.specFile` + `apiDesign.apiDesignFile` + `migrations.databaseFile` |
-| 5 (Frontend) | `technicalSpec.specFile` + `apiDesign.apiDesignFile` + `wireframes.paths` |
-| 6 (Tests) | `technicalSpec.specFile` + optionale Backend/Frontend-Reports |
-| 7 (Security) | `technicalSpec.specFile` + optionale Backend/Frontend-Reports |
-| 8 (Review) | Alle verfuegbaren Spec-Pfade + Test/Security-Reports |
+| 1 (Migrations) | `technicalSpec.specFile` |
+| 2 (Backend) | `technicalSpec.specFile` + `migrations.databaseFile` |
+| 3 (Frontend) | `technicalSpec.specFile` (+ optional Wireframes) |
+| 4 (Tests) | `technicalSpec.specFile` + optionale Backend/Frontend-Reports |
+| 5 (Security) | `technicalSpec.specFile` + optionale Backend/Frontend-Reports |
+| 6 (Review) | Alle verfuegbaren Spec-Pfade + Test/Security-Reports |
 
-**Beispiel-Output fuer Phase 4:**
+**Beispiel-Output fuer Phase 2:**
 
 ```
-Phase 4: Implement Backend for Issue #42: User Dashboard
+Phase 2: Implement Backend for Issue #42: User Dashboard
 
 ## SPEC FILES (LIES DIESE ZUERST mit dem Read-Tool!)
 - Technical Spec: .workflow/specs/issue-42-plan-consolidated.md
-- API Design: .workflow/specs/issue-42-ph02-api-architect.md
-- Database Design: .workflow/specs/issue-42-ph03-postgresql-architect.md
+- Database Design: backend/src/main/resources/db/migration/V001__create_user_dashboard.sql
 
 ## WORKFLOW CONTEXT
 - Issue: #42 - User Dashboard
@@ -642,7 +603,7 @@ Run mvn verify before completing. MANDATORY: Load current docs via Context7 BEFO
 
 ## ACCEPTANCE CRITERIA (auto-generated from phases.conf)
 Your work is verified EXTERNALLY. You are done when:
-  File must exist: .workflow/specs/issue-*-ph04-spring-boot-developer.md
+  File must exist: .workflow/specs/issue-*-ph02-spring-boot-developer.md
 This is checked automatically. If this criterion is not met, you will be re-spawned.
 
 ## RETURN PROTOCOL
@@ -671,10 +632,9 @@ The orchestrator does NOT read your summary — it verifies externally.
 
    awaiting_approval → Phase-spezifische Anweisungen (via wf_advance.sh):
      Phase 0: "BEI APPROVAL: wf_advance.sh approve. BEI FEEDBACK: wf_advance.sh feedback 'MSG'."
-     Phase 1: "BEI APPROVAL: wf_advance.sh approve. BEI FEEDBACK: wf_advance.sh feedback 'MSG'."
-     Phase 7: "BEI APPROVAL: wf_advance.sh approve. BEI SECURITY-FIXES: wf_advance.sh rollback TARGET 'MSG'."
-     Phase 8: "BEI APPROVAL: wf_advance.sh approve. BEI FEEDBACK: wf_advance.sh rollback TARGET 'MSG'."
-     Phase 9: "BEI APPROVAL: Push + PR. Pre-Push Build Gate PFLICHT! wf_advance.sh complete."
+     Phase 5: "BEI APPROVAL: wf_advance.sh approve. BEI SECURITY-FIXES: wf_advance.sh rollback TARGET 'MSG'."
+     Phase 6: "BEI APPROVAL: wf_advance.sh approve. BEI FEEDBACK: wf_advance.sh rollback TARGET 'MSG'."
+     Phase 7: "BEI APPROVAL: Push + PR. Pre-Push Build Gate PFLICHT! wf_advance.sh complete."
 
    active → "Workflow laeuft. Bei Phase-Aktionen: lies workflow-state.json."
 ```
@@ -702,7 +662,7 @@ Blockiert (exit 2) wenn:
 Erlaubt wenn:
 - Kein Workflow vorhanden
 - Status completed/idle
-- `pushApproved = true` (Phase 9)
+- `pushApproved = true` (Phase 7)
 
 ### 7.7 `wf_advance.sh` — Deterministic Approval-Advance (v3.7.0)
 
@@ -764,13 +724,13 @@ Erstellt `.workflow/.subagent-active` Marker. Dieser Marker signalisiert den Pre
 **Datei:** `scripts/subagent_done.sh` (~58 Zeilen)
 **Feuert:** Wenn ein Subagent fertig ist (SubagentStop Event)
 
-Erstellt automatische WIP-Commits fuer Code-produzierende Phasen (1, 3, 4, 5, 6):
+Erstellt automatische WIP-Commits fuer Code-produzierende Phasen (1, 2, 3, 4):
 
 ```
-wip(#42/phase-4): Backend - User Dashboard
+wip(#42/phase-2): Backend - User Dashboard
 ```
 
-**Warum nur bestimmte Phasen?** Phase 0 und 2 schreiben nur Specs in `.workflow/` (gitignored). Phase 7 und 8 schreiben keinen Code.
+**Warum nur bestimmte Phasen?** Phase 0 schreibt nur Specs in `.workflow/` (gitignored). Phase 5 und 6 schreiben keinen Code.
 
 ### 7.10 `session_recovery.sh` — Context Recovery
 
@@ -845,37 +805,35 @@ User ──> /bytA:feature ──> SKILL.md ──> Claude (Transport-Layer)
 
 ```json
 {
-  "currentPhase": 4,
+  "currentPhase": 2,
   "issue": { "number": 42, "title": "User Dashboard" },
   "targetCoverage": 70,
   "context": {
     "technicalSpec": { "specFile": ".workflow/specs/issue-42-plan-consolidated.md" },
-    "apiDesign": { "apiDesignFile": ".workflow/specs/issue-42-ph02-api-architect.md" },
-    "migrations": { "databaseFile": ".workflow/specs/issue-42-ph03-postgresql-architect.md" }
+    "migrations": { "databaseFile": "backend/src/main/resources/db/migration/V001__create_dashboard.sql" }
   }
 }
 ```
 
-**Schritt 2: Stop Hook feuert, ruft `wf_prompt_builder.sh 4` auf**
+**Schritt 2: Stop Hook feuert, ruft `wf_prompt_builder.sh 2` auf**
 
 Das Script liest NUR die Pfade aus dem State (nicht den Inhalt der Spec-Dateien!).
 
 **Schritt 3: Prompt-Text wird gebaut**
 
 ```
-Phase 4: Implement Backend for Issue #42: User Dashboard
+Phase 2: Implement Backend for Issue #42: User Dashboard
 
 ## SPEC FILES (LIES DIESE ZUERST mit dem Read-Tool!)
 - Technical Spec: .workflow/specs/issue-42-plan-consolidated.md
-- API Design: .workflow/specs/issue-42-ph02-api-architect.md
-- Database Design: .workflow/specs/issue-42-ph03-postgresql-architect.md
+- Database Design: backend/src/main/resources/db/migration/V001__create_dashboard.sql
 ...
 ```
 
 **Schritt 4: Orchestrator gibt `decision:block` aus**
 
 ```json
-{"decision":"block","reason":"Phase 3 DONE. Auto-Advance zu Phase 4. Starte sofort: Task(bytA:spring-boot-developer, 'Phase 4: Implement Backend...')"}
+{"decision":"block","reason":"Phase 1 DONE. Auto-Advance zu Phase 2. Starte sofort: Task(bytA:spring-boot-developer, 'Phase 2: Implement Backend...')"}
 ```
 
 **Schritt 5: Claude fuehrt `Task(bytA:spring-boot-developer, '...')` aus**
@@ -883,23 +841,23 @@ Phase 4: Implement Backend for Issue #42: User Dashboard
 Der Agent startet mit **frischem Context** (Boomerang). Er:
 1. Liest die genannten Spec-Dateien selbst mit dem Read-Tool
 2. Schreibt Java-Code
-3. Schreibt seinen Report als `.workflow/specs/issue-42-ph04-spring-boot-developer.md`
+3. Schreibt seinen Report als `.workflow/specs/issue-42-ph02-spring-boot-developer.md`
 4. Updatet `workflow-state.json`: `context.backendImpl.specFile = "..."`
 5. Gibt "Done." zurueck
 
 **Schritt 6: Stop Hook verifiziert extern**
 
 ```bash
-wf_verify.sh 4
-# → ls .workflow/specs/issue-*-ph04-spring-boot-developer.md
+wf_verify.sh 2
+# → ls .workflow/specs/issue-*-ph02-spring-boot-developer.md
 # → Datei existiert → exit 0 → DONE
 ```
 
-Weiter mit Phase 5 (Auto-Advance).
+Weiter mit Phase 3 (Auto-Advance).
 
 ### 8.3 Warum NUR Pfade und nicht Inhalte?
 
-| Ansatz | Orchestrator-Context | Nach 8 Phasen |
+| Ansatz | Orchestrator-Context | Nach 6 Phasen |
 |---|---|---|
 | Inhalte uebergeben | Waechst pro Phase (~30-50 KB) | ~300 KB → Context Rot |
 | Nur Pfade uebergeben | Konstant (~2.5 KB) | ~2.5 KB → kein Context Rot |
@@ -927,22 +885,18 @@ Der Orchestrator sieht nie den Inhalt einer Spec-Datei. Er kennt nur den **Pfad*
   "modelTier": "fast",
   "uiDesigner": false,
   "ownerSessionId": "abc-123-def",
-  "currentPhase": 4,
+  "currentPhase": 2,
   "startedAt": "2026-02-07T10:00:00Z",
   "phases": {
-    "0": { "name": "Tech Spec", "status": "completed", "completedAt": "..." },
-    "1": { "name": "Wireframes", "status": "completed", "completedAt": "..." },
-    "2": { "name": "API Design", "status": "completed", "completedAt": "..." },
-    "3": { "name": "Migrations", "status": "completed", "completedAt": "..." }
+    "0": { "name": "Planning", "status": "completed", "completedAt": "..." },
+    "1": { "name": "Migrations", "status": "completed", "completedAt": "..." }
   },
   "context": {
     "technicalSpec": { "specFile": ".workflow/specs/issue-42-plan-consolidated.md" },
-    "wireframes": { "paths": ["wireframes/dashboard.html"] },
-    "apiDesign": { "apiDesignFile": ".workflow/specs/issue-42-ph02-api-architect.md" },
-    "migrations": { "databaseFile": ".workflow/specs/issue-42-ph03-postgresql-architect.md" }
+    "migrations": { "databaseFile": "backend/src/main/resources/db/migration/V001__create_dashboard.sql" }
   },
   "recovery": {
-    "phase_4_attempts": 1
+    "phase_2_attempts": 1
   },
   "stopHookBlockCount": 0,
   "pushApproved": false
@@ -969,7 +923,7 @@ Der Orchestrator sieht nie den Inhalt einer Spec-Datei. Er kennt nur den **Pfad*
 | `context.*` | Agents (jq-Befehle am Ende ihres Runs) | `wf_prompt_builder.sh` |
 | `recovery.*` | `wf_orchestrator.sh` (increment/reset_retry) | `wf_orchestrator.sh`, `wf_prompt_builder.sh` |
 | `stopHookBlockCount` | `wf_orchestrator.sh` (output_block) | `wf_orchestrator.sh` (Loop-Prevention) |
-| `pushApproved` | Claude (laut UserPromptSubmit-Anweisung) | `guard_git_push.sh` |
+| `pushApproved` | `wf_advance.sh` (approve bei Phase 7) | `guard_git_push.sh` |
 | `modelTier` | SKILL.md (Startup, User-Wahl) | `wf_prompt_builder.sh` (Phase 0 Model-Auswahl) |
 | `uiDesigner` | SKILL.md (Startup, User-Wahl) | `wf_prompt_builder.sh` (Phase 0 Specialist-Count) |
 | `ownerSessionId` | `wf_orchestrator.sh` (Session Claim), `session_recovery.sh` (Resume) | Alle Blocker-Scripts (Session Isolation) |
@@ -1014,46 +968,41 @@ Der Orchestrator sieht nie den Inhalt einer Spec-Datei. Er kennt nur den **Pfad*
 │ 4. USER REVIEWED SPEC → "OK, weiter"                                    │
 │    UserPromptSubmit Hook → wf_user_prompt.sh                            │
 │    → Injiziert: "BEI APPROVAL: Phase 1 starten"                        │
-│    → Claude setzt status=active, currentPhase=1                         │
-│    → Task(bytA:ui-designer, 'Phase 1...')                               │
+│    → Claude fuehrt wf_advance.sh approve aus                            │
+│    → Auto-Advance Kette startet                                         │
 └───────────────────────────────┬──────────────────────────────────────────┘
                                 │
 ┌───────────────────────────────▼──────────────────────────────────────────┐
-│ 5. PHASE 1 (ui-designer) → APPROVAL                                    │
-│    (gleicher Ablauf wie Phase 0, mit Wireframe-Files als Kriterium)     │
-└───────────────────────────────┬──────────────────────────────────────────┘
-                                │
-┌───────────────────────────────▼──────────────────────────────────────────┐
-│ 6. USER APPROVED WIREFRAMES → Auto-Advance Kette startet               │
+│ 5. AUTO-ADVANCE KETTE                                                    │
 │                                                                          │
-│    Phase 2 (api-architect) ──AUTO──> Phase 3 (postgresql-architect)     │
-│       ──AUTO──> Phase 4 (spring-boot-developer) ──AUTO──>              │
-│    Phase 5 (angular-frontend-developer) ──AUTO──>                       │
-│    Phase 6 (test-engineer)                                              │
+│    Phase 1 (postgresql-architect) ──AUTO──>                              │
+│    Phase 2 (spring-boot-developer) ──AUTO──>                             │
+│    Phase 3 (angular-frontend-developer) ──AUTO──>                        │
+│    Phase 4 (test-engineer)                                               │
 │                                                                          │
 │    Jede Phase: Agent → SubagentStop (WIP-Commit) → Stop Hook           │
 │                → wf_verify.sh → DONE → Auto-Advance → naechster Agent   │
 │                                                                          │
-│    Der User sieht: Phasen rauschen automatisch durch (5 Phasen).       │
+│    Der User sieht: Phasen rauschen automatisch durch (4 Phasen).       │
 │    Pro Phase: ~2-15 Minuten (je nach Komplexitaet).                    │
 └───────────────────────────────┬──────────────────────────────────────────┘
                                 │
 ┌───────────────────────────────▼──────────────────────────────────────────┐
-│ 7. PHASE 7 (security-auditor) → APPROVAL                               │
+│ 6. PHASE 5 (security-auditor) → APPROVAL                               │
 │    User reviewed Security-Findings                                      │
-│    → OK → Phase 8                                                       │
-│    → Security Fixes → Rollback zu Phase 4/5, dann Tests, Re-Audit      │
+│    → OK → Phase 6                                                       │
+│    → Security Fixes → Rollback zu Phase 2/3, dann Tests, Re-Audit      │
 └───────────────────────────────┬──────────────────────────────────────────┘
                                 │
 ┌───────────────────────────────▼──────────────────────────────────────────┐
-│ 8. PHASE 8 (code-reviewer) → APPROVAL                                  │
+│ 7. PHASE 6 (code-reviewer) → APPROVAL                                  │
 │    User reviewed Code Review                                            │
-│    → APPROVED → Phase 9                                                 │
+│    → APPROVED → Phase 7                                                 │
 │    → CHANGES_REQUESTED → Rollback (deterministisch)                     │
 └───────────────────────────────┬──────────────────────────────────────────┘
                                 │
 ┌───────────────────────────────▼──────────────────────────────────────────┐
-│ 9. PHASE 9 (Push & PR) → APPROVAL                                      │
+│ 8. PHASE 7 (Push & PR) → APPROVAL                                      │
 │    Pre-Push Build Gate (mvn verify + npm test + npm run build)          │
 │    User: "Ja, pushen!"                                                  │
 │    → pushApproved = true                                                │
@@ -1079,23 +1028,22 @@ An bestimmten Phasen stoppt der Workflow und wartet auf den User. Der User kann:
 
 | Phase | Warum Approval? |
 |---|---|
-| 0 (Tech Spec) | User muss Architektur-Entscheidungen validieren |
-| 1 (Wireframes) | User muss UI-Design freigeben |
-| 7 (Security) | User muss Security-Findings bewerten |
-| 8 (Code Review) | User muss Code-Qualitaet bestaetigen |
-| 9 (Push & PR) | User muss Push explizit erlauben |
+| 0 (Planning) | User muss Architektur-Entscheidungen validieren |
+| 5 (Security) | User muss Security-Findings bewerten |
+| 6 (Code Review) | User muss Code-Qualitaet bestaetigen |
+| 7 (Push & PR) | User muss Push explizit erlauben |
 
 ### Wie funktioniert ein Approval Gate?
 
 ```
-1. Agent beendet Phase 7 (Security Audit)
+1. Agent beendet Phase 5 (Security Audit)
 2. Stop Hook: wf_verify.sh → Audit-Datei existiert → DONE
-3. Stop Hook: Phase 7 ist APPROVAL → status = "awaiting_approval"
+3. Stop Hook: Phase 5 ist APPROVAL → status = "awaiting_approval"
 4. Stop Hook: exit 0 → Claude stoppt, Sound spielt
 5. User liest Security-Findings
 6. User tippt: "Sieht gut aus, weiter"
 7. UserPromptSubmit Hook feuert: wf_user_prompt.sh
-8. Script erkennt: status=awaiting_approval, Phase=7
+8. Script erkennt: status=awaiting_approval, Phase=5
 9. Script injiziert Anweisungen:
    "BEI APPROVAL: wf_advance.sh approve → gibt EXECUTE: Task(bytA:code-reviewer, '...') aus"
 10. Claude fuehrt wf_advance.sh aus, dann den EXECUTE-Befehl woertlich
@@ -1107,30 +1055,30 @@ An bestimmten Phasen stoppt der Workflow und wartet auf den User. Der User kann:
 
 ### Wann passiert ein Rollback?
 
-Nur an Approval Gates Phase 7 und 8:
-- Phase 7: Security-Findings erfordern Fixes
-- Phase 8: Code Review mit CHANGES_REQUESTED
+Nur an Approval Gates Phase 5 und 6:
+- Phase 5: Security-Findings erfordern Fixes
+- Phase 6: Code Review mit CHANGES_REQUESTED
 
 ### Wie funktioniert der Rollback?
 
-**Deterministisch in `wf_orchestrator.sh` (Phase 8 Spezial):**
+**Deterministisch in `wf_orchestrator.sh` (Phase 6 Spezial):**
 
 ```
 1. Code-Reviewer setzt: reviewFeedback.status = "CHANGES_REQUESTED"
    mit fixes[]: [{type: "backend", file: "path/File.java", issue: "..."}]
 
-2. Stop Hook erkennt: Phase 8 + NOT DONE + CHANGES_REQUESTED
+2. Stop Hook erkennt: Phase 6 + NOT DONE + CHANGES_REQUESTED
 
 3. Rollback-Ziel bestimmen (Dateipfad-Heuristik):
-   .sql → Phase 3 (Database)
-   .java → Phase 4 (Backend)
-   .ts/.html/.scss → Phase 5 (Frontend)
-   Sonst → Phase 6 (Tests)
+   .sql → Phase 1 (Database)
+   .java → Phase 2 (Backend)
+   .ts/.html/.scss → Phase 3 (Frontend)
+   Sonst → Phase 4 (Tests)
 
 4. Context ab Rollback-Ziel loeschen:
-   Ziel <= 5 → del(frontendImpl)
-   Ziel <= 4 → del(backendImpl)
-   Ziel <= 3 → del(migrations)
+   Ziel <= 3 → del(frontendImpl)
+   Ziel <= 2 → del(backendImpl)
+   Ziel <= 1 → del(migrations)
    Immer: del(reviewFeedback, securityAudit, testResults)
 
 5. Spec-Dateien ab Rollback-Ziel loeschen (verhindert stale GLOB-Matches)
@@ -1141,16 +1089,16 @@ Nur an Approval Gates Phase 7 und 8:
    wf_prompt_builder.sh $ROLLBACK_TARGET "$FIXES_TEXT"
    → Agent bekommt: "Fix the following issues: [backend] Add authorization check"
 
-8. Auto-Advance laeuft automatisch von Rollback-Ziel bis Phase 7 (naechstes Gate)
+8. Auto-Advance laeuft automatisch von Rollback-Ziel bis Phase 5 (naechstes Gate)
 ```
 
-### Option C: Heuristik + User-Wahl (Phase 8)
+### Option C: Heuristik + User-Wahl (Phase 6)
 
-Bei Phase 8 bietet `wf_user_prompt.sh` zusaetzlich an:
+Bei Phase 6 bietet `wf_user_prompt.sh` zusaetzlich an:
 
 ```
 OPTION C - VORGESCHLAGENES ROLLBACK-ZIEL:
-→ Phase 4 (Backend) basierend auf betroffenen Dateien:
+→ Phase 2 (Backend) basierend auf betroffenen Dateien:
   path/to/File.java
 User kann bestaetigen oder anderes Ziel waehlen.
 ```
@@ -1192,12 +1140,10 @@ Der Counter wird bei jedem UserPromptSubmit zurueckgesetzt (`wf_user_prompt.sh`)
 Wenn die aktuelle Phase Vorgaenger-Phasen ohne Context hat:
 
 ```
-detect_skipped_phase(4)
+detect_skipped_phase(2)
 → Prueft: Hat Phase 0 Context? Ja (technicalSpec existiert)
-→ Prueft: Hat Phase 1 Context? Ja (wireframes existiert)
-→ Prueft: Hat Phase 2 Context? Ja (apiDesign existiert)
-→ Prueft: Hat Phase 3 Context? NEIN! → Rueckgabe: 3
-→ Orchestrator korrigiert: currentPhase = 3, startet postgresql-architect
+→ Prueft: Hat Phase 1 Context? NEIN! → Rueckgabe: 1
+→ Orchestrator korrigiert: currentPhase = 1, startet postgresql-architect
 ```
 
 ---

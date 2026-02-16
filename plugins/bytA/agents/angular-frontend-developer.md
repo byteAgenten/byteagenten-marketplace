@@ -199,8 +199,6 @@ Du erhältst vom Orchestrator **DATEIPFADE** zu Spec-Dateien. LIES SIE SELBST!
 
 Typische Spec-Dateien:
 - **Technical Spec**: `.workflow/specs/issue-*-plan-consolidated.md`
-- **API Design**: `.workflow/specs/issue-*-ph02-api-architect.md`
-- **Wireframes**: `wireframes/issue-*-*.html`
 
 Metadaten direkt im Prompt: Issue-Nr, Coverage-Ziel.
 Bei Hotfix/Rollback: Fixes aus Review/Security-Audit im HOTFIX CONTEXT Abschnitt.
@@ -211,7 +209,7 @@ Bei Hotfix/Rollback: Fixes aus Review/Security-Audit im HOTFIX CONTEXT Abschnitt
 
 ```bash
 mkdir -p .workflow/specs
-# Dateiname: .workflow/specs/issue-{N}-ph05-angular-frontend-developer.md
+# Dateiname: .workflow/specs/issue-{N}-ph03-angular-frontend-developer.md
 # Inhalt: Alle implementierten Components, Services, Routes, Test-Ergebnisse
 ```
 
@@ -221,11 +219,11 @@ Die MD-Datei ist SINGLE SOURCE OF TRUTH. Downstream-Agents (test-engineer, secur
 
 ```bash
 jq '.context.frontendImpl = {
-  "specFile": ".workflow/specs/issue-42-ph05-angular-frontend-developer.md"
+  "specFile": ".workflow/specs/issue-42-ph03-angular-frontend-developer.md"
 }' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
 mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```
 
 **⚠️ OHNE die MD-Datei schlägt die Phase-Validierung fehl!**
 
-Der Stop-Hook prüft: `ls .workflow/specs/issue-*-ph05-angular-frontend-developer.md`
+Der Stop-Hook prüft: `ls .workflow/specs/issue-*-ph03-angular-frontend-developer.md`

@@ -552,7 +552,6 @@ Du erhältst vom Orchestrator **DATEIPFADE** zu Spec-Dateien. LIES SIE SELBST!
 
 Typische Spec-Dateien:
 - **Technical Spec**: `.workflow/specs/issue-*-plan-consolidated.md`
-- **API Design**: `.workflow/specs/issue-*-ph02-api-architect.md`
 
 Metadaten direkt im Prompt: Issue-Nr.
 Bei Hotfix/Rollback: Fixes im HOTFIX CONTEXT Abschnitt.
@@ -563,7 +562,7 @@ Bei Hotfix/Rollback: Fixes im HOTFIX CONTEXT Abschnitt.
 
 ```bash
 mkdir -p .workflow/specs
-# Dateiname: .workflow/specs/issue-{N}-ph03-postgresql-architect.md
+# Dateiname: .workflow/specs/issue-{N}-ph01-postgresql-architect.md
 # Inhalt: Schema-Übersicht, Tabellen, Indexes, Constraints, Entscheidungen
 ```
 
@@ -573,7 +572,7 @@ Die MD-Datei ist SINGLE SOURCE OF TRUTH. Downstream-Agents (spring-boot-develope
 
 ```bash
 jq '.context.migrations = {
-  "databaseFile": ".workflow/specs/issue-42-ph03-postgresql-architect.md"
+  "databaseFile": ".workflow/specs/issue-42-ph01-postgresql-architect.md"
 }' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
 mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```

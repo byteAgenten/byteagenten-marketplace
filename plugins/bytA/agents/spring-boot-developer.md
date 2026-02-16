@@ -167,7 +167,7 @@ Wenn du Code aenderst, MUSST du die zugehoerigen Tests pruefen und anpassen:
 
 ## API Design Input
 
-**Im Workflow:** Der Orchestrator (Claude) übergibt die API-Skizze aus Phase 2 direkt im Prompt.
+**Im Workflow:** Der Orchestrator (Claude) übergibt die API-Skizze aus der Phase 0 Spec direkt im Prompt.
 
 **Direkter Aufruf:** Falls keine API-Skizze übergeben wurde:
 1. Prüfe existierende Controller für Naming-Patterns
@@ -282,8 +282,6 @@ Du erhältst vom Orchestrator **DATEIPFADE** zu Spec-Dateien. LIES SIE SELBST!
 
 Typische Spec-Dateien:
 - **Technical Spec**: `.workflow/specs/issue-*-plan-consolidated.md`
-- **API Design**: `.workflow/specs/issue-*-ph02-api-architect.md`
-- **Database Design**: `.workflow/specs/issue-*-ph03-postgresql-architect.md`
 
 Metadaten direkt im Prompt: Issue-Nr, Coverage-Ziel.
 Bei Hotfix/Rollback: Fixes aus Review/Security-Audit im HOTFIX CONTEXT Abschnitt.
@@ -294,7 +292,7 @@ Bei Hotfix/Rollback: Fixes aus Review/Security-Audit im HOTFIX CONTEXT Abschnitt
 
 ```bash
 mkdir -p .workflow/specs
-# Dateiname: .workflow/specs/issue-{N}-ph04-spring-boot-developer.md
+# Dateiname: .workflow/specs/issue-{N}-ph02-spring-boot-developer.md
 # Inhalt: Alle implementierten Dateien, Endpoints, DTOs, Test-Ergebnisse
 ```
 
@@ -304,11 +302,11 @@ Die MD-Datei ist SINGLE SOURCE OF TRUTH. Downstream-Agents (test-engineer, secur
 
 ```bash
 jq '.context.backendImpl = {
-  "specFile": ".workflow/specs/issue-42-ph04-spring-boot-developer.md"
+  "specFile": ".workflow/specs/issue-42-ph02-spring-boot-developer.md"
 }' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
 mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```
 
 **⚠️ OHNE die MD-Datei schlägt die Phase-Validierung fehl!**
 
-Der Stop-Hook prüft: `ls .workflow/specs/issue-*-ph04-spring-boot-developer.md`
+Der Stop-Hook prüft: `ls .workflow/specs/issue-*-ph02-spring-boot-developer.md`

@@ -367,7 +367,7 @@ Architecture Decisions:
 Affected Layers: Database [YES/NO] | Backend [YES/NO] | Frontend [YES/NO]
 
 ═══════════════════════════════════════════════════════════════
-Proceed to Phase 1 (UI Design)?
+Proceed to Phase 1 (Migrations)?
 ═══════════════════════════════════════════════════════════════
 ```
 

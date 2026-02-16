@@ -458,8 +458,8 @@ Du erhältst vom Orchestrator **DATEIPFADE** zu Spec-Dateien. LIES SIE SELBST!
 
 Typische Spec-Dateien:
 - **Technical Spec**: `.workflow/specs/issue-*-plan-consolidated.md`
-- **Backend Report**: `.workflow/specs/issue-*-ph04-spring-boot-developer.md`
-- **Frontend Report**: `.workflow/specs/issue-*-ph05-angular-frontend-developer.md`
+- **Backend Report**: `.workflow/specs/issue-*-ph02-spring-boot-developer.md`
+- **Frontend Report**: `.workflow/specs/issue-*-ph03-angular-frontend-developer.md`
 
 Metadaten direkt im Prompt: Issue-Nr.
 
@@ -469,7 +469,7 @@ Metadaten direkt im Prompt: Issue-Nr.
 
 ```bash
 mkdir -p .workflow/specs
-# Dateiname: .workflow/specs/issue-{N}-ph07-security-auditor.md
+# Dateiname: .workflow/specs/issue-{N}-ph05-security-auditor.md
 # Inhalt: Vollständiger Audit-Report (OWASP Checklist, alle Findings, Empfehlungen)
 ```
 
@@ -479,11 +479,11 @@ Die MD-Datei ist SINGLE SOURCE OF TRUTH. Der Code-Reviewer liest diese Datei sel
 
 ```bash
 jq '.context.securityAudit = {
-  "specFile": ".workflow/specs/issue-42-ph07-security-auditor.md"
+  "specFile": ".workflow/specs/issue-42-ph05-security-auditor.md"
 }' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
 mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```
 
 **⚠️ OHNE die MD-Datei schlägt die Phase-Validierung fehl!**
 
-Der Stop-Hook prüft: `ls .workflow/specs/issue-*-ph07-security-auditor.md`
+Der Stop-Hook prüft: `ls .workflow/specs/issue-*-ph05-security-auditor.md`

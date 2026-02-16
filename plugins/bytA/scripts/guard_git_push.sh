@@ -62,5 +62,5 @@ LOG_DIR=".workflow/logs"
 mkdir -p "$LOG_DIR" 2>/dev/null || true
 echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] BLOCKED: $COMMAND (pushApproved=$PUSH_APPROVED)" >> "$LOG_DIR/hooks.log"
 
-echo "PUSH BLOCKIERT! Workflow aktiv (Phase $(jq -r '.currentPhase' "$WORKFLOW_FILE")). Git push/PR ist nur in Phase 9 mit pushApproved=true erlaubt." >&2
+echo "PUSH BLOCKIERT! Workflow aktiv (Phase $(jq -r '.currentPhase' "$WORKFLOW_FILE")). Git push/PR ist nur in Phase 7 mit pushApproved=true erlaubt." >&2
 exit 2

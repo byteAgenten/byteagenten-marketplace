@@ -1,8 +1,8 @@
 # bytA Plugin
 
-**Version 4.0.1** | Deterministic Orchestration: Boomerang + Ralph-Loop + Team Planning
+**Version 4.1.0** | Deterministic Orchestration: Boomerang + Ralph-Loop + Team Planning
 
-Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 10-Phasen-Workflow und Team-basiertem Planning.
+Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 8-Phasen-Workflow und Team-basiertem Planning.
 
 ## Architektur
 
@@ -42,7 +42,7 @@ Der Orchestrator ist ein **Bash-Script**, kein LLM. Claude dient nur als Transpo
 
 | Command | Beschreibung |
 |---------|-------------|
-| `/bytA:feature` | Deterministischer 10-Phasen-Workflow fuer Full-Stack Features |
+| `/bytA:feature` | Deterministischer 8-Phasen-Workflow fuer Full-Stack Features |
 | `/bytA:prd-generator` | PRD-Generator: Product Requirements Documents + GitHub Issues |
 
 ## Workflow
@@ -56,15 +56,13 @@ Der Orchestrator ist ein **Bash-Script**, kein LLM. Claude dient nur als Transpo
 | Phase | Agent | Typ | Done-Kriterium |
 |-------|-------|-----|----------------|
 | 0 | team-planning (Hub-and-Spoke) | APPROVAL | Consolidated Spec existiert |
-| 1 | ui-designer | APPROVAL | Issue-prefixed Wireframe HTML existiert |
-| 2 | api-architect | AUTO | API-Spec existiert |
-| 3 | postgresql-architect | AUTO | Migration SQL existiert |
-| 4 | spring-boot-developer | AUTO | Backend-Report MD existiert |
-| 5 | angular-frontend-developer | AUTO | Frontend-Report MD existiert |
-| 6 | test-engineer | AUTO | allPassed == true + Report-Datei existiert |
-| 7 | security-auditor | APPROVAL | Audit-Datei existiert |
-| 8 | code-reviewer | APPROVAL | Review-Datei existiert |
-| 9 | Push & PR | APPROVAL | PR URL in State |
+| 1 | postgresql-architect | AUTO | Migration SQL existiert |
+| 2 | spring-boot-developer | AUTO | Backend-Report MD existiert |
+| 3 | angular-frontend-developer | AUTO | Frontend-Report MD existiert |
+| 4 | test-engineer | AUTO | allPassed == true + Report-Datei existiert |
+| 5 | security-auditor | APPROVAL | Audit-Datei existiert |
+| 6 | code-reviewer | APPROVAL | Review-Datei existiert |
+| 7 | Push & PR | APPROVAL | PR URL in State |
 
 **APPROVAL** = User muss approven (Workflow pausiert)
 **AUTO** = Externe Verifikation, dann naechste Phase automatisch
@@ -97,21 +95,16 @@ und schreibt die konsolidierte Spec. Der User-Model-Tier bestimmt ob Sonnet oder
 ### Ablauf-Diagramm
 
 ```
-Phase 0 (Team Plan) ──[User Approval]──→ Phase 1 (Wireframes)
-                                              │
-                                        [User Approval]
-                                              │
-                                              ▼
-Phase 2 (API) → Phase 3 (DB) → Phase 4 (Backend) → Phase 5 (Frontend) → Phase 6 (Tests)
-   AUTO           AUTO           AUTO                  AUTO                  AUTO
-                                              │
-                                              ▼
-Phase 7 (Security) ──[User Approval]──→ Phase 8 (Review) ──[User Approval]──→ Phase 9 (PR)
+Phase 0 (Team Plan) ──[User Approval]──→ Phase 1 (DB) → Phase 2 (Backend) → Phase 3 (Frontend) → Phase 4 (Tests)
+                                           AUTO           AUTO                  AUTO                  AUTO
+                                                                                                       │
+                                                                                                       ▼
+                                        Phase 5 (Security) ──[User Approval]──→ Phase 6 (Review) ──[User Approval]──→ Phase 7 (PR)
 ```
 
 ### Rollback (Option C: Heuristik + User-Wahl)
 
-Bei Phase 7/8 kann der User aendern lassen:
+Bei Phase 5/6 kann der User aendern lassen:
 1. Shell-Script schlaegt Rollback-Ziel vor (basierend auf betroffenen Dateipfaden)
 2. User bestaetigt oder waehlt anderes Ziel
 3. State wird deterministisch bereinigt (alle downstream Phasen geloescht)
@@ -161,14 +154,13 @@ Nach Context-Compaction verliert Claude die SKILL.md-Instruktionen. Der `Session
 | Agent | Phase | Aufgabe |
 |-------|-------|---------|
 | architect-planner | 0 (Hub) | Konsolidierung, Konsistenz-Pruefung, Phase-Skipping, Tech Spec |
-| spring-boot-developer | 0 (Spoke), 4 | Backend-Plan (Phase 0), Implementation (Phase 4) |
-| angular-frontend-developer | 0 (Spoke), 5 | Frontend-Plan (Phase 0), Implementation (Phase 5) |
-| test-engineer | 0 (Spoke), 6 | Test Impact Analysis (Phase 0), E2E Tests (Phase 6) |
-| ui-designer | 0 (optional), 1 | Wireframe-Plan (Phase 0), Wireframes (Phase 1) |
-| api-architect | 2 | REST API Design (Markdown-Sketch, kein YAML) |
-| postgresql-architect | 3 | Flyway SQL Migrations, Schema, Indexes |
-| security-auditor | 7 | OWASP Top 10 Security Audit |
-| code-reviewer | 8 | Code Quality Gate (SOLID, Coverage, Architecture) |
+| spring-boot-developer | 0 (Spoke), 2 | Backend-Plan (Phase 0), Implementation (Phase 2) |
+| angular-frontend-developer | 0 (Spoke), 3 | Frontend-Plan (Phase 0), Implementation (Phase 3) |
+| test-engineer | 0 (Spoke), 4 | Test Impact Analysis (Phase 0), E2E Tests (Phase 4) |
+| ui-designer | 0 (optional Spoke) | Wireframe-Plan + data-testid (Phase 0) |
+| postgresql-architect | 1 | Flyway SQL Migrations, Schema, Indexes |
+| security-auditor | 5 | OWASP Top 10 Security Audit |
+| code-reviewer | 6 | Code Quality Gate (SOLID, Coverage, Architecture) |
 | architect-reviewer | - | Eskalation bei Architektur-Concerns |
 
 ## Externe Verifikation (kein LLM!)
@@ -178,19 +170,17 @@ Done-Kriterien werden von `wf_verify.sh` extern geprueft:
 | Phase | Pruefung | Methode |
 |-------|----------|---------|
 | 0 | Consolidated Spec | `ls .workflow/specs/*-plan-consolidated.md` |
-| 1 | Wireframe | `ls wireframes/issue-*.html` |
-| 2 | API-Spec | `ls .workflow/specs/*-ph02-*.md` |
-| 3 | Migration | `ls backend/.../V*.sql` |
-| 4 | Backend-Report | `ls .workflow/specs/*-ph04-*.md` |
-| 5 | Frontend-Report | `ls .workflow/specs/*-ph05-*.md` |
-| 6 | Tests bestanden | `jq .context.testResults.allPassed` + `ls .workflow/specs/*-ph06-*.md` |
-| 7 | Audit-Datei | `ls .workflow/specs/*-ph07-*.md` |
-| 8 | Review-Datei | `ls .workflow/specs/*-ph08-*.md` |
-| 9 | PR URL | `jq .phases["9"].prUrl` |
+| 1 | Migration | `ls backend/.../V*.sql` |
+| 2 | Backend-Report | `ls .workflow/specs/*-ph02-*.md` |
+| 3 | Frontend-Report | `ls .workflow/specs/*-ph03-*.md` |
+| 4 | Tests bestanden | `jq .context.testResults.allPassed` + `ls .workflow/specs/*-ph04-*.md` |
+| 5 | Audit-Datei | `ls .workflow/specs/*-ph05-*.md` |
+| 6 | Review-Datei | `ls .workflow/specs/*-ph06-*.md` |
+| 7 | PR URL | `jq .phases["7"].prUrl` |
 
 ### Compound-Kriterien (v3.3.0)
 
-Phase 6 nutzt ein Compound-Kriterium (`+` Separator): STATE und GLOB muessen BEIDE bestanden werden.
+Phase 4 nutzt ein Compound-Kriterium (`+` Separator): STATE und GLOB muessen BEIDE bestanden werden.
 `wf_verify.sh` unterstuetzt beliebige Kombinationen: `STATE:...+GLOB:...+VERIFY:...`
 
 ### Status-Bypass Guard (v3.3.0)
@@ -220,7 +210,7 @@ Betroffene Scripts: `wf_orchestrator.sh`, `wf_user_prompt.sh`, `subagent_done.sh
 
 ### Deterministic Approval-Advance (v3.7.0)
 
-Alle Approval-Phasen (0, 1, 7, 8, 9) nutzen `wf_advance.sh` fuer deterministische State-Manipulation.
+Alle Approval-Phasen (0, 5, 6, 7) nutzen `wf_advance.sh` fuer deterministische State-Manipulation.
 Claude fuehrt nur noch **einen einzigen Bash-Befehl** aus statt 3-4 manuelle jq-Befehle:
 
 ```bash
@@ -241,11 +231,11 @@ triggern. Die Lock-Datei `.workflow/.advancing` verhindert re-entrant Orchestrat
 ### Phase Skipping (v3.3.0)
 
 Phase 0 (Architect im Team) kann Phasen als `"skipped"` markieren, wenn sie nicht benoetigt werden
-(z.B. keine DB-Aenderungen → Phase 3 skippen). Der Orchestrator (`wf_orchestrator.sh`) erkennt
+(z.B. keine DB-Aenderungen → Phase 1 skippen). Der Orchestrator (`wf_orchestrator.sh`) erkennt
 pre-geskippte Phasen und ueberspringt sie automatisch — auch ueber APPROVAL-Gates hinweg.
 
-Skippbare Phasen: 1 (Wireframes), 2 (API), 3 (DB), 4 (Backend), 5 (Frontend).
-Nicht skippbar: 0 (Spec), 6 (Tests), 7 (Security), 8 (Review), 9 (Push & PR).
+Skippbare Phasen: 1 (DB), 2 (Backend), 3 (Frontend).
+Nicht skippbar: 0 (Spec), 4 (Tests), 5 (Security), 6 (Review), 7 (Push & PR).
 
 ### Agent-Reports (MD-Dateien)
 
@@ -259,13 +249,11 @@ Der Orchestrator sieht nur den **Dateipfad** (wenige Bytes) — kein Context-Wac
 ├── issue-42-plan-backend.md               ← Backend Plan (Phase 0 Spoke)
 ├── issue-42-plan-frontend.md              ← Frontend Plan (Phase 0 Spoke)
 ├── issue-42-plan-quality.md               ← Quality Plan (Phase 0 Spoke)
-├── issue-42-ph02-api-architect.md         ← API Design
-├── issue-42-ph03-postgresql-architect.md   ← Database Design
-├── issue-42-ph04-spring-boot-developer.md  ← Backend Report
-├── issue-42-ph05-angular-frontend-developer.md ← Frontend Report
-├── issue-42-ph06-test-engineer.md         ← Test Report
-├── issue-42-ph07-security-auditor.md      ← Security Audit
-└── issue-42-ph08-code-reviewer.md         ← Code Review
+├── issue-42-ph02-spring-boot-developer.md  ← Backend Report
+├── issue-42-ph03-angular-frontend-developer.md ← Frontend Report
+├── issue-42-ph04-test-engineer.md         ← Test Report
+├── issue-42-ph05-security-auditor.md      ← Security Audit
+└── issue-42-ph06-code-reviewer.md         ← Code Review
 ```
 
 ## Struktur
