@@ -313,7 +313,7 @@ $([ -n "$WIREFRAMES" ] && echo "- Wireframes: $WIREFRAMES")
 context.frontendImpl = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-ph03-angular-frontend-developer.md"}
 
 ## YOUR TASK
-Implement Angular 21+ components, services, routing. Use Signals, inject(). Add data-testid on ALL interactive elements. Run npm test before completing. MANDATORY: Load current docs via Context7 + Angular CLI MCP BEFORE coding.
+Implement ALL functional requirements from the Technical Spec. Use Angular 21+, Signals, inject(). Add data-testid on ALL interactive elements. Run npm test before completing. MANDATORY: Load current docs via Context7 + Angular CLI MCP BEFORE coding.
 $RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
 EOF
     ;;

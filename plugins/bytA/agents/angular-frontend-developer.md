@@ -172,6 +172,8 @@ Wenn du Code aenderst, MUSST du die zugehoerigen Tests pruefen und anpassen:
 **Service:** `ng generate` → Backend-Controller lesen → Interface → Implementation → Tests
 
 **Vor Abschluss:**
+1. **Spec-Compliance:** Lies die Technical Spec NOCHMAL. Gehe JEDE funktionale Anforderung durch und pruefe ob sie implementiert ist. Fehlende Anforderungen JETZT implementieren.
+2. **Checks:**
 ```bash
 grep -r "template:\s*\`\|styles:\s*\[" src/app --include="*.ts"  # muss leer sein!
 npm run lint && npm test -- --no-watch --browsers=ChromeHeadless && npm run build
@@ -210,7 +212,13 @@ Bei Hotfix/Rollback: Fixes aus Review/Security-Audit im HOTFIX CONTEXT Abschnitt
 ```bash
 mkdir -p .workflow/specs
 # Dateiname: .workflow/specs/issue-{N}-ph03-angular-frontend-developer.md
-# Inhalt: Alle implementierten Components, Services, Routes, Test-Ergebnisse
+# Inhalt:
+# 1. Requirements Map (JEDE Anforderung aus der Spec mit Status + Datei):
+#    | # | Anforderung | Status | Datei |
+#    |---|-------------|--------|-------|
+#    | 1 | Phone CRUD  | done   | phone.component.ts |
+# 2. Implementierte Components, Services, Routes
+# 3. Test-Ergebnisse (npm test Output, Coverage %)
 ```
 
 Die MD-Datei ist SINGLE SOURCE OF TRUTH. Downstream-Agents (test-engineer, security-auditor, code-reviewer) lesen diese Datei selbst via Read-Tool.
