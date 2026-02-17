@@ -62,5 +62,12 @@ LOG_DIR=".workflow/logs"
 mkdir -p "$LOG_DIR" 2>/dev/null || true
 echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] BLOCKED: $COMMAND (pushApproved=$PUSH_APPROVED)" >> "$LOG_DIR/hooks.log"
 
-echo "PUSH BLOCKIERT! Workflow aktiv (Phase $(jq -r '.currentPhase' "$WORKFLOW_FILE")). Git push/PR ist nur in Phase 7 mit pushApproved=true erlaubt." >&2
-exit 2
+# JSON deny Pattern (zuverlaessiger als exit 2, siehe GitHub #13744)
+CURRENT_PHASE=$(jq -r '.currentPhase // "?"' "$WORKFLOW_FILE" 2>/dev/null || echo "?")
+jq -n --arg phase "$CURRENT_PHASE" '{
+  hookSpecificOutput: {
+    hookEventName: "PreToolUse",
+    permissionDecision: "deny",
+    permissionDecisionReason: ("Git Push blockiert. Workflow aktiv (Phase " + $phase + "). Push ist nur in Phase 7 nach User-Approval erlaubt (pushApproved=true). Sage Done. und der Stop-Hook uebernimmt.")
+  }
+}'
