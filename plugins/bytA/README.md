@@ -1,6 +1,6 @@
 # bytA Plugin
 
-**Version 4.3.0** | Deterministic Orchestration: Boomerang + Ralph-Loop + Team Planning
+**Version 4.4.0** | Deterministic Orchestration: Boomerang + Ralph-Loop + Team Planning
 
 Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 8-Phasen-Workflow und Team-basiertem Planning.
 
@@ -242,6 +242,24 @@ pre-geskippte Phasen und ueberspringt sie automatisch — auch ueber APPROVAL-Ga
 
 Skippbare Phasen: 1 (DB), 2 (Backend), 3 (Frontend).
 Nicht skippbar: 0 (Spec), 4 (Tests), 5 (Security), 6 (Review), 7 (Push & PR).
+
+### Scope-basiertes Phase Skipping (v4.4.0)
+
+Beim Workflow-Start waehlt der User den Issue-Scope als 5. Startup-Frage:
+
+| Scope | Phases uebersprungen | Specialists uebersprungen | Wann nutzen? |
+|-------|---------------------|--------------------------|--------------|
+| Full-Stack (default) | Architect entscheidet | Keine | Standard, alle Bereiche betroffen |
+| Frontend-only | Phase 1 (DB) + Phase 2 (Backend) | Backend-Specialist | Nur Angular-Aenderungen |
+| Backend-only | Phase 3 (Frontend) | Frontend + UI Designer | Nur Spring-Boot-Aenderungen |
+
+Der Scope wird in `workflow-state.json` als `"scope"` Feld gespeichert. Die Phase Pre-Skips
+werden deterministisch in SKILL.md VOR Phase 0 ausgefuehrt (jq-Befehle). `wf_prompt_builder.sh`
+liest den Scope und spawnt nur die benoetigten Specialist-Agents in Phase 0.
+
+Die Rollback-Reset-Logik (`wf_advance.sh`) unterscheidet zwischen Scope-Skips
+(`reason: "Frontend-only scope"`) und Fast-Rollback-Skips (`reason: "fast-rollback"`).
+Nur Fast-Rollback-Skips werden bei einem vollen Rollback zurueckgesetzt.
 
 ### Agent-Reports (MD-Dateien)
 

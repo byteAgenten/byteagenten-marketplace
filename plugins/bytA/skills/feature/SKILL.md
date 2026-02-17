@@ -60,12 +60,13 @@ grep -q "^\.workflow/" .gitignore 2>/dev/null || echo ".workflow/" >> .gitignore
 git fetch --prune
 ```
 
-**Frage den User nach 4 Einstellungen (EIN AskUserQuestion-Call, WARTE auf Antwort!):**
+**Frage den User nach 5 Einstellungen (EIN AskUserQuestion-Call, WARTE auf Antwort!):**
 
 1. "Von welchem Branch starten?" — Optionen: main (default) / develop
 2. "Coverage-Ziel?" — Optionen: 50% / 70% (default) / 85% / 95%
 3. "Welches Model fuer Agents?" — Optionen: fast (Sonnet, default) / quality (Opus)
 4. "UI Designer einschliessen? (Wireframe + data-testid)" — Optionen: Nein (default) / Ja
+5. "Issue Scope?" — Optionen: Full-Stack (default) / Frontend-only / Backend-only
 
 ### Schritt 4: Issue laden
 
@@ -89,6 +90,7 @@ cat > .workflow/workflow-state.json << EOF
   "targetCoverage": COVERAGE,
   "modelTier": "MODEL_TIER",
   "uiDesigner": UI_DESIGNER_BOOL,
+  "scope": "SCOPE_VALUE",
   "currentPhase": 0,
   "startedAt": "$STARTED_AT",
   "phases": {},
@@ -101,6 +103,24 @@ git checkout -b feature/issue-ISSUE_NUM-kurzer-name FROM_BRANCH
 ```
 
 Branch-Prefix: `feature/` fuer Features, `fix/` fuer Bugs, `refactor/` fuer Refactorings.
+
+### Schritt 5b: Phase Pre-Skip basierend auf Scope
+
+Basierend auf dem gewaehlten Scope, fuehre die entsprechenden jq-Befehle aus:
+
+- Falls Scope = "frontend-only":
+
+```bash
+jq '.phases["1"] = {"name":"postgresql-architect","status":"skipped","reason":"Frontend-only scope"} | .context.migrations = {"skipped":true,"reason":"Frontend-only scope"} | .phases["2"] = {"name":"spring-boot-developer","status":"skipped","reason":"Frontend-only scope"} | .context.backendImpl = {"skipped":true,"reason":"Frontend-only scope"}' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
+```
+
+- Falls Scope = "backend-only":
+
+```bash
+jq '.phases["3"] = {"name":"angular-frontend-developer","status":"skipped","reason":"Backend-only scope"} | .context.frontendImpl = {"skipped":true,"reason":"Backend-only scope"}' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
+```
+
+- Falls Scope = "full-stack": Keine Phase Pre-Skips (Architect entscheidet spaeter).
 
 ### Schritt 6: Phase 0 starten
 

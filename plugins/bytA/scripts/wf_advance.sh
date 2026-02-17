@@ -416,7 +416,7 @@ rollback)
   RESET_CMD=""
   _RP=$((TARGET + 1))
   while [ "$_RP" -lt "$APPROVAL_PHASE" ]; do
-    RESET_CMD="$RESET_CMD | if .phases[\"$_RP\"].status == \"skipped\" then del(.phases[\"$_RP\"]) else . end"
+    RESET_CMD="$RESET_CMD | if .phases[\"$_RP\"].reason == \"fast-rollback\" then del(.phases[\"$_RP\"]) else . end"
     _RP=$((_RP + 1))
   done
 

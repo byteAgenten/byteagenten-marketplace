@@ -99,6 +99,7 @@ case $PHASE in
     # Lese Team-Konfiguration aus workflow-state.json
     MODEL_TIER=$(jq -r '.modelTier // "fast"' "$WORKFLOW_FILE")
     UI_DESIGNER_OPT=$(jq -r '.uiDesigner // false' "$WORKFLOW_FILE")
+    SCOPE=$(jq -r '.scope // "full-stack"' "$WORKFLOW_FILE")
 
     # Model bestimmen
     if [ "$MODEL_TIER" = "quality" ]; then
@@ -107,10 +108,70 @@ case $PHASE in
       MODEL="sonnet"
     fi
 
-    # Specialist-Count + UI-Designer Block
+    # ─── Specialist Count berechnen (Basis: quality ist immer dabei) ─────
+    SPECIALIST_COUNT=1
+    [ "$SCOPE" != "frontend-only" ] && SPECIALIST_COUNT=$((SPECIALIST_COUNT + 1))  # backend
+    [ "$SCOPE" != "backend-only" ] && SPECIALIST_COUNT=$((SPECIALIST_COUNT + 1))   # frontend
+
+    # ─── Backend Specialist (nicht bei frontend-only) ────────────────────
+    BACKEND_BLOCK=""
+    BACKEND_PLAN_READ=""
+    BACKEND_PLAN_VERIFY=""
+    BACKEND_SHUTDOWN=""
+    if [ "$SCOPE" != "frontend-only" ]; then
+      BACKEND_BLOCK="
+--- SPECIALIST: backend ---
+Agent: bytA:spring-boot-developer
+Name: backend
+Prompt: |
+  ROUND 1: PLAN for Issue #${ISSUE_NUM} - ${ISSUE_TITLE}.
+  Target Coverage: ${TARGET_COV}%.
+  Analyze the codebase. Plan: DB schema changes, new/modified entities, services, controllers, endpoint signatures, Flyway migrations, test approach.
+  Write full plan to .workflow/specs/issue-${ISSUE_NUM}-plan-backend.md
+  Then send SHORT SUMMARY (max 20 lines) to teammate \"architect\" via SendMessage.
+  Summary must include: entity count, endpoint count, migration version.
+  After sending, say 'Done.'
+"
+      BACKEND_PLAN_READ="
+     - .workflow/specs/issue-${ISSUE_NUM}-plan-backend.md"
+      BACKEND_PLAN_VERIFY="
+  .workflow/specs/issue-${ISSUE_NUM}-plan-backend.md"
+      BACKEND_SHUTDOWN="backend, "
+    fi
+
+    # ─── Frontend Specialist (nicht bei backend-only) ────────────────────
+    FRONTEND_BLOCK=""
+    FRONTEND_PLAN_READ=""
+    FRONTEND_PLAN_VERIFY=""
+    FRONTEND_SHUTDOWN=""
+    if [ "$SCOPE" != "backend-only" ]; then
+      FRONTEND_BLOCK="
+--- SPECIALIST: frontend ---
+Agent: bytA:angular-frontend-developer
+Name: frontend
+Prompt: |
+  ROUND 1: PLAN for Issue #${ISSUE_NUM} - ${ISSUE_TITLE}.
+  Target Coverage: ${TARGET_COV}%.
+  Analyze the codebase. Plan: new/modified components, services, routing, state management, data-testid attributes.
+  Write full plan to .workflow/specs/issue-${ISSUE_NUM}-plan-frontend.md
+  Then send SHORT SUMMARY (max 20 lines) to teammate \"architect\" via SendMessage.
+  Summary must include: component count, new routes, service count.
+  After sending, say 'Done.'
+"
+      FRONTEND_PLAN_READ="
+     - .workflow/specs/issue-${ISSUE_NUM}-plan-frontend.md"
+      FRONTEND_PLAN_VERIFY="
+  .workflow/specs/issue-${ISSUE_NUM}-plan-frontend.md"
+      FRONTEND_SHUTDOWN="frontend, "
+    fi
+
+    # ─── UI Designer (nur wenn aktiviert UND Frontend dabei) ─────────────
     UI_DESIGNER_BLOCK=""
-    if [ "$UI_DESIGNER_OPT" = "true" ]; then
-      SPECIALIST_COUNT=4
+    UI_PLAN_READ=""
+    UI_SHUTDOWN=""
+    WIREFRAME_SECTION=""
+    if [ "$UI_DESIGNER_OPT" = "true" ] && [ "$SCOPE" != "backend-only" ]; then
+      SPECIALIST_COUNT=$((SPECIALIST_COUNT + 1))
       UI_DESIGNER_BLOCK="
 --- SPECIALIST: ui ---
 Agent: bytA:ui-designer
@@ -128,12 +189,35 @@ Prompt: |
   Summary must include: number of data-testid attributes, Material components used.
   After sending, say 'Done.'
 "
-    else
-      SPECIALIST_COUNT=3
+      UI_PLAN_READ="
+     - .workflow/specs/issue-${ISSUE_NUM}-plan-ui.md"
+      UI_SHUTDOWN="ui, "
+      WIREFRAME_SECTION="
+     - ## Wireframe Reference (path to wireframe HTML)"
     fi
 
-    # Phase-Skipping Block (wiederverwendbar fuer Architect)
-    PHASE_SKIP_BLOCK="
+    # ─── Phase-Skipping Block (scope-bedingt) ────────────────────────────
+    case "$SCOPE" in
+      "frontend-only")
+        PHASE_SKIP_BLOCK="
+## PHASE SKIPPING
+Phase 1 (DB) und Phase 2 (Backend) sind bereits uebersprungen (Scope: frontend-only).
+Pruefe ob WEITERE Phasen uebersprungen werden koennen.
+NIEMALS skippen: Phase 0, 3 (Frontend), 4 (Tests), 5 (Security), 6 (Review), 7 (Push & PR)."
+        ;;
+      "backend-only")
+        PHASE_SKIP_BLOCK="
+## PHASE SKIPPING
+Phase 3 (Frontend) ist bereits uebersprungen (Scope: backend-only).
+Pruefe ob Phase 1 (DB) uebersprungen werden kann (keine DB-Aenderungen?).
+
+Beispiel (Phase 1 skippen):
+  jq '.phases[\"1\"] = {\"name\":\"postgresql-architect\",\"status\":\"skipped\",\"reason\":\"Keine DB-Aenderungen\"} | .context.migrations = {\"skipped\":true,\"reason\":\"Keine DB-Aenderungen\"}' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
+
+NIEMALS skippen: Phase 0, 2 (Backend), 4 (Tests), 5 (Security), 6 (Review), 7 (Push & PR)."
+        ;;
+      *)
+        PHASE_SKIP_BLOCK="
 ## PHASE SKIPPING (PFLICHT bei nicht benoetigten Phasen!)
 Wenn bestimmte Phasen fuer dieses Issue NICHT benoetigt werden, MUSST du sie pre-skippen.
 Fuehre fuer JEDE nicht benoetigte Phase einen jq-Befehl aus:
@@ -149,38 +233,17 @@ Skip-Referenz:
 | 3 | angular-frontend-developer | frontendImpl | Kein Frontend betroffen |
 
 NIEMALS skippen: Phase 0, 4 (Tests), 5 (Security), 6 (Review), 7 (Push & PR)."
+        ;;
+    esac
 
     cat << TEAM_EOF
 === PHASE 0: TEAM PLANNING PROTOCOL ===
 
 TEAM_NAME: bytA-plan-${ISSUE_NUM}
 MODEL: ${MODEL}
+SCOPE: ${SCOPE}
 SPECIALIST_COUNT: ${SPECIALIST_COUNT}
-
---- SPECIALIST: backend ---
-Agent: bytA:spring-boot-developer
-Name: backend
-Prompt: |
-  ROUND 1: PLAN for Issue #${ISSUE_NUM} - ${ISSUE_TITLE}.
-  Target Coverage: ${TARGET_COV}%.
-  Analyze the codebase. Plan: DB schema changes, new/modified entities, services, controllers, endpoint signatures, Flyway migrations, test approach.
-  Write full plan to .workflow/specs/issue-${ISSUE_NUM}-plan-backend.md
-  Then send SHORT SUMMARY (max 20 lines) to teammate "architect" via SendMessage.
-  Summary must include: entity count, endpoint count, migration version.
-  After sending, say 'Done.'
-
---- SPECIALIST: frontend ---
-Agent: bytA:angular-frontend-developer
-Name: frontend
-Prompt: |
-  ROUND 1: PLAN for Issue #${ISSUE_NUM} - ${ISSUE_TITLE}.
-  Target Coverage: ${TARGET_COV}%.
-  Analyze the codebase. Plan: new/modified components, services, routing, state management, data-testid attributes.
-  Write full plan to .workflow/specs/issue-${ISSUE_NUM}-plan-frontend.md
-  Then send SHORT SUMMARY (max 20 lines) to teammate "architect" via SendMessage.
-  Summary must include: component count, new routes, service count.
-  After sending, say 'Done.'
-
+${BACKEND_BLOCK}${FRONTEND_BLOCK}
 --- SPECIALIST: quality ---
 Agent: bytA:test-engineer
 Name: quality
@@ -201,47 +264,42 @@ Name: architect
 Prompt: |
   ROUND 1: PLAN (Consolidator) for Issue #${ISSUE_NUM} - ${ISSUE_TITLE}.
   Target Coverage: ${TARGET_COV}%.
+  Scope: ${SCOPE}
 
   You are the HUB in a Hub-and-Spoke planning team.
   You will receive ${SPECIALIST_COUNT} plan summaries via SendMessage from teammates.
   WAIT for ALL ${SPECIALIST_COUNT} summaries before proceeding.
 
   After receiving all summaries:
-  1. Read full plans from disk INCREMENTALLY (one at a time):
-     - .workflow/specs/issue-${ISSUE_NUM}-plan-backend.md
-     - .workflow/specs/issue-${ISSUE_NUM}-plan-frontend.md
-     - .workflow/specs/issue-${ISSUE_NUM}-plan-quality.md$([ "$UI_DESIGNER_OPT" = "true" ] && echo "
-     - .workflow/specs/issue-${ISSUE_NUM}-plan-ui.md")
-  2. Validate CONSISTENCY:
+  1. Read full plans from disk INCREMENTALLY (one at a time):${BACKEND_PLAN_READ}${FRONTEND_PLAN_READ}
+     - .workflow/specs/issue-${ISSUE_NUM}-plan-quality.md${UI_PLAN_READ}
+  2. Validate CONSISTENCY (between existing plans):
      - Endpoints match between backend and frontend (field names, types, URLs)
      - DTOs match (same field names, same types)
      - data-testid from wireframe match E2E test selectors
   3. If CONFLICTS found: SendMessage to affected specialist, wait for correction
   4. Write CONSOLIDATED SPEC to .workflow/specs/issue-${ISSUE_NUM}-plan-consolidated.md
-     MUST contain these sections:
+     MUST contain appropriate sections for scope "${SCOPE}":
      - ## Architecture Overview
+     - ## Implementation Scope (${SCOPE})
+     - ## Existing Tests to Update (from quality plan)$([ "$SCOPE" != "frontend-only" ] && echo "
      - ## API Contract
-     - ## Data Model
-     - ## Frontend Structure
-     - ## Implementation Scope (backend-only / frontend-only / full-stack)
-     - ## Existing Tests to Update (from quality plan)$([ "$UI_DESIGNER_OPT" = "true" ] && echo "
-     - ## Wireframe Reference (path to wireframe HTML)")
+     - ## Data Model")$([ "$SCOPE" != "backend-only" ] && echo "
+     - ## Frontend Structure")${WIREFRAME_SECTION}
   5. Set context key:
-     jq '.context.technicalSpec = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-plan-consolidated.md"}$([ "$UI_DESIGNER_OPT" = "true" ] && echo " | .context.wireframes = {\"paths\":[\"wireframes/issue-${ISSUE_NUM}-plan-ui.html\"]}")' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
+     jq '.context.technicalSpec = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-plan-consolidated.md","scope":"${SCOPE}"}$([ "$UI_DESIGNER_OPT" = "true" ] && [ "$SCOPE" != "backend-only" ] && echo " | .context.wireframes = {\"paths\":[\"wireframes/issue-${ISSUE_NUM}-plan-ui.html\"]}")' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
   6. Execute Phase Skipping:
 ${PHASE_SKIP_BLOCK}
   After writing consolidated spec and executing phase skipping, say 'Done.'
 
 --- VERIFY ---
 Files that MUST exist after team completes:
-  .workflow/specs/issue-${ISSUE_NUM}-plan-consolidated.md
-  .workflow/specs/issue-${ISSUE_NUM}-plan-backend.md
-  .workflow/specs/issue-${ISSUE_NUM}-plan-frontend.md
+  .workflow/specs/issue-${ISSUE_NUM}-plan-consolidated.md${BACKEND_PLAN_VERIFY}${FRONTEND_PLAN_VERIFY}
   .workflow/specs/issue-${ISSUE_NUM}-plan-quality.md
 
 --- CLEANUP ---
 After architect says 'Done.':
-1. Send shutdown_request to ALL teammates (backend, frontend, quality$([ "$UI_DESIGNER_OPT" = "true" ] && echo ", ui"), architect)
+1. Send shutdown_request to ALL teammates (${BACKEND_SHUTDOWN}${FRONTEND_SHUTDOWN}quality, ${UI_SHUTDOWN}architect)
 2. TeamDelete (ignore errors — agents may already be gone)
 3. Say "Done."
 $RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
