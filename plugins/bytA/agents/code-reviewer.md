@@ -121,7 +121,7 @@ Dies MUSS als erstes im Review-Output erscheinen, damit der User weiß, gegen we
 │  3. npm run build ausführen (Frontend)                                     │
 │  4. NUR bei ALLEN GRÜN: status = "APPROVED"                                │
 │                                                                             │
-│  Bei JEDEM Fehler: status = "CHANGES_REQUESTED" + Fix-Anweisung            │
+│  Bei JEDEM Fehler: status = "CHANGES_REQUESTED" + Findings in Tabelle oben │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -261,10 +261,24 @@ Provide your review in this structured format:
 ```markdown
 ## Code Review Summary
 
-**Overall Assessment**: [APPROVED / APPROVED WITH SUGGESTIONS / CHANGES REQUIRED]
+**Overall Assessment**: [APPROVED / CHANGES REQUIRED]
+**Files Reviewed**: [number] files ([short list or "see details below"])
+**Coverage Target**: [XX]%
 
-**Files Reviewed**: [List of files]
+### Findings Overview (sorted by priority)
 
+| Prio | File | Issue |
+|------|------|-------|
+| CRITICAL | `path/to/file:line` | Brief one-line description |
+| MAJOR | `path/to/file:line` | Brief one-line description |
+| MINOR | `path/to/file:line` | Brief one-line description |
+
+(If no issues: "No issues found — all checks pass.")
+
+**Recommendation**: [One sentence: what should be done next]
+
+---
+DETAILED ANALYSIS (read full file for details)
 ---
 
 ### Context7 Verification
@@ -277,51 +291,40 @@ Provide your review in this structured format:
 **OR if no external libraries involved:**
 - No external library APIs used (Context7 verification not required)
 
----
-
-### Critical Issues
+### Critical Issues (Detail)
 
 **File**: `path/to/file`
 **Line(s)**: [line numbers]
-**Issue**: [Description of the problem]
+**Issue**: [Full description of the problem]
 **Impact**: [Why this is critical]
 **Recommendation**: [Specific fix needed]
 
----
-
-### Major Issues
+### Major Issues (Detail)
 
 **File**: `path/to/file`
 **Issue**: [Description]
 **Recommendation**: [Suggested fix]
 
----
-
-### Minor Issues
+### Minor Issues (Detail)
 
 **File**: `path/to/file`
 **Suggestion**: [Description]
 
----
-
 ### Missing Updates
 
 [Related files that should have been updated but weren't]
-
----
-
-### Next Steps
-
-[Clear action items based on the assessment]
 ```
+
+**IMPORTANT: The "Findings Overview" table at the top is the EXECUTIVE SUMMARY.**
+The user sees only the first ~40 lines at the Approval Gate. Critical/Major/Minor
+details go in the sections below — the user reads the full file only if needed.
 
 ## Decision Criteria
 
 | Status | Meaning | Action |
 |--------|---------|--------|
-| **APPROVED** | Code is ready | Can commit |
-| **APPROVED WITH SUGGESTIONS** | Minor improvements possible | Can commit, improvements optional |
-| **CHANGES REQUIRED** | Critical/major issues | Must fix before commit |
+| **APPROVED** | Code is ready, all checks pass | Can commit |
+| **CHANGES REQUIRED** | Issues found that must be fixed | Must fix before commit |
 
 ## Agent Collaboration
 
@@ -474,7 +477,8 @@ jq '.context.reviewFeedback = {
 mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
 ```
 
-Das `fixes` Array bestimmt den deterministischen Rollback:
-- `type: "database"` → Phase 1 | `type: "backend"` → Phase 2
-- `type: "frontend"` → Phase 3 | `type: "tests"` → Phase 4
-- `file:` Pfad fuer Heuristik (.java → Backend, .ts → Frontend, .sql → DB)
+Das `fixes` Array wird dem User am Approval-Gate praesentiert:
+- `type`: Bereich (database, backend, frontend, tests)
+- `file`: Betroffene Datei
+- `issue`: Beschreibung des Problems
+Der User entscheidet basierend auf den Findings ob rollback, feedback oder approve.

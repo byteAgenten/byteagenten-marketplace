@@ -388,7 +388,7 @@ $([ -n "$SECURITY_REPORT" ] && echo "- Security Audit: $SECURITY_REPORT")
 
 ## CONTEXT KEY (workflow-state.json — EXAKT SO SETZEN!)
 context.reviewFeedback = {"reviewFile":".workflow/specs/issue-${ISSUE_NUM}-ph06-code-reviewer.md","status":"APPROVED"}
-(Oder "CHANGES_REQUESTED" bei Aenderungswuenschen. Bei CHANGES_REQUESTED: fixes[].file mit betroffenen Dateipfaden fuer deterministisches Rollback-Routing.)
+(Oder "CHANGES_REQUESTED" bei Aenderungswuenschen. Bei CHANGES_REQUESTED: fixes[] Array mit betroffenen Dateien fuer den User am Approval-Gate.)
 
 ## YOUR TASK
 Independent code quality review. Verify coverage targets. Check SOLID, DRY, KISS.

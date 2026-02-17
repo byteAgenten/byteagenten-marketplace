@@ -354,7 +354,7 @@ PHASE_NUMMER|AGENT_NAME|PHASE_TYP|DONE_KRITERIUM
 4. Setzt `context.reviewFeedback.status` auf APPROVED oder CHANGES_REQUESTED
 5. Bei CHANGES_REQUESTED: `fixes[]` Array mit betroffenen Dateien + Typ
 
-**Danach:** User approved oder gibt Feedback. Bei CHANGES_REQUESTED → Rollback.
+**Danach:** User sieht Review-Findings am Approval-Gate und entscheidet: approve, feedback oder rollback.
 
 ### Phase 7: Push & PR (Orchestrator direkt)
 
@@ -456,10 +456,7 @@ Hooks kommunizieren ueber drei Kanaele:
    └── DONE + AUTO → currentPhase++, wf_prompt_builder.sh, build_dispatch_msg()
    └── NOT DONE → weiter zu Schritt 6
 
-6. Phase 6 Spezial: CHANGES_REQUESTED?
-   └── Ja → Rollback-Ziel bestimmen, Context aufraeumen, Agent starten
-
-7. RALPH LOOP: Retry-Counter pruefen
+6. RALPH LOOP: Retry-Counter pruefen
    └── >= MAX_RETRIES → Workflow pausieren
    └── < MAX_RETRIES → increment_retry, wf_prompt_builder.sh, build_dispatch_msg()
 ```
@@ -996,9 +993,9 @@ Der Orchestrator sieht nie den Inhalt einer Spec-Datei. Er kennt nur den **Pfad*
                                 │
 ┌───────────────────────────────▼──────────────────────────────────────────┐
 │ 7. PHASE 6 (code-reviewer) → APPROVAL                                  │
-│    User reviewed Code Review                                            │
-│    → APPROVED → Phase 7                                                 │
-│    → CHANGES_REQUESTED → Rollback (deterministisch)                     │
+│    User reviewed Code Review Findings                                   │
+│    → approve → Phase 7                                                  │
+│    → rollback → User waehlt Ziel (1=DB, 2=Backend, 3=Frontend, 4=Tests)│
 └───────────────────────────────┬──────────────────────────────────────────┘
                                 │
 ┌───────────────────────────────▼──────────────────────────────────────────┐
@@ -1055,41 +1052,32 @@ An bestimmten Phasen stoppt der Workflow und wartet auf den User. Der User kann:
 
 ### Wann passiert ein Rollback?
 
-Nur an Approval Gates Phase 5 und 6:
+An allen Approval Gates (Phase 0, 5, 6):
 - Phase 5: Security-Findings erfordern Fixes
-- Phase 6: Code Review mit CHANGES_REQUESTED
+- Phase 6: Code Review Findings erfordern Fixes
+User entscheidet an jedem Gate: approve, feedback oder rollback.
 
 ### Wie funktioniert der Rollback?
 
-**Deterministisch in `wf_orchestrator.sh` (Phase 6 Spezial):**
+**User-gesteuert via wf_advance.sh:**
 
 ```
-1. Code-Reviewer setzt: reviewFeedback.status = "CHANGES_REQUESTED"
-   mit fixes[]: [{type: "backend", file: "path/File.java", issue: "..."}]
+1. Code-Reviewer praesentiert Findings am Approval-Gate
+   (Executive Summary mit Findings-Tabelle in den ersten 40 Zeilen der Spec-Datei)
 
-2. Stop Hook erkennt: Phase 6 + NOT DONE + CHANGES_REQUESTED
+2. User sieht Review-Ergebnis (APPROVED oder CHANGES_REQUESTED mit fixes[])
 
-3. Rollback-Ziel bestimmen (Dateipfad-Heuristik):
-   .sql → Phase 1 (Database)
-   .java → Phase 2 (Backend)
-   .ts/.html/.scss → Phase 3 (Frontend)
-   Sonst → Phase 4 (Tests)
+3. User entscheidet:
+   - wf_advance.sh approve → weiter zu Phase 7
+   - wf_advance.sh feedback 'MSG' → Re-Review Phase 6
+   - wf_advance.sh rollback ZIEL 'MSG' → Rollback mit Feedback
 
-4. Context ab Rollback-Ziel loeschen:
-   Ziel <= 3 → del(frontendImpl)
-   Ziel <= 2 → del(backendImpl)
-   Ziel <= 1 → del(migrations)
-   Immer: del(reviewFeedback, securityAudit, testResults)
-
-5. Spec-Dateien ab Rollback-Ziel loeschen (verhindert stale GLOB-Matches)
-
-6. currentPhase = Rollback-Ziel, status = "active"
-
-7. Agent starten mit Hotfix-Kontext:
-   wf_prompt_builder.sh $ROLLBACK_TARGET "$FIXES_TEXT"
-   → Agent bekommt: "Fix the following issues: [backend] Add authorization check"
-
-8. Auto-Advance laeuft automatisch von Rollback-Ziel bis Phase 5 (naechstes Gate)
+4. wf_advance.sh rollback handhabt:
+   - Context ab Rollback-Ziel loeschen (cleanup_context)
+   - Spec-Dateien ab Rollback-Ziel loeschen (cleanup_specs)
+   - rollbackContext persistieren (Downstream-Phasen informiert, v4.1.1)
+   - Agent mit Hotfix-Kontext starten
+   - Auto-Advance laeuft automatisch bis zum naechsten Approval Gate
 ```
 
 ### Option C: Heuristik + User-Wahl (Phase 6)

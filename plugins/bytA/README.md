@@ -1,6 +1,6 @@
 # bytA Plugin
 
-**Version 4.1.1** | Deterministic Orchestration: Boomerang + Ralph-Loop + Team Planning
+**Version 4.2.0** | Deterministic Orchestration: Boomerang + Ralph-Loop + Team Planning
 
 Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 8-Phasen-Workflow und Team-basiertem Planning.
 
@@ -102,13 +102,13 @@ Phase 0 (Team Plan) ──[User Approval]──→ Phase 1 (DB) → Phase 2 (Bac
                                         Phase 5 (Security) ──[User Approval]──→ Phase 6 (Review) ──[User Approval]──→ Phase 7 (PR)
 ```
 
-### Rollback (Option C: Heuristik + User-Wahl)
+### Rollback (User-Entscheidung an Approval Gates)
 
-Bei Phase 5/6 kann der User aendern lassen:
-1. Shell-Script schlaegt Rollback-Ziel vor (basierend auf betroffenen Dateipfaden)
-2. User bestaetigt oder waehlt anderes Ziel
-3. State wird deterministisch bereinigt (alle downstream Phasen geloescht)
-4. Auto-Advance laeuft automatisch bis zum naechsten Approval Gate
+Bei Phase 0/5/6 sieht der User die Ergebnisse und entscheidet:
+1. `approve` → weiter zur naechsten Phase
+2. `feedback 'MSG'` → gleiche Phase nochmal
+3. `rollback ZIEL 'MSG'` → Rollback zu Phase 1-5 mit Feedback-Propagation
+State wird deterministisch bereinigt (alle downstream Phasen + Specs geloescht).
 
 ## Hook-Architektur
 

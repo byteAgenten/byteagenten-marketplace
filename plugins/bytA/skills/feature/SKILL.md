@@ -125,7 +125,7 @@ Der Stop-Hook (`wf_orchestrator.sh`) uebernimmt ab hier den GESAMTEN Workflow:
 - Approval Gates (awaiting_approval, User-Interaktion via wf_user_prompt.sh)
 - Ralph-Loop Retries (Agent re-spawn bei fehlgeschlagener Verifikation)
 - Phase Skipping (auto-advance durch pre-skipped Phasen)
-- Rollback bei CHANGES_REQUESTED (deterministisch)
+- Code Review Findings am Approval-Gate (User entscheidet ueber Rollback)
 - Phase 7 Push & PR (Orchestrator-Anweisungen)
 
 ---
