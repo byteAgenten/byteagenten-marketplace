@@ -1,6 +1,6 @@
 # bytA Plugin
 
-**Version 4.2.2** | Deterministic Orchestration: Boomerang + Ralph-Loop + Team Planning
+**Version 4.3.0** | Deterministic Orchestration: Boomerang + Ralph-Loop + Team Planning
 
 Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 8-Phasen-Workflow und Team-basiertem Planning.
 
@@ -108,7 +108,12 @@ Bei Phase 0/5/6 sieht der User die Ergebnisse und entscheidet:
 1. `approve` → weiter zur naechsten Phase
 2. `feedback 'MSG'` → gleiche Phase nochmal
 3. `rollback ZIEL 'MSG'` → Rollback zu Phase 1-5 mit Feedback-Propagation
-State wird deterministisch bereinigt (alle downstream Phasen + Specs geloescht).
+4. `rollback ZIEL --fast 'MSG'` → Fast Rollback: ueberspringt intermediäre Phasen
+
+**Fast Rollback (v4.3.0):** Bei CSS/Style-only Aenderungen koennen Tests und Security
+uebersprungen werden. Nutzt bestehende Phase-Skip-Infrastruktur (`get_next_active_phase`).
+Context und Specs der uebersprungenen Phasen bleiben erhalten (Code Reviewer sieht sie).
+Phase 7 PR-Vorschau zeigt "SKIPPED" fuer uebersprungene Phasen.
 
 ## Hook-Architektur
 
@@ -216,7 +221,8 @@ Claude fuehrt nur noch **einen einzigen Bash-Befehl** aus statt 3-4 manuelle jq-
 ```bash
 wf_advance.sh approve              # User approved → naechste Phase
 wf_advance.sh feedback 'MESSAGE'   # User will Aenderungen → gleiche Phase nochmal
-wf_advance.sh rollback 4 'MESSAGE' # Rollback zu Phase 4 mit Feedback
+wf_advance.sh rollback 4 'MESSAGE'       # Rollback zu Phase 4 mit Feedback
+wf_advance.sh rollback 3 --fast 'MESSAGE' # Fast Rollback (ueberspringt Tests+Security)
 wf_advance.sh complete             # Workflow abschliessen (nach Push+PR)
 ```
 

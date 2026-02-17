@@ -125,6 +125,36 @@ cleanup_specs() {
   done
 }
 
+# Context ab einer Phase aufraeumen (Fast-Modus: testResults/securityAudit erhalten)
+cleanup_context_fast() {
+  local from_phase=$1
+  # Nur reviewFeedback loeschen (Phase 6 wird neu erstellt)
+  # testResults + securityAudit erhalten (Phase 4+5 werden uebersprungen)
+  local clear_cmd="del(.context.reviewFeedback)"
+  [ "$from_phase" -le 3 ] && clear_cmd="$clear_cmd | del(.context.frontendImpl)"
+  [ "$from_phase" -le 2 ] && clear_cmd="$clear_cmd | del(.context.backendImpl)"
+  [ "$from_phase" -le 1 ] && clear_cmd="$clear_cmd | del(.context.migrations)"
+  [ "$from_phase" -le 0 ] && clear_cmd="$clear_cmd | del(.context.technicalSpec)"
+  echo "$clear_cmd"
+}
+
+# Spec-Dateien fuer Fast-Rollback: nur TARGET + APPROVAL_PHASE loeschen
+cleanup_specs_fast() {
+  local from_phase=$1
+  local approval_phase=$2
+  # Nur TARGET-Phase Spec loeschen (wird neu erstellt)
+  if [ "$from_phase" -le 0 ]; then
+    rm -f .workflow/specs/issue-*-plan-*.md 2>/dev/null || true
+  fi
+  local pf
+  pf=$(printf "%02d" "$from_phase")
+  rm -f .workflow/specs/issue-*-ph${pf}-*.md 2>/dev/null || true
+  # APPROVAL_PHASE Spec loeschen (wird neu erstellt)
+  local apf
+  apf=$(printf "%02d" "$approval_phase")
+  rm -f .workflow/specs/issue-*-ph${apf}-*.md 2>/dev/null || true
+}
+
 # ═══════════════════════════════════════════════════════════════════════════
 # STATE LESEN
 # ═══════════════════════════════════════════════════════════════════════════
@@ -344,10 +374,16 @@ feedback)
 # ═══════════════════════════════════════════════════════════════════════════
 rollback)
   TARGET="${2:-}"
-  FEEDBACK="${3:-}"
+  FAST_MODE=false
+  if [ "${3:-}" = "--fast" ]; then
+    FAST_MODE=true
+    FEEDBACK="${4:-}"
+  else
+    FEEDBACK="${3:-}"
+  fi
 
   if [ -z "$TARGET" ]; then
-    echo "ERROR: Rollback-Ziel fehlt. Usage: wf_advance.sh rollback TARGET 'MESSAGE'" >&2
+    echo "ERROR: Rollback-Ziel fehlt. Usage: wf_advance.sh rollback TARGET [--fast] 'MESSAGE'" >&2
     echo ""
     echo "Verfuegbare Ziele:"
     echo "  0 = Planning (team-planning)"
@@ -370,14 +406,37 @@ rollback)
   FROM_PHASE_NAME=$(get_phase_name "$APPROVAL_PHASE")
 
   # ─── Context aufraeumen + retry counter reset ────────────────────────
-  CLEAR_CMD=$(cleanup_context "$TARGET")
+  if [ "$FAST_MODE" = "true" ]; then
+    CLEAR_CMD=$(cleanup_context_fast "$TARGET")
+  else
+    CLEAR_CMD=$(cleanup_context "$TARGET")
+  fi
+
+  # Reset: Frueheres --fast rueckgaengig machen (skipped → geloescht)
+  RESET_CMD=""
+  _RP=$((TARGET + 1))
+  while [ "$_RP" -lt "$APPROVAL_PHASE" ]; do
+    RESET_CMD="$RESET_CMD | if .phases[\"$_RP\"].status == \"skipped\" then del(.phases[\"$_RP\"]) else . end"
+    _RP=$((_RP + 1))
+  done
+
+  # Fast-Mode: Intermediäre Phasen als "skipped" markieren
+  SKIP_CMD=""
+  if [ "$FAST_MODE" = "true" ]; then
+    _SP=$((TARGET + 1))
+    while [ "$_SP" -lt "$APPROVAL_PHASE" ]; do
+      _SKIP_NAME=$(get_phase_name "$_SP")
+      SKIP_CMD="$SKIP_CMD | .phases[\"$_SP\"] = {\"name\":\"$_SKIP_NAME\",\"status\":\"skipped\",\"reason\":\"fast-rollback\"}"
+      _SP=$((_SP + 1))
+    done
+  fi
 
   if [ -n "$FEEDBACK" ]; then
     jq --arg fb "$FEEDBACK" --argjson tgt "$TARGET" \
-      "$CLEAR_CMD | del(.recovery.phase_${TARGET}_attempts) | .currentPhase = \$tgt | .status = \"active\" | .recovery.rollbackContext = {\"feedback\": \$fb, \"targetPhase\": \$tgt}" \
+      "$CLEAR_CMD$RESET_CMD$SKIP_CMD | del(.recovery.phase_${TARGET}_attempts) | .currentPhase = \$tgt | .status = \"active\" | .recovery.rollbackContext = {\"feedback\": \$fb, \"targetPhase\": \$tgt}" \
       "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
   else
-    jq "$CLEAR_CMD | del(.recovery.phase_${TARGET}_attempts) | .currentPhase = $TARGET | .status = \"active\" | del(.recovery.rollbackContext)" \
+    jq "$CLEAR_CMD$RESET_CMD$SKIP_CMD | del(.recovery.phase_${TARGET}_attempts) | .currentPhase = $TARGET | .status = \"active\" | del(.recovery.rollbackContext)" \
       "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
   fi
 
@@ -386,11 +445,15 @@ rollback)
     touch "${WORKFLOW_DIR}/.team-planning-active"
   fi
 
-  # ─── Spec-Dateien ab Rollback-Ziel loeschen ───────────────────────────
-  cleanup_specs "$TARGET"
+  # ─── Spec-Dateien loeschen ──────────────────────────────────────────
+  if [ "$FAST_MODE" = "true" ]; then
+    cleanup_specs_fast "$TARGET" "$APPROVAL_PHASE"
+  else
+    cleanup_specs "$TARGET"
+  fi
 
-  log "ADVANCE: Rollback from Phase $APPROVAL_PHASE ($FROM_PHASE_NAME) → Phase $TARGET ($TARGET_NAME). Feedback: ${FEEDBACK:0:100}"
-  log_transition "user_advance" "action=rollback from=$APPROVAL_PHASE to=$TARGET"
+  log "ADVANCE: Rollback from Phase $APPROVAL_PHASE ($FROM_PHASE_NAME) → Phase $TARGET ($TARGET_NAME). Fast=$FAST_MODE. Feedback: ${FEEDBACK:0:100}"
+  log_transition "user_advance" "action=rollback from=$APPROVAL_PHASE to=$TARGET fast=$FAST_MODE"
 
   # ─── Prompt bauen ─────────────────────────────────────────────────────
   if [ -n "$FEEDBACK" ]; then
@@ -401,7 +464,12 @@ rollback)
 
   echo "=== bytA ADVANCE: rollback ==="
   echo "Rollback: Phase $APPROVAL_PHASE ($FROM_PHASE_NAME) → Phase $TARGET ($TARGET_NAME)"
-  echo "Context & Specs ab Phase $TARGET geloescht."
+  if [ "$FAST_MODE" = "true" ]; then
+    echo "FAST ROLLBACK: Phasen zwischen $TARGET und $APPROVAL_PHASE uebersprungen."
+    echo "Nur Phase $TARGET ($TARGET_NAME) + Phase $APPROVAL_PHASE ($FROM_PHASE_NAME) werden neu ausgefuehrt."
+  else
+    echo "Context & Specs ab Phase $TARGET geloescht."
+  fi
   echo ""
   if [ "$TARGET" = "0" ]; then
     echo "EXECUTE: TEAM PLANNING PROTOCOL — Parse und fuehre das folgende Protokoll DIREKT aus (NICHT nochmal wf_prompt_builder.sh aufrufen! Rollback-Kontext ist bereits enthalten): 0) touch .workflow/.team-planning-active, 1) TeamCreate(team_name aus TEAM_NAME-Zeile), 2) Spawne ALLE Specialists + HUB parallel via Task(), 3) Warte auf Architect Done, 4) Pruefe VERIFY-Dateien, 5) shutdown_request an alle, 6) TeamDelete, 7) rm -f .workflow/.team-planning-active, 8) Done. Bei TeamCreate-Fehler: rm -f .workflow/.team-planning-active, dann Fallback auf single Task(bytA:architect-planner). --- PROTOKOLL-START --- $PROMPT --- PROTOKOLL-ENDE ---"

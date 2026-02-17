@@ -124,6 +124,11 @@ if [ "$STATUS" = "awaiting_approval" ]; then
       echo "  Bash: $ADVANCE_CMD rollback ZIEL 'SECURITY_FINDINGS_HIER'"
       echo "  Ziel: 2=Backend, 3=Frontend, 4=Tests (Default)"
       echo "  Fuehre die EXECUTE-Anweisung aus dem Output aus."
+      echo ""
+      echo "BEI SCHNELLEM ROLLBACK (nur Style/CSS, ueberspringt Tests):"
+      echo "  Bash: $ADVANCE_CMD rollback ZIEL --fast 'SECURITY_FINDINGS_HIER'"
+      echo "  Ziel: 2=Backend, 3=Frontend"
+      echo "  Fuehre die EXECUTE-Anweisung aus dem Output aus."
       ;;
 
     6)
@@ -140,6 +145,11 @@ if [ "$STATUS" = "awaiting_approval" ]; then
       echo "BEI ROLLBACK (zu anderer Phase):"
       echo "  Bash: $ADVANCE_CMD rollback ZIEL 'REVIEW_FINDINGS_HIER'"
       echo "  Ziel: 1=DB, 2=Backend, 3=Frontend, 4=Tests"
+      echo "  Fuehre die EXECUTE-Anweisung aus dem Output aus."
+      echo ""
+      echo "BEI SCHNELLEM ROLLBACK (nur Style/CSS, ueberspringt Tests+Security):"
+      echo "  Bash: $ADVANCE_CMD rollback ZIEL --fast 'REVIEW_FINDINGS_HIER'"
+      echo "  Ziel: 2=Backend, 3=Frontend"
       echo "  Fuehre die EXECUTE-Anweisung aus dem Output aus."
       ;;
 
