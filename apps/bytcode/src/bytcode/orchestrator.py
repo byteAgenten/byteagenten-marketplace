@@ -738,13 +738,18 @@ class Orchestrator:
             summary = "\n".join(lines)
 
         if summary:
+            import textwrap
             self._emit("")
-            self._emit("[bold cyan]" + "─" * 50 + "[/]")
+            self._emit("[bold cyan]" + "─" * 70 + "[/]")
             self._emit("[bold cyan]  Plan Summary[/]")
-            self._emit("[bold cyan]" + "─" * 50 + "[/]")
+            self._emit("[bold cyan]" + "─" * 70 + "[/]")
             for line in summary.strip().splitlines():
-                self._emit(f"  {line}")
-            self._emit("[bold cyan]" + "─" * 50 + "[/]")
+                if not line.strip():
+                    self._emit("")
+                else:
+                    wrapped = textwrap.fill(line, width=68, initial_indent="  ", subsequent_indent="  ")
+                    self._emit(wrapped)
+            self._emit("[bold cyan]" + "─" * 70 + "[/]")
             self._emit("")
 
     def _show_pr_draft(self) -> None:
