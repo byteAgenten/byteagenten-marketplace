@@ -744,10 +744,19 @@ class Orchestrator:
             self._emit("[bold cyan]  Plan Summary[/]")
             self._emit("[bold cyan]" + "─" * 70 + "[/]")
             for line in summary.strip().splitlines():
-                if not line.strip():
+                stripped = line.strip()
+                if not stripped:
                     self._emit("")
+                elif stripped.startswith("### "):
+                    # Sub-heading: bold + extra spacing
+                    self._emit("")
+                    self._emit(f"  [bold]{stripped[4:]}[/]")
+                elif stripped.startswith("- "):
+                    # Bullet point: wrap with hanging indent
+                    wrapped = textwrap.fill(stripped, width=66, initial_indent="    ", subsequent_indent="      ")
+                    self._emit(wrapped)
                 else:
-                    wrapped = textwrap.fill(line, width=68, initial_indent="  ", subsequent_indent="  ")
+                    wrapped = textwrap.fill(stripped, width=68, initial_indent="  ", subsequent_indent="  ")
                     self._emit(wrapped)
             self._emit("[bold cyan]" + "─" * 70 + "[/]")
             self._emit("")
