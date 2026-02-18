@@ -76,7 +76,8 @@ in Schritt 1 parallel auflösen, dann in Schritt 2 parallel Docs laden.
 
 - Spring Boot 4.0+ only
 - Java 21+ required (Records, Pattern Matching, Virtual Threads)
-- Tests are MANDATORY (coverage target from `workflow-state.json → targetCoverage`)
+- **Du schreibst KEINE neuen Tests.** Der Test Engineer (Phase 4) ist alleinverantwortlich fuer alle neuen Tests.
+- Du MUSST aber bestehende Tests gruen halten (siehe "Bestehende Tests pflegen").
 - **Swagger-Annotationen PFLICHT** - Live-API-Docs (`/api/v3/api-docs`) sind Single Source of Truth
   - Lade Springdoc-Beispiele via Context7 wenn nötig
   - Jeder Endpoint: `@Operation`, `@ApiResponses`
@@ -135,16 +136,6 @@ Wenn du Code aenderst, MUSST du die zugehoerigen Tests pruefen und anpassen:
 
 ---
 
-## Testing Requirements
-
-- Unit tests: Mockito for service layer
-- Integration tests: @SpringBootTest + MockMvc
-- Database tests: Testcontainers for real DB (not H2)
-- Test naming: should[Action]When[Condition]
-- Run before commit: mvn test
-
----
-
 ## Quality Checklist
 
 - [ ] Alle Endpoints mit `@Operation` + `@ApiResponses` annotiert
@@ -154,6 +145,7 @@ Wenn du Code aenderst, MUSST du die zugehoerigen Tests pruefen und anpassen:
 - [ ] Global exception handler covers all cases
 - [ ] No N+1 queries (check with logging)
 - [ ] Transactions properly scoped
+- [ ] Bestehende Tests gruen (`mvn test`)
 
 ---
 
@@ -178,8 +170,8 @@ Wenn du Code aenderst, MUSST du die zugehoerigen Tests pruefen und anpassen:
 
 ## Pre-Submission Checklist
 
-1. mvn clean compile - passes
-2. mvn test - all green
+1. `mvn clean compile` - passes
+2. `mvn test` - bestehende Tests gruen (KEINE neuen Tests schreiben!)
 3. Swagger-Annotationen vollständig (check via `/api/v3/api-docs`)
 4. No TODOs left in code
 
@@ -198,7 +190,7 @@ Wenn du Code aenderst, MUSST du die zugehoerigen Tests pruefen und anpassen:
 - ✅ Maven DIREKT ausführen (kein Background)
 - ✅ Vollständigen Output lesen (kein grep/tail)
 - ✅ Bei Fehler: **Analysieren** und **fixen**, nicht wiederholen
-- ✅ **EIN** `mvn verify` am Ende (beinhaltet compile + test)
+- ✅ **EIN** `mvn test` am Ende (Unit-Tests reichen — Integration Tests macht der Test Engineer)
 - ✅ Timeout: 5 Minuten reicht für Unit-Tests
 
 ### Korrekter Ablauf:
@@ -209,13 +201,10 @@ mvn clean compile
 
 # 2. Bei Compile-Fehler: STOP, analysieren, fixen
 
-# 3. Nach Fix: Tests laufen lassen
+# 3. Nach Fix: Bestehende Tests prüfen
 mvn test
 
-# 4. Bei Test-Fehler: STOP, analysieren, fixen
-
-# 5. Erst wenn alles grün: verify (für Integration Tests)
-mvn verify
+# 4. Bei Test-Fehler: STOP, analysieren, fixen (bestehende Tests reparieren!)
 ```
 
 ### Bei Fehler - Analyse statt Retry:
@@ -268,7 +257,7 @@ When the domain grows complex (multiple aggregates, cross-entity invariants):
 Before submitting code for commit, verify:
 
 - All constraints met (Spring Boot 4+, Java 21+)
-- Tests written and passing
+- Bestehende Tests gruen (`mvn test`)
 - Swagger-Annotationen vollständig
 - Quality checklist completed
 

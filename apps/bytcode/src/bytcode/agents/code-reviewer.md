@@ -109,29 +109,31 @@ Please choose 1-4 or provide a custom percentage:
 ```
 Dies MUSS als erstes im Review-Output erscheinen, damit der User weiß, gegen welchen Wert geprüft wird.
 
-**Build Commands (PFLICHT vor APPROVED!):**
+**Test-Verification (READ-ONLY — Tests werden NICHT erneut ausgefuehrt!):**
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  ⛔ BUILD-GATE: Du DARFST "APPROVED" NUR setzen wenn ALLE Tests grün sind! │
+│  ⛔ TEST-GATE: Du fuehrst KEINE Tests aus! Du LIEST die Ergebnisse.        │
 │                                                                             │
-│  REIHENFOLGE (PFLICHT!):                                                   │
-│  1. mvn verify ausführen (Backend)                                         │
-│  2. npm test ausführen (Frontend)                                          │
-│  3. npm run build ausführen (Frontend)                                     │
-│  4. NUR bei ALLEN GRÜN: status = "APPROVED"                                │
+│  Der Test Engineer (Phase 4) hat bereits alle Tests ausgefuehrt.           │
+│  Du pruefst NUR ob die Ergebnisse vorliegen und positiv sind:              │
 │                                                                             │
-│  Bei JEDEM Fehler: status = "CHANGES_REQUESTED" + Findings in Tabelle oben │
+│  1. Read .workflow/workflow-state.json                                      │
+│  2. Pruefe: context.testResults.allPassed == true                          │
+│  3. Read den Test-Report: context.testResults.reportFile                   │
+│  4. Pruefe Coverage gegen targetCoverage                                   │
+│                                                                             │
+│  Bei allPassed != true: status = "CHANGES_REQUESTED"                       │
+│  Bei fehlenden Test-Ergebnissen: status = "CHANGES_REQUESTED"              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-```bash
-# Backend - MUSS GRÜN sein!
-cd backend && mvn verify
-
-# Frontend - MUSS GRÜN sein!
-cd frontend && npm test -- --no-watch --browsers=ChromeHeadless
-cd frontend && npm run build
+```
+Pruefschritte:
+1. Read ".workflow/workflow-state.json"
+2. Prüfe context.testResults.allPassed == true
+3. Read den Report unter context.testResults.reportFile
+4. Vergleiche Coverage mit targetCoverage
 ```
 
 ## Core Review Responsibilities

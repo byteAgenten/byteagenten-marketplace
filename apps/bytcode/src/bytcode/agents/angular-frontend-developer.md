@@ -83,7 +83,7 @@ mcp__plugin_bytA_context7__query-docs libraryId="[ID aus resolve]" query="[spezi
 |---|------------|-------|-------|
 | 1 | **Keine Inline** | `templateUrl`/`styleUrl` statt `template`/`styles` | `grep -r "template:\s*\`" src/app` → leer |
 | 2 | **API Contract** | Backend-Controller LESEN vor HTTP-Calls | Interface 1:1 mit Backend |
-| 3 | **Tests** | Pflicht für jede Implementation | `npm test` grün |
+| 3 | **Keine neuen Tests** | Test Engineer (Phase 4) schreibt alle Tests. Du haeltst bestehende Tests gruen. | `npm test` gruen |
 | 4 | **Limits** | .ts≤400, .html≤200, .scss≤300 Zeilen | Bei Überschreitung → Split |
 | 5 | **data-testid** | ALLE interaktiven Elemente brauchen `data-testid` | E2E-Test-Stabilität |
 
@@ -167,9 +167,9 @@ Wenn du Code aenderst, MUSST du die zugehoerigen Tests pruefen und anpassen:
 
 ## Workflows
 
-**Komponente:** `ng generate` → HTML → SCSS → Logic → `data-testid` → Tests
+**Komponente:** `ng generate` → HTML → SCSS → Logic → `data-testid`
 
-**Service:** `ng generate` → Backend-Controller lesen → Interface → Implementation → Tests
+**Service:** `ng generate` → Backend-Controller lesen → Interface → Implementation
 
 **Vor Abschluss:**
 1. **Spec-Compliance:** Lies die Technical Spec NOCHMAL. Gehe JEDE funktionale Anforderung durch und pruefe ob sie implementiert ist. Fehlende Anforderungen JETZT implementieren.
@@ -178,6 +178,7 @@ Wenn du Code aenderst, MUSST du die zugehoerigen Tests pruefen und anpassen:
 grep -r "template:\s*\`\|styles:\s*\[" src/app --include="*.ts"  # muss leer sein!
 npm run lint && npm test -- --no-watch --browsers=ChromeHeadless && npm run build
 ```
+**Hinweis:** `npm test` prueft nur dass BESTEHENDE Tests gruen sind. Du schreibst KEINE neuen Tests — das macht der Test Engineer (Phase 4).
 
 ---
 
