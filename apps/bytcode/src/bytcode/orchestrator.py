@@ -181,6 +181,7 @@ class Orchestrator:
         if resume_from == 0:
             # Fresh start: clean workflow state but preserve architecture context
             self._clean_workflow_state()
+            self._ensure_workflow_dir()  # Re-create dirs after cleanup
 
             ok = await self._fetch_issue()
             if not ok:
