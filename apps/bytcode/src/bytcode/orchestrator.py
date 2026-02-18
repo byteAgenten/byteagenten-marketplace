@@ -325,11 +325,13 @@ class Orchestrator:
                 phase_log.close()
                 self._current_log = None
 
-                # Show plan summary after Phase 0, PR draft after Phase 7
+                # Show summaries after phase completion
                 if phase.number == 0:
                     self._show_plan_summary()
                 elif phase.number == 7:
                     self._show_pr_draft()
+                elif phase.number != 8:
+                    self._show_phase_summary(phase)
 
                 if phase.phase_type == PhaseType.APPROVAL:
                     self._notify_phase(phase.number, PhaseStatus.AWAITING_APPROVAL)
@@ -782,6 +784,43 @@ class Orchestrator:
         self._emit("[bold green]" + "─" * 50 + "[/]")
         self._emit("")
         self._emit("[dim]Approve (F1) to push & create PR, or give Feedback (F2) to revise.[/]")
+
+    def _show_phase_summary(self, phase: Phase) -> None:
+        """Extract and display Phase Summary from the agent's spec file."""
+        import textwrap
+
+        specs_dir = self.project_dir / ".workflow" / "specs"
+        if not specs_dir.exists():
+            return
+
+        # Find spec file for this phase (pattern: *-ph0X-*.md)
+        pattern = f"*-ph{phase.number:02d}-*.md"
+        spec_files = list(specs_dir.glob(pattern))
+        if not spec_files:
+            return
+
+        content = spec_files[0].read_text(encoding="utf-8", errors="replace")
+        summary = _extract_section(content, "Phase Summary")
+
+        if not summary:
+            # Fallback: first 4 non-empty lines of the spec
+            lines = [l for l in content.strip().splitlines() if l.strip() and not l.startswith("#")]
+            summary = "\n".join(lines[:4])
+
+        if not summary:
+            return
+
+        self._emit("")
+        self._emit(f"[bold]  {phase.name} Summary[/]")
+        self._emit("[dim]" + "  " + "─" * 50 + "[/]")
+        for line in summary.strip().splitlines():
+            stripped = line.strip()
+            if not stripped:
+                self._emit("")
+            else:
+                wrapped = textwrap.fill(stripped, width=72, initial_indent="  ", subsequent_indent="  ")
+                self._emit(f"[dim]{wrapped}[/]")
+        self._emit("")
 
     def _update_codebase_context(self) -> None:
         """Regenerate structure.md and ensure architecture.md exists."""

@@ -475,7 +475,31 @@ def build_prompt(phase: Phase, config: WorkflowConfig, project_dir: Path) -> str
 
     parts.extend(["", "## Phase Context", "\n".join(phase_context)])
 
-    # 5. Architecture update instructions (tells agent to update architecture.md)
+    # 5. Phase Summary instruction (all phases that write a spec)
+    if phase.number not in (0, 8):
+        # Phase 0 has its own Executive Summary format; Phase 8 has no spec
+        _summary_hints: dict[int, str] = {
+            1: "What migrations were created (or skipped and why). Tables/columns affected.",
+            2: "What endpoints, services, entities were created or modified. Key implementation patterns used.",
+            3: "What components, routes, services were created or modified. UX decisions made.",
+            4: "Test results: how many tests, pass/fail, coverage achieved. What was tested (unit, integration, e2e).",
+            5: "Security findings by severity (critical/high/medium/low). Key recommendations.",
+            6: "Code quality assessment. Issues found by severity. Overall recommendation (approve/needs-work).",
+            7: "Brief note on what the PR covers and key points for reviewers.",
+        }
+        hint = _summary_hints.get(phase.number, "What was done and what the user should know.")
+        parts.extend([
+            "",
+            "## IMPORTANT: Phase Summary in Spec File",
+            "Your spec file MUST begin with a `## Phase Summary` section (3-5 sentences).\n"
+            "This summary is displayed to the user in the terminal UI so they can follow\n"
+            "the progress of the workflow without reading the full spec.\n\n"
+            f"Focus on: {hint}\n\n"
+            "Be specific — name actual files, endpoints, components, not vague descriptions.\n"
+            "Write as prose, not bullet points. Keep it concise but informative.",
+        ])
+
+    # 6. Architecture update instructions (tells agent to update architecture.md)
     arch_instructions = _architecture_update_instructions(phase, project_dir)
     if arch_instructions:
         parts.append(arch_instructions)
