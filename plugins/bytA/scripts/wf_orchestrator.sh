@@ -432,7 +432,8 @@ if [ -n "$SKIPPED_TO" ]; then
   log "PHASE SKIP DETECTED: Phase $PHASE requires Phase $SKIPPED_TO ($SKIP_NAME). Auto-correcting."
   log_transition "phase_skip_corrected" "from=$PHASE to=$SKIPPED_TO"
 
-  jq --argjson sp "$SKIPPED_TO" '.currentPhase = $sp | .status = "active"' \
+  jq --argjson sp "$SKIPPED_TO" --arg name "$SKIP_NAME" \
+    '.phases[($sp | tostring)] = {"name": $name, "status": "active"} | .currentPhase = $sp | .status = "active"' \
     "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
 
   # Build prompt for skipped phase
@@ -462,7 +463,8 @@ if "${SCRIPT_DIR}/wf_verify.sh" "$PHASE"; then
     NEXT_NAME=$(get_phase_name "$NEXT_PHASE")
     NEXT_AGENT=$(get_phase_agent "$NEXT_PHASE")
 
-    jq --argjson np "$NEXT_PHASE" '.currentPhase = $np | .status = "active"' \
+    jq --argjson np "$NEXT_PHASE" --arg name "$NEXT_NAME" \
+      '.phases[($np | tostring)] = {"name": $name, "status": "active"} | .currentPhase = $np | .status = "active"' \
       "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
 
     log "SKIP-ADVANCE: Phase $PHASE ($PHASE_NAME) pre-skipped → Phase $NEXT_PHASE ($NEXT_NAME)"
@@ -473,7 +475,18 @@ if "${SCRIPT_DIR}/wf_verify.sh" "$PHASE"; then
   fi
 
   reset_retry "$PHASE"
-  mark_phase_completed "$PHASE"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # RE-COMPLETION GUARD: Bereits completed Phasen nicht nochmal completen
+  # Verhindert Endlos-Zyklen wenn LLM currentPhase auf completed Phase setzt
+  # ─────────────────────────────────────────────────────────────────────────
+  EXISTING_PHASE_STATUS=$(jq -r ".phases[\"$PHASE\"].status // \"\"" "$WORKFLOW_FILE" 2>/dev/null)
+  if [ "$EXISTING_PHASE_STATUS" = "completed" ]; then
+    log "RE-COMPLETION GUARD: Phase $PHASE already completed. Skipping mark_phase_completed."
+    log_transition "re_completion_blocked" "phase=$PHASE"
+  else
+    mark_phase_completed "$PHASE"
+  fi
 
   # WIP-Commit (silent)
   if needs_commit "$PHASE"; then
@@ -520,7 +533,8 @@ if "${SCRIPT_DIR}/wf_verify.sh" "$PHASE"; then
     NEXT_NAME=$(get_phase_name "$NEXT_PHASE")
     NEXT_AGENT=$(get_phase_agent "$NEXT_PHASE")
 
-    jq --argjson np "$NEXT_PHASE" '.currentPhase = $np | .status = "active"' \
+    jq --argjson np "$NEXT_PHASE" --arg name "$NEXT_NAME" \
+      '.phases[($np | tostring)] = {"name": $name, "status": "active"} | .currentPhase = $np | .status = "active"' \
       "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
 
     log "AUTO-ADVANCE: Phase $PHASE ($PHASE_NAME) → Phase $NEXT_PHASE ($NEXT_NAME)"
@@ -541,8 +555,11 @@ else
   # ─────────────────────────────────────────────────────────────────────────
   PHASE_EXISTS=$(jq -r ".phases[\"$PHASE\"] // \"null\"" "$WORKFLOW_FILE" 2>/dev/null)
   if [ "$PHASE_EXISTS" = "null" ]; then
-    log "GUARD: Phase $PHASE not in phases[]. Allowing stop for approval."
-    exit 0
+    log "GUARD: Phase $PHASE not in phases[]. Initializing and continuing Ralph-Loop."
+    log_transition "phase_initialized" "phase=$PHASE"
+    jq --argjson p "$PHASE" --arg name "$PHASE_NAME" \
+      '.phases[($p | tostring)] = {"name": $name, "status": "active"}' \
+      "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
   fi
 
   # ─────────────────────────────────────────────────────────────────────────

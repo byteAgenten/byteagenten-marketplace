@@ -1,6 +1,6 @@
 # bytA Plugin
 
-**Version 4.4.0** | Deterministic Orchestration: Boomerang + Ralph-Loop + Team Planning
+**Version 4.5.0** | Deterministic Orchestration: Boomerang + Ralph-Loop + Team Planning
 
 Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 8-Phasen-Workflow und Team-basiertem Planning.
 
@@ -260,6 +260,22 @@ liest den Scope und spawnt nur die benoetigten Specialist-Agents in Phase 0.
 Die Rollback-Reset-Logik (`wf_advance.sh`) unterscheidet zwischen Scope-Skips
 (`reason: "Frontend-only scope"`) und Fast-Rollback-Skips (`reason: "fast-rollback"`).
 Nur Fast-Rollback-Skips werden bei einem vollen Rollback zurueckgesetzt.
+
+### Phase-Entry + Control Escape Fix (v4.5.0)
+
+Behebt einen kritischen Bug bei dem der LLM nach Auto-Advance die Kontrolle uebernehmen konnte:
+
+**Problem (Orbit #428):** Bei Auto-Advance wurde `currentPhase` gesetzt, aber `phases[$NEXT_PHASE]`
+nicht initialisiert. Der Guard bei `wf_orchestrator.sh:542` fand keinen Eintrag → `exit 0` →
+Ralph-Loop wurde komplett umgangen → LLM uebernahm Kontrolle → Endlos-Zyklen (6x Phase 3/4 Loop, 51 Min).
+
+**3 Fixes:**
+1. **Phase-Entry bei Auto-Advance:** Alle 3 Stellen die `currentPhase` setzen (Auto-Advance,
+   Skip-Advance, Phase-Skip-Corrected) initialisieren jetzt auch `phases[$NEXT_PHASE]`.
+2. **Guard-Fix:** Statt `exit 0` (LLM bekommt Kontrolle) wird die Phase initialisiert und
+   die Ralph-Loop laeuft weiter.
+3. **Re-Completion Guard:** `mark_phase_completed()` wird uebersprungen wenn die Phase
+   bereits `completed` ist. Verhindert Endlos-Zyklen bei LLM-induzierter Phase-Reversion.
 
 ### Agent-Reports (MD-Dateien)
 
