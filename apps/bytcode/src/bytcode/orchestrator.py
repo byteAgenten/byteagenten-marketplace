@@ -440,11 +440,13 @@ class Orchestrator:
                 elif block_type == "text":
                     text = block.get("text", "")
                     if text.strip():
-                        # Show first 200 chars of agent text output
-                        preview = text.strip()[:200]
-                        if len(text.strip()) > 200:
-                            preview += "..."
-                        self._emit(f"[dim]{preview}[/]")
+                        import textwrap
+                        # Show first 300 chars of agent text, word-wrapped
+                        preview = text.strip()[:300]
+                        if len(text.strip()) > 300:
+                            preview += " ..."
+                        wrapped = textwrap.fill(preview, width=76, initial_indent="  ", subsequent_indent="  ")
+                        self._emit(f"[dim]{wrapped}[/]")
                         # Write full text to transcript (not truncated)
                         if log:
                             log.write_agent_text(text.strip())
