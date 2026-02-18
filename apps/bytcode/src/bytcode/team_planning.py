@@ -1,10 +1,16 @@
 """Team Planning Protocol for Phase 0.
 
-Generates a prompt that instructs the Claude session to spawn a team of
-specialists (backend, frontend, quality) + a hub architect that consolidates
-their findings into the final plan-consolidated.md.
+Generates a prompt where the MAIN AGENT acts as the hub architect:
+1. Spawns specialists (backend, frontend, quality) in parallel
+2. Receives their summaries via SendMessage
+3. Consolidates into plan-consolidated.md ITSELF
+4. Cleans up team
 
-This mirrors the bytA plugin's Team Planning Protocol but adapted for bytcode.
+Previous design spawned a separate architect sub-agent, but that caused
+a deadlock: the architect's "Done" never reached the main agent because
+SendMessage can only go to named teammates, not to the unnamed main agent.
+
+Fix: Main agent IS the architect. Specialists send summaries directly to it.
 """
 
 from .config import Scope, WorkflowConfig
@@ -13,11 +19,11 @@ from .config import Scope, WorkflowConfig
 def build_team_planning_prompt(config: WorkflowConfig) -> str:
     """Build the team planning protocol prompt for Phase 0.
 
-    The prompt instructs Claude to:
+    The main agent acts as the hub architect:
     1. TeamCreate a planning team
     2. Spawn specialists in parallel (scope-dependent)
-    3. Specialists analyze and send summaries to the hub architect
-    4. Hub architect consolidates into plan-consolidated.md
+    3. Wait for SendMessage summaries from each specialist
+    4. Read full plans, validate consistency, write consolidated spec
     5. Cleanup: shutdown teammates + TeamDelete
     """
     issue_num = config.issue_num
@@ -52,20 +58,20 @@ def build_team_planning_prompt(config: WorkflowConfig) -> str:
 
     specialist_count = len(specialists)
 
-    # --- Hub architect ---
-    hub = _hub_architect(
-        issue_num, issue_title, scope, coverage,
-        specialist_count, plan_reads,
+    # --- Consolidation instructions (for main agent) ---
+    consolidation = _consolidation_instructions(
+        issue_num, issue_title, scope, coverage, plan_reads,
     )
 
     # --- Assemble full protocol ---
     specialist_blocks = "\n".join(specialists)
     verify_files = "\n".join(plan_verify)
-    all_names = ", ".join(specialist_names + ["architect"])
+    all_names = ", ".join(specialist_names)
 
     return f"""=== PHASE 0: TEAM PLANNING PROTOCOL ===
 
-You are the ORCHESTRATOR for team planning. Follow these steps EXACTLY:
+You are the ARCHITECT and CONSOLIDATOR. You spawn specialists, receive their
+summaries, then consolidate everything into the final plan. Follow these steps EXACTLY:
 
 ## Step 1: Create Team
 
@@ -75,27 +81,33 @@ TeamCreate(team_name: "{team_name}")
 
 If TeamCreate fails (Agent Teams not enabled), use the FALLBACK at the bottom.
 
-## Step 2: Spawn ALL Agents in Parallel
+## Step 2: Spawn Specialists in Parallel
 
 Spawn ALL of the following agents IN PARALLEL in a SINGLE message with multiple Task calls:
 
 {specialist_blocks}
-{hub}
 
-## Step 3: Wait
+## Step 3: Wait for Summaries
 
-Wait for the architect's "Done." message. The architect is the last to finish
-(waits for all specialists first).
+You will receive {specialist_count} SendMessage summaries from your specialists.
+WAIT until you have received ALL {specialist_count} summaries before proceeding.
+Each specialist writes their full plan to disk AND sends you a short summary.
 
-## Step 4: Verify
+DO NOT proceed to Step 4 until all {specialist_count} summaries have arrived.
 
-Check that ALL these files exist:
+## Step 4: Consolidate
+
+After receiving ALL {specialist_count} summaries:
+
+{consolidation}
+
+## Step 5: Verify
+
+Check that ALL these files exist (use Glob or Read):
   .workflow/specs/issue-{issue_num}-plan-consolidated.md
 {verify_files}
 
-If files are missing, warn but continue — verification happens externally.
-
-## Step 5: Cleanup
+## Step 6: Cleanup
 
 Send shutdown_request to ALL teammates: {all_names}
 Then: TeamDelete (ignore errors — agents may already be gone)
@@ -106,10 +118,11 @@ Say "Done."
 
 ## FALLBACK (if TeamCreate fails)
 
-If TeamCreate throws an error:
-1. Run the architect prompt below as a SINGLE agent (no team):
-   Task(subagent_type: "bytA:architect-planner", prompt: "<architect prompt without SendMessage references>")
-2. Say "Done."
+If TeamCreate throws an error, do the planning yourself as a single agent:
+1. Read .workflow/issue.json
+2. Analyze the codebase (backend + frontend)
+3. Write the consolidated spec directly to .workflow/specs/issue-{issue_num}-plan-consolidated.md
+4. Say "Done."
 """
 
 
@@ -118,6 +131,7 @@ def _backend_specialist(issue_num: int, title: str) -> str:
 subagent_type: "bytA:spring-boot-developer"
 name: "backend"
 model: "sonnet"
+run_in_background: true
 prompt: |
   PLAN for Issue #{issue_num} - {title}.
   Analyze the existing codebase and create a backend implementation plan.
@@ -125,7 +139,7 @@ prompt: |
   Read the GitHub issue from .workflow/issue.json first.
   Read existing backend code to understand patterns and conventions.
   Write your full plan to .workflow/specs/issue-{issue_num}-plan-backend.md
-  Then send a SHORT SUMMARY (max 20 lines) to teammate "architect" via SendMessage.
+  Then send a SHORT SUMMARY (max 20 lines) to the team lead via SendMessage.
   Summary must include: new/modified entities, new endpoints (method + path), DTO changes.
   After sending, say 'Done.'
 """
@@ -136,6 +150,7 @@ def _frontend_specialist(issue_num: int, title: str) -> str:
 subagent_type: "bytA:angular-frontend-developer"
 name: "frontend"
 model: "sonnet"
+run_in_background: true
 prompt: |
   PLAN for Issue #{issue_num} - {title}.
   Analyze the existing codebase and create a frontend implementation plan.
@@ -143,7 +158,7 @@ prompt: |
   Read the GitHub issue from .workflow/issue.json first.
   Read existing frontend code to understand patterns and conventions.
   Write your full plan to .workflow/specs/issue-{issue_num}-plan-frontend.md
-  Then send a SHORT SUMMARY (max 20 lines) to teammate "architect" via SendMessage.
+  Then send a SHORT SUMMARY (max 20 lines) to the team lead via SendMessage.
   Summary must include: new/modified components, service changes, route changes.
   After sending, say 'Done.'
 """
@@ -154,6 +169,7 @@ def _quality_specialist(issue_num: int, title: str, coverage: int) -> str:
 subagent_type: "bytA:test-engineer"
 name: "quality"
 model: "sonnet"
+run_in_background: true
 prompt: |
   PLAN for Issue #{issue_num} - {title}.
   Target Coverage: {coverage}%.
@@ -161,18 +177,17 @@ prompt: |
   Plan E2E scenarios, unit test strategy, integration test strategy.
   Write your full plan to .workflow/specs/issue-{issue_num}-plan-quality.md
   MUST include section: ## Existing Tests to Update
-  Then send a SHORT SUMMARY (max 20 lines) to teammate "architect" via SendMessage.
+  Then send a SHORT SUMMARY (max 20 lines) to the team lead via SendMessage.
   Summary must include: count of existing tests that will break, new test count, coverage estimate.
   After sending, say 'Done.'
 """
 
 
-def _hub_architect(
+def _consolidation_instructions(
     issue_num: int,
     title: str,
     scope: Scope,
     coverage: int,
-    specialist_count: int,
     plan_reads: list[str],
 ) -> str:
     plan_files = "\n".join(plan_reads)
@@ -192,36 +207,21 @@ def _hub_architect(
 
     sections_str = "\n    ".join(sections)
 
-    return f"""--- Task: hub architect ---
-subagent_type: "bytA:architect-planner"
-name: "architect"
-model: "opus"
-prompt: |
-  PLAN (Consolidator) for Issue #{issue_num} - {title}.
-  Target Coverage: {coverage}%.
-  Scope: {scope.value}
-
-  You are the HUB in a Hub-and-Spoke planning team.
-  You will receive {specialist_count} plan summaries via SendMessage from teammates.
-  WAIT for ALL {specialist_count} summaries before proceeding.
-
-  After receiving all summaries:
-  1. Read full plans from disk (one at a time):
+    return f"""1. Read the full specialist plans from disk (one at a time):
 {plan_files}
-  2. Validate CONSISTENCY between plans:
-     - Endpoints match between backend and frontend (field names, types, URLs)
-     - DTOs match (same field names, same types)
-  3. If CONFLICTS found: SendMessage to affected specialist, wait for correction
-  4. Write CONSOLIDATED SPEC to .workflow/specs/issue-{issue_num}-plan-consolidated.md
-     MUST contain these sections:
+
+2. Validate CONSISTENCY between plans:
+   - Endpoints match between backend and frontend (field names, types, URLs)
+   - DTOs match (same field names, same types)
+   - If CONFLICTS found: SendMessage to affected specialist, wait for correction
+
+3. Write CONSOLIDATED SPEC to .workflow/specs/issue-{issue_num}-plan-consolidated.md
+   MUST contain these sections:
     {sections_str}
 
-  The Executive Summary MUST use this structure:
+   The Executive Summary MUST use this structure:
     ### What & Why (2-3 sentences, user perspective)
     ### Architecture Approach (2-4 sentences, patterns + rationale)
     ### Scope of Changes (bullet list: Database, Backend, Frontend with file counts)
     ### Key Design Decisions (2-3 decisions with rationale)
-    ### Risks & Mitigations (1-3 bullet points)
-
-  After writing consolidated spec, say 'Done.'
-"""
+    ### Risks & Mitigations (1-3 bullet points)"""
