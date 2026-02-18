@@ -49,6 +49,7 @@ class Phase:
     phase_type: PhaseType
     criteria: list[Criterion] = field(default_factory=list)
     allowed_tools: list[str] = field(default_factory=list)
+    model: str = ""  # "" = default (opus), or "sonnet", "haiku"
 
 
 PHASES: list[Phase] = [
@@ -61,6 +62,7 @@ PHASES: list[Phase] = [
             Criterion("glob", ".workflow/specs/*-plan-consolidated.md"),
         ],
         allowed_tools=["Read", "Glob", "Grep", "Write", "Bash"],
+        model="",       # opus — needs deep analysis
     ),
     Phase(
         number=1,
@@ -72,6 +74,7 @@ PHASES: list[Phase] = [
             Criterion("glob", ".workflow/specs/*-ph01-*.md"),
         ],
         allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+        model="sonnet",  # migrations are straightforward
     ),
     Phase(
         number=2,
@@ -82,6 +85,8 @@ PHASES: list[Phase] = [
             Criterion("glob", ".workflow/specs/*-ph02-*.md"),
         ],
         allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+        model="",       # opus — complex implementation
+
     ),
     Phase(
         number=3,
@@ -92,6 +97,8 @@ PHASES: list[Phase] = [
             Criterion("glob", ".workflow/specs/*-ph03-*.md"),
         ],
         allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+        model="",       # opus — complex implementation
+
     ),
     Phase(
         number=4,
@@ -107,6 +114,8 @@ PHASES: list[Phase] = [
             Criterion("glob", ".workflow/specs/*-ph04-*.md"),
         ],
         allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+        model="sonnet",  # test writing follows patterns
+
     ),
     Phase(
         number=5,
@@ -117,6 +126,8 @@ PHASES: list[Phase] = [
             Criterion("glob", ".workflow/specs/*-ph05-*.md"),
         ],
         allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+        model="sonnet",  # audit is read-heavy, pattern-based
+
     ),
     Phase(
         number=6,
@@ -127,12 +138,25 @@ PHASES: list[Phase] = [
             Criterion("glob", ".workflow/specs/*-ph06-*.md"),
         ],
         allowed_tools=["Read", "Glob", "Grep"],
+        model="sonnet",  # review is read-only analysis
+
     ),
     Phase(
         number=7,
-        name="PR",
-        agent="push-pr",
+        name="PR Draft",
+        agent="pr-writer",
         phase_type=PhaseType.APPROVAL,
+        criteria=[
+            Criterion("glob", ".workflow/pr-draft.md"),
+        ],
+        allowed_tools=["Read", "Write", "Bash", "Glob", "Grep"],
+        model="sonnet",  # summary writing
+    ),
+    Phase(
+        number=8,
+        name="Push & PR",
+        agent="push-pr",
+        phase_type=PhaseType.AUTO,
         criteria=[
             Criterion(
                 "jq",
@@ -141,5 +165,6 @@ PHASES: list[Phase] = [
             ),
         ],
         allowed_tools=["Bash", "Read", "Glob", "Grep"],
+        model="sonnet",  # just git commands
     ),
 ]

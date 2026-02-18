@@ -2,6 +2,7 @@
 
 import json
 import re
+import subprocess
 from pathlib import Path
 
 from .codebase import read_context
@@ -10,24 +11,51 @@ from .config import Phase, Scope, WorkflowConfig
 # Directory containing agent definition files (copied from bytA)
 _AGENTS_DIR = Path(__file__).parent / "agents"
 
-# Minimal fallback instructions for phases without agent files (e.g., Phase 7)
+# Minimal fallback instructions for phases without agent files
 PHASE_FALLBACK: dict[int, str] = {
     7: (
+        "You are a PR writer. Your task is to create a compelling pull request draft.\n\n"
+        "Analyze the changes made in this workflow:\n"
+        "1. Run `git diff {from_branch}...HEAD --stat` to see all changed files\n"
+        "2. Run `git diff {from_branch}...HEAD` to see the actual changes\n"
+        "3. Read the existing specs in .workflow/specs/ for context\n"
+        "4. Read the GitHub issue from .workflow/issue.json\n\n"
+        "Then write a PR draft to `.workflow/pr-draft.md` with this EXACT format:\n\n"
+        "```\n"
+        "# PR Draft\n\n"
+        "## Title\n"
+        "feat(#{issue}): <concise title>\n\n"
+        "## Summary\n"
+        "<2-3 sentences explaining WHAT was built and WHY, from the user's perspective>\n\n"
+        "## Changes\n"
+        "<grouped by layer: Database, Backend, Frontend — each with bullet points>\n\n"
+        "## Design Decisions\n"
+        "<key architectural choices and their rationale>\n\n"
+        "## Testing\n"
+        "<what was tested, test coverage notes>\n\n"
+        "## Screenshots / Notes\n"
+        "<any additional context for reviewers>\n"
+        "```\n\n"
+        "Write a thorough, reviewer-friendly draft. This will be reviewed by the user\n"
+        "before the PR is actually created. Focus on explaining the WHY, not just the WHAT."
+    ),
+    8: (
         "IMPORTANT: You are running in AUTOMATED HEADLESS MODE. "
         "Execute ALL commands directly. Do NOT ask for confirmation. "
         "Do NOT present plans or proposals. Just DO it.\n\n"
-        "Push all changes and create a pull request. Execute these steps:\n\n"
-        "1. Stage ALL changes:\n"
+        "Read the approved PR draft from `.workflow/pr-draft.md` and execute these steps:\n\n"
+        "1. Read `.workflow/pr-draft.md` to get the PR title and body.\n\n"
+        "2. Stage ALL changes:\n"
         "   git add -A\n\n"
-        "2. Commit with a descriptive message:\n"
-        "   git commit -m 'feat(#{issue}): <title from issue>'\n\n"
-        "3. Push the branch:\n"
+        "3. Commit with the title from the PR draft:\n"
+        "   git commit -m '<title from PR draft>'\n\n"
+        "4. Push the branch:\n"
         "   git push -u origin feature/issue-{issue}\n\n"
-        "4. Create PR:\n"
+        "5. Create the PR using the FULL body from the draft:\n"
         '   gh pr create --base {from_branch} '
-        "--title 'feat(#{issue}): <title>' "
-        "--body '<summary of changes>'\n\n"
-        "5. Capture the PR URL from gh output and update workflow-state.json:\n"
+        "--title '<title from draft>' "
+        "--body '<full body from draft>'\n\n"
+        "6. Capture the PR URL from gh output and update workflow-state.json:\n"
         '   jq \'.prUrl = "THE_PR_URL"\' '
         ".workflow/workflow-state.json > /tmp/ws.json "
         "&& mv /tmp/ws.json .workflow/workflow-state.json\n\n"
@@ -109,13 +137,170 @@ def _read_state(project_dir: Path) -> str:
     return ""
 
 
+# Max total characters for pre-read file content (avoid prompt bloat)
+_PRE_READ_LIMIT = 60_000
+
+
+def _extract_file_paths(spec_content: str) -> list[str]:
+    """Extract file paths mentioned in the plan spec.
+
+    Matches patterns like:
+    - `backend/src/main/.../Foo.java`
+    - `frontend/src/app/.../bar.component.ts`
+    - **File:** `some/path.java`
+    """
+    # Match paths that look like project files (contain / and a file extension)
+    pattern = r'(?:backend|frontend)/[\w/.-]+\.\w+'
+    matches = re.findall(pattern, spec_content)
+    # Deduplicate while preserving order
+    seen: set[str] = set()
+    result: list[str] = []
+    for m in matches:
+        if m not in seen:
+            seen.add(m)
+            result.append(m)
+    return result
+
+
+def _git_changed_files(project_dir: Path, base_branch: str) -> list[str]:
+    """Get list of files changed on the current branch vs base branch."""
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--name-only", f"{base_branch}...HEAD"],
+            capture_output=True, text=True,
+            cwd=str(project_dir), timeout=10,
+        )
+        if result.returncode == 0:
+            return [f for f in result.stdout.strip().splitlines() if f]
+    except Exception:
+        pass
+
+    # Fallback: uncommitted changes
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--name-only", "HEAD"],
+            capture_output=True, text=True,
+            cwd=str(project_dir), timeout=10,
+        )
+        if result.returncode == 0:
+            files = [f for f in result.stdout.strip().splitlines() if f]
+            # Also include untracked files
+            result2 = subprocess.run(
+                ["git", "ls-files", "--others", "--exclude-standard"],
+                capture_output=True, text=True,
+                cwd=str(project_dir), timeout=10,
+            )
+            if result2.returncode == 0:
+                files.extend(f for f in result2.stdout.strip().splitlines() if f)
+            return files
+    except Exception:
+        pass
+
+    return []
+
+
+def _read_files_content(project_dir: Path, file_paths: list[str]) -> str:
+    """Read file contents up to the character limit, return formatted block."""
+    parts: list[str] = []
+    total_chars = 0
+
+    for rel_path in file_paths:
+        full_path = project_dir / rel_path
+        if not full_path.exists() or not full_path.is_file():
+            continue
+        # Skip binary / large files
+        if full_path.suffix in (".class", ".jar", ".png", ".jpg", ".gif", ".pdf", ".lock"):
+            continue
+        try:
+            content = full_path.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            continue
+
+        if total_chars + len(content) > _PRE_READ_LIMIT:
+            remaining = _PRE_READ_LIMIT - total_chars
+            if remaining > 500:  # only include if we can fit something meaningful
+                content = content[:remaining] + "\n... (truncated)"
+                parts.append(f"### {rel_path}\n```\n{content}\n```")
+            parts.append(f"\n_Stopped pre-reading: character limit reached ({_PRE_READ_LIMIT:,} chars)_")
+            break
+
+        parts.append(f"### {rel_path}\n```\n{content}\n```")
+        total_chars += len(content)
+
+    return "\n\n".join(parts)
+
+
+def _pre_read_files(phase: Phase, config: WorkflowConfig, project_dir: Path) -> str:
+    """Pre-read relevant files for a phase to reduce agent exploration turns.
+
+    Phase 0, 7: no pre-reading
+    Phase 1-3:  files mentioned in the plan spec (existing ones only)
+    Phase 4:    changed files + their test counterparts
+    Phase 5-6:  all git-changed files (for review/audit)
+    """
+    if phase.number in (0, 8):
+        return ""
+
+    files_to_read: list[str] = []
+
+    if phase.number in (1, 2, 3):
+        # Extract file paths from the plan spec
+        specs_dir = project_dir / ".workflow" / "specs"
+        plan_files = list(specs_dir.glob("*plan-consolidated.md")) if specs_dir.exists() else []
+        if plan_files:
+            spec_content = plan_files[0].read_text(encoding="utf-8", errors="replace")
+            all_paths = _extract_file_paths(spec_content)
+
+            # Filter by phase scope
+            if phase.number == 1:
+                # DB phase: migration files + entity files
+                files_to_read = [
+                    p for p in all_paths
+                    if "/migration/" in p or "/entity/" in p or "/model/" in p
+                ]
+            elif phase.number == 2:
+                # Backend: all backend files
+                files_to_read = [p for p in all_paths if p.startswith("backend/")]
+            elif phase.number == 3:
+                # Frontend: all frontend files
+                files_to_read = [p for p in all_paths if p.startswith("frontend/")]
+
+    elif phase.number == 4:
+        # Tests: read changed files + find corresponding test files
+        changed = _git_changed_files(project_dir, config.from_branch)
+        for f in changed:
+            files_to_read.append(f)
+            # Auto-find test counterpart
+            if f.endswith(".java") and "/test/" not in f:
+                test_path = f.replace("/main/", "/test/").replace(".java", "Test.java")
+                if test_path not in files_to_read:
+                    files_to_read.append(test_path)
+            elif f.endswith(".ts") and ".spec." not in f:
+                spec_path = f.replace(".ts", ".spec.ts")
+                if spec_path not in files_to_read:
+                    files_to_read.append(spec_path)
+
+    elif phase.number in (5, 6, 7):
+        # Security + Review + PR Draft: all changed files
+        files_to_read = _git_changed_files(project_dir, config.from_branch)
+
+    if not files_to_read:
+        return ""
+
+    content = _read_files_content(project_dir, files_to_read)
+    if not content:
+        return ""
+
+    return content
+
+
 def _architecture_update_instructions(phase: Phase, project_dir: Path) -> str:
     """Generate instructions for the agent to update architecture.md."""
     arch_file = project_dir / ".workflow" / "context" / "architecture.md"
     rel_path = ".workflow/context/architecture.md"
 
-    # Read-only phases don't update architecture
-    if phase.number in (5, 6):  # Security, Review — read-only analysis
+    # Read-only / non-code phases don't update architecture
+    if phase.number in (5, 6, 7, 8):  # Security, Review, PR Draft, Push
         return ""
 
     sections_by_phase: dict[int, str] = {
@@ -124,7 +309,6 @@ def _architecture_update_instructions(phase: Phase, project_dir: Path) -> str:
         2: "API Endpoints (new/changed endpoints with HTTP methods and paths), Key Patterns & Conventions",
         3: "Frontend Components (new/changed components, routes, services)",
         4: "Key Patterns & Conventions (test patterns, test utilities)",
-        7: "",
     }
 
     sections = sections_by_phase.get(phase.number, "")
@@ -201,6 +385,31 @@ def build_prompt(phase: Phase, config: WorkflowConfig, project_dir: Path) -> str
         phase_context.append(
             f"Write plan to: .workflow/specs/issue-{issue_num}-plan-consolidated.md"
         )
+        phase_context.append(
+            "IMPORTANT — Spec format requirement:\n"
+            "Your spec MUST begin with a `## Executive Summary` section.\n"
+            "This summary is displayed to the user in the terminal UI for quick review.\n\n"
+            "Write it as a short, readable narrative (5-8 sentences, NO bullet points).\n"
+            "Focus on DESIGN DECISIONS and their RATIONALE — not just what, but WHY:\n"
+            "- What does the feature do from the user's perspective?\n"
+            "- Which architectural approach did you choose and WHY?\n"
+            "- Are there existing patterns in the codebase you're following? Why is that the right choice?\n"
+            "- What was the most important design decision and what alternatives did you consider?\n"
+            "- What risks did you identify and how does the design mitigate them?\n\n"
+            "Example:\n"
+            "## Executive Summary\n"
+            "This feature adds persistence for the user's preferred start page so that the "
+            "setting actually takes effect after login instead of being purely decorative. "
+            "The implementation follows the existing `timeSuggestionMode` pattern — a Java enum "
+            "with `@Enumerated(EnumType.STRING)`, a Flyway migration, and DTO extensions — because "
+            "this pattern is already proven in the codebase and keeps the change minimal. "
+            "The most critical design decision is chaining the settings HTTP request into the "
+            "auth flow using `switchMap`, because without this the navigation would always "
+            "default to /dashboard due to a race condition between settings loading and routing. "
+            "The main risk is that adding a parameter to `PreferencesDto` (a Java record) will "
+            "break all existing test constructors, but this is expected and straightforward to fix. "
+            "In total, 7 backend files (2 new) and 6 frontend files are affected.\n"
+        )
     elif phase.number == 4:
         phase_context.append(f"Target coverage: {config.target_coverage}%")
         phase_context.append(
@@ -216,6 +425,13 @@ def build_prompt(phase: Phase, config: WorkflowConfig, project_dir: Path) -> str
             "This is required for phase verification to pass."
         )
     elif phase.number == 7:
+        # PR Draft phase — needs from_branch for git diff
+        phase_context.append(f"Base branch for diff: {config.from_branch}")
+        phase_context.append(
+            f"Write the PR draft to: .workflow/pr-draft.md"
+        )
+    elif phase.number == 8:
+        # Push & PR phase — needs from_branch for push target
         phase_context.append(f"PR base branch: {config.from_branch}")
         phase_context.append(
             "CRITICAL — After creating the PR, you MUST update .workflow/workflow-state.json:\n"
@@ -235,12 +451,23 @@ def build_prompt(phase: Phase, config: WorkflowConfig, project_dir: Path) -> str
     if arch_instructions:
         parts.append(arch_instructions)
 
-    # 6. Specs from previous phases
+    # 6. Pre-read files (reduces agent exploration turns)
+    pre_read = _pre_read_files(phase, config, project_dir)
+    if pre_read:
+        parts.extend([
+            "",
+            "## Pre-Read Files (already loaded — do NOT re-read these)",
+            "The following files are relevant to your task and pre-loaded for you.",
+            "You can reference them directly without using the Read tool.",
+            pre_read,
+        ])
+
+    # 7. Specs from previous phases
     specs = _read_specs(project_dir)
     if specs:
         parts.extend(["", "## Existing Specs (from previous phases)", specs])
 
-    # 7. Workflow state
+    # 8. Workflow state
     state = _read_state(project_dir)
     if state:
         parts.extend(["", "## Current Workflow State", f"```json\n{state}\n```"])

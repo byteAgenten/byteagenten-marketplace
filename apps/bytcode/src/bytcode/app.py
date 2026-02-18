@@ -217,7 +217,7 @@ class ResumeScreen(ModalScreen[int]):
 
             yield Label("")
             with Vertical(id="resume-buttons"):
-                if resume_phase <= 7:
+                if resume_phase < len(PHASES):
                     phase_name = PHASES[resume_phase].name if resume_phase < len(PHASES) else "?"
                     yield Button(
                         f"Resume from Phase {resume_phase} ({phase_name})",
@@ -266,6 +266,7 @@ class BytcodeApp(App[None]):
         self._running_phase: int | None = None
         self._last_activity: str = ""
         self._tick_timer: Timer | None = None
+        self._tick_count: int = 0
         self._resume_from: int = 0
 
     def compose(self) -> ComposeResult:
@@ -407,6 +408,7 @@ class BytcodeApp(App[None]):
 
     def _tick(self) -> None:
         """Called every second to refresh sidebar with elapsed time."""
+        self._tick_count += 1
         if self._running_phase is not None:
             self._refresh_sidebar()
 
@@ -414,27 +416,42 @@ class BytcodeApp(App[None]):
         """Rebuild sidebar content with current status + elapsed time."""
         sidebar = self.query_one("#phase-sidebar", Static)
         lines: list[str] = []
+        total_s: float = 0.0
 
         for phase in PHASES:
             current_status = PhaseStatus.PENDING
+            result = None
             if self.orchestrator and phase.number in self.orchestrator.results:
-                current_status = self.orchestrator.results[phase.number].status
+                result = self.orchestrator.results[phase.number]
+                current_status = result.status
             if phase.number == self._running_phase:
                 current_status = PhaseStatus.RUNNING
 
             icon = STATUS_ICONS[current_status]
             typ = "A" if phase.phase_type == PhaseType.APPROVAL else " "
-            line = f"{icon} {phase.number} {phase.name} {typ}"
 
-            # Add elapsed time + activity for running phase
             if current_status == PhaseStatus.RUNNING and self.orchestrator:
+                # Live elapsed time for running phase — icon pulses
                 elapsed = time.monotonic() - self.orchestrator.phase_start_time
-                line = f"{icon} {phase.number} {phase.name}"
+                total_s += elapsed
+                pulse = "[yellow]●[/]" if self._tick_count % 2 == 0 else "[dim yellow]○[/]"
+                line = f"{pulse} {phase.number} {phase.name}"
                 line += f"\n    [yellow]{_fmt_elapsed(elapsed)}[/]"
                 if self._last_activity:
                     line += f" [dim]{self._last_activity}[/]"
+            elif result and result.duration_s > 0:
+                # Completed phase — show final duration
+                total_s += result.duration_s
+                dur = f"[dim]{_fmt_elapsed(result.duration_s)}[/]"
+                line = f"{icon} {phase.number} {phase.name} {dur}"
+            else:
+                line = f"{icon} {phase.number} {phase.name} {typ}"
 
             lines.append(line)
+
+        # Total time at the bottom
+        lines.append("")
+        lines.append(f"[bold]Total: {_fmt_elapsed(total_s)}[/]")
 
         sidebar.update("\n".join(lines))
 

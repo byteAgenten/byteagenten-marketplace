@@ -3,7 +3,7 @@
 /* --- Main Workflow Screen --- */
 
 #phase-sidebar {
-    width: 24;
+    width: 28;
     height: 100%;
     background: $surface;
     border-right: solid $primary-darken-1;

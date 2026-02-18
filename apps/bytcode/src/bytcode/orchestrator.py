@@ -15,6 +15,29 @@ from .config import PHASES, Phase, PhaseType, WorkflowConfig
 from .prompts import build_prompt
 from .verify import verify_phase
 
+import re
+
+
+def _extract_section(markdown: str, heading: str) -> str:
+    """Extract content under a ## heading, stopping at the next ## heading."""
+    pattern = rf"^##\s+{re.escape(heading)}\s*$"
+    lines = markdown.splitlines()
+    start = None
+    for i, line in enumerate(lines):
+        if re.match(pattern, line, re.IGNORECASE):
+            start = i + 1
+            break
+    if start is None:
+        return ""
+    result: list[str] = []
+    for line in lines[start:]:
+        if line.startswith("## "):
+            break
+        result.append(line)
+    # Strip leading/trailing blank lines
+    text = "\n".join(result).strip()
+    return text
+
 
 class PhaseStatus(Enum):
     PENDING = "pending"
@@ -30,6 +53,7 @@ class PhaseResult:
     status: PhaseStatus
     message: str = ""
     attempts: int = 0
+    duration_s: float = 0.0
 
 
 OutputCallback = Callable[[str], None]
@@ -155,7 +179,9 @@ class Orchestrator:
         self._ensure_workflow_dir()
 
         if resume_from == 0:
-            # Fresh start: fetch issue, create state, setup branch
+            # Fresh start: clean workflow state but preserve architecture context
+            self._clean_workflow_state()
+
             ok = await self._fetch_issue()
             if not ok:
                 self.abort_reason = "GitHub Issue could not be loaded."
@@ -263,9 +289,10 @@ class Orchestrator:
 
         for attempt in range(1, self.MAX_RETRIES + 1):
             if self._cancelled:
+                elapsed = time.monotonic() - self.phase_start_time
                 phase_log.close()
                 self._current_log = None
-                return PhaseResult(phase, PhaseStatus.FAILED, "Cancelled", attempt)
+                return PhaseResult(phase, PhaseStatus.FAILED, "Cancelled", attempt, elapsed)
 
             if self.MAX_RETRIES > 1:
                 self._emit(f"--- Attempt {attempt}/{self.MAX_RETRIES}")
@@ -296,21 +323,29 @@ class Orchestrator:
                 self._emit(f"\n  Verification passed: {msg} ({elapsed:.0f}s)")
                 phase_log.close()
                 self._current_log = None
+
+                # Show plan summary after Phase 0, PR draft after Phase 7
+                if phase.number == 0:
+                    self._show_plan_summary()
+                elif phase.number == 7:
+                    self._show_pr_draft()
+
                 if phase.phase_type == PhaseType.APPROVAL:
                     self._notify_phase(phase.number, PhaseStatus.AWAITING_APPROVAL)
                     return PhaseResult(
-                        phase, PhaseStatus.AWAITING_APPROVAL, msg, attempt
+                        phase, PhaseStatus.AWAITING_APPROVAL, msg, attempt, elapsed
                     )
                 self._notify_phase(phase.number, PhaseStatus.PASSED)
-                return PhaseResult(phase, PhaseStatus.PASSED, msg, attempt)
+                return PhaseResult(phase, PhaseStatus.PASSED, msg, attempt, elapsed)
 
             self._emit(f"\n  Verification failed: {msg}")
             phase_log.close()
 
         self._current_log = None
+        total_elapsed = time.monotonic() - self.phase_start_time
         self._notify_phase(phase.number, PhaseStatus.FAILED)
         return PhaseResult(
-            phase, PhaseStatus.FAILED, "Max retries exceeded", self.MAX_RETRIES
+            phase, PhaseStatus.FAILED, "Max retries exceeded", self.MAX_RETRIES, total_elapsed
         )
 
     async def _run_claude(self, phase: Phase, prompt: str) -> bool:
@@ -325,8 +360,10 @@ class Orchestrator:
             "--output-format",
             "stream-json",
             "--verbose",
-            "--dangerouslySkipPermissions",
+            "--dangerously-skip-permissions",
         ]
+        if phase.model:
+            cmd.extend(["--model", phase.model])
 
         env = {"CLAUDECODE": ""}  # Prevent nested-session error
 
@@ -646,6 +683,88 @@ class Orchestrator:
         wf_dir = self.project_dir / ".workflow" / "specs"
         wf_dir.mkdir(parents=True, exist_ok=True)
         self._logs_dir.mkdir(parents=True, exist_ok=True)
+
+    def _clean_workflow_state(self) -> None:
+        """Remove workflow-specific files but preserve persistent context.
+
+        Preserved: .workflow/context/architecture.md (agent-maintained knowledge)
+        Deleted:   workflow-state.json, issue.json, specs/*, logs/*
+        """
+        import shutil
+
+        wf_dir = self.project_dir / ".workflow"
+        if not wf_dir.exists():
+            return
+
+        # Delete workflow-specific files
+        for f in ("workflow-state.json", "issue.json"):
+            path = wf_dir / f
+            if path.exists():
+                path.unlink()
+
+        # Clear specs and logs directories (but keep the dirs)
+        for subdir in ("specs", "logs"):
+            path = wf_dir / subdir
+            if path.exists():
+                shutil.rmtree(path)
+
+        # context/architecture.md is preserved (agent-maintained knowledge)
+        # context/structure.md is preserved (regenerated before each phase anyway)
+
+    def _show_plan_summary(self) -> None:
+        """Extract and display Executive Summary from Phase 0 spec."""
+        specs_dir = self.project_dir / ".workflow" / "specs"
+        if not specs_dir.exists():
+            return
+
+        # Find the plan spec file
+        plan_files = list(specs_dir.glob("*plan-consolidated.md"))
+        if not plan_files:
+            return
+
+        spec_content = plan_files[0].read_text(encoding="utf-8", errors="replace")
+
+        # Try to extract ## Executive Summary section
+        summary = _extract_section(spec_content, "Executive Summary")
+
+        # Fallback: try ## Architecture Overview
+        if not summary:
+            summary = _extract_section(spec_content, "Architecture Overview")
+
+        # Fallback: show first heading + first few lines
+        if not summary:
+            lines = spec_content.strip().splitlines()[:8]
+            summary = "\n".join(lines)
+
+        if summary:
+            self._emit("")
+            self._emit("[bold cyan]" + "─" * 50 + "[/]")
+            self._emit("[bold cyan]  Plan Summary[/]")
+            self._emit("[bold cyan]" + "─" * 50 + "[/]")
+            for line in summary.strip().splitlines():
+                self._emit(f"  {line}")
+            self._emit("[bold cyan]" + "─" * 50 + "[/]")
+            self._emit("")
+
+    def _show_pr_draft(self) -> None:
+        """Display the PR draft for user review before push."""
+        draft_file = self.project_dir / ".workflow" / "pr-draft.md"
+        if not draft_file.exists():
+            return
+
+        content = draft_file.read_text(encoding="utf-8", errors="replace").strip()
+        if not content:
+            return
+
+        self._emit("")
+        self._emit("[bold green]" + "─" * 50 + "[/]")
+        self._emit("[bold green]  PR Draft — Review before push[/]")
+        self._emit("[bold green]" + "─" * 50 + "[/]")
+        for line in content.splitlines():
+            self._emit(f"  {line}")
+        self._emit("[bold green]" + "─" * 50 + "[/]")
+        self._emit("")
+        self._emit("[dim]Approve (F1) to push & create PR, or give Feedback (F2) to revise.[/]")
 
     def _update_codebase_context(self) -> None:
         """Regenerate structure.md and ensure architecture.md exists."""
