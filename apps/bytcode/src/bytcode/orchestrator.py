@@ -58,7 +58,9 @@ class PhaseResult:
 
 OutputCallback = Callable[[str], None]
 PhaseCallback = Callable[[int, PhaseStatus], None]
-ActivityCallback = Callable[[str], None]  # short activity string for sidebar
+ActivityCallback = Callable[[str], None]    # short activity string for sidebar
+LiveLogCallback = Callable[[str], None]     # detailed tool activity for live-log panel
+SummaryCallback = Callable[[str, str], None]  # (title, markdown) for summary panel
 
 
 class PhaseLog:
@@ -152,12 +154,16 @@ class Orchestrator:
         on_output: OutputCallback | None = None,
         on_phase_change: PhaseCallback | None = None,
         on_activity: ActivityCallback | None = None,
+        on_live_log: LiveLogCallback | None = None,
+        on_summary: SummaryCallback | None = None,
     ):
         self.config = config
         self.project_dir = project_dir
         self.on_output = on_output
         self.on_phase_change = on_phase_change
         self.on_activity = on_activity
+        self.on_live_log = on_live_log
+        self.on_summary = on_summary
         self.results: dict[int, PhaseResult] = {}
         self.abort_reason: str | None = None
         self.phase_start_time: float = 0.0
@@ -288,6 +294,8 @@ class Orchestrator:
         phase_log = PhaseLog(self._logs_dir, phase.number, phase.agent)
         self._current_log = phase_log
 
+        last_failure: str = ""  # Carries verification error to next attempt
+
         for attempt in range(1, self.MAX_RETRIES + 1):
             if self._cancelled:
                 elapsed = time.monotonic() - self.phase_start_time
@@ -308,9 +316,21 @@ class Orchestrator:
             if extra_context:
                 prompt += f"\n\n## Additional Context\n{extra_context}"
 
+            # On retry: inject the verification error so the agent knows what went wrong
+            if last_failure:
+                prompt += (
+                    f"\n\n## RETRY — Previous Attempt Failed\n"
+                    f"This is attempt {attempt}/{self.MAX_RETRIES}. "
+                    f"The previous attempt failed verification:\n\n"
+                    f"**Error:** {last_failure}\n\n"
+                    f"Fix this issue before completing your work. "
+                    f"Make sure all required output files are written."
+                )
+
             success = await self._run_claude(phase, prompt)
 
             if not success:
+                last_failure = "Claude process exited with non-zero exit code"
                 self._emit(f"--- Claude process failed (attempt {attempt})")
                 phase_log.write_verification(False, "Claude process failed")
                 phase_log.close()
@@ -341,6 +361,7 @@ class Orchestrator:
                 self._notify_phase(phase.number, PhaseStatus.PASSED)
                 return PhaseResult(phase, PhaseStatus.PASSED, msg, attempt, elapsed)
 
+            last_failure = msg
             self._emit(f"\n  Verification failed: {msg}")
             phase_log.close()
 
@@ -404,7 +425,7 @@ class Orchestrator:
                     stderr = await process.stderr.read()
                     err = stderr.decode("utf-8", errors="replace").strip()
                     if err:
-                        self._emit(f"[dim]stderr: {err}[/]")
+                        self._emit_live(f"[dim red]stderr: {err}[/]")
                 return False
 
             return True
@@ -436,7 +457,7 @@ class Orchestrator:
                     tool_name = block.get("name", "?")
                     tool_input = block.get("input", {})
                     activity = self._format_tool_activity(tool_name, tool_input)
-                    self._emit(f"[cyan]  [{tool_name}][/] {activity}")
+                    self._emit_live(f"[cyan]  [{tool_name}][/] {activity}")
                     self._notify_activity(f"{tool_name}")
                     if log:
                         log.write_tool_call(tool_name, activity)
@@ -450,7 +471,7 @@ class Orchestrator:
                         if len(text.strip()) > 300:
                             preview += " ..."
                         wrapped = textwrap.fill(preview, width=76, initial_indent="  ", subsequent_indent="  ")
-                        self._emit(f"[dim]{wrapped}[/]")
+                        self._emit_live(f"[dim]{wrapped}[/]")
                         # Write full text to transcript (not truncated)
                         if log:
                             log.write_agent_text(text.strip())
@@ -460,7 +481,7 @@ class Orchestrator:
             duration = event.get("duration_ms", 0)
             turns = event.get("num_turns", 0)
             if cost or duration:
-                self._emit(
+                self._emit_live(
                     f"[dim]  Cost: ${cost:.4f} | "
                     f"Duration: {duration / 1000:.1f}s | "
                     f"Turns: {turns}[/]"
@@ -719,12 +740,11 @@ class Orchestrator:
         # context/structure.md is preserved (regenerated before each phase anyway)
 
     def _show_plan_summary(self) -> None:
-        """Extract and display Executive Summary from Phase 0 spec."""
+        """Send Executive Summary as markdown to the summary panel."""
         specs_dir = self.project_dir / ".workflow" / "specs"
         if not specs_dir.exists():
             return
 
-        # Find the plan spec file
         plan_files = list(specs_dir.glob("*plan-consolidated.md"))
         if not plan_files:
             return
@@ -733,69 +753,41 @@ class Orchestrator:
 
         # Try to extract ## Executive Summary section
         summary = _extract_section(spec_content, "Executive Summary")
+        heading = "Executive Summary"
 
         # Fallback: try ## Architecture Overview
         if not summary:
             summary = _extract_section(spec_content, "Architecture Overview")
+            heading = "Architecture Overview"
 
-        # Fallback: show first heading + first few lines
+        # Fallback: show first lines
         if not summary:
-            lines = spec_content.strip().splitlines()[:8]
+            lines = spec_content.strip().splitlines()[:12]
             summary = "\n".join(lines)
+            heading = "Plan"
 
         if summary:
-            import textwrap
-            self._emit("")
-            self._emit("[bold cyan]" + "─" * 70 + "[/]")
-            self._emit("[bold cyan]  Plan Summary[/]")
-            self._emit("[bold cyan]" + "─" * 70 + "[/]")
-            for line in summary.strip().splitlines():
-                stripped = line.strip()
-                if not stripped:
-                    self._emit("")
-                elif stripped.startswith("### "):
-                    # Sub-heading: bold + extra spacing
-                    self._emit("")
-                    self._emit(f"  [bold]{stripped[4:]}[/]")
-                elif stripped.startswith("- "):
-                    # Bullet point: wrap with hanging indent
-                    wrapped = textwrap.fill(stripped, width=66, initial_indent="    ", subsequent_indent="      ")
-                    self._emit(wrapped)
-                else:
-                    wrapped = textwrap.fill(stripped, width=68, initial_indent="  ", subsequent_indent="  ")
-                    self._emit(wrapped)
-            self._emit("[bold cyan]" + "─" * 70 + "[/]")
-            self._emit("")
+            self._emit_summary(
+                "Plan Summary",
+                f"## {heading}\n\n{summary}",
+            )
 
     def _show_pr_draft(self) -> None:
-        """Display the PR draft for user review before push."""
+        """Send PR draft as markdown to the summary panel."""
         draft_file = self.project_dir / ".workflow" / "pr-draft.md"
         if not draft_file.exists():
             return
 
         content = draft_file.read_text(encoding="utf-8", errors="replace").strip()
-        if not content:
-            return
-
-        self._emit("")
-        self._emit("[bold green]" + "─" * 50 + "[/]")
-        self._emit("[bold green]  PR Draft — Review before push[/]")
-        self._emit("[bold green]" + "─" * 50 + "[/]")
-        for line in content.splitlines():
-            self._emit(f"  {line}")
-        self._emit("[bold green]" + "─" * 50 + "[/]")
-        self._emit("")
-        self._emit("[dim]Approve (F1) to push & create PR, or give Feedback (F2) to revise.[/]")
+        if content:
+            self._emit_summary("PR Draft", content)
 
     def _show_phase_summary(self, phase: Phase) -> None:
-        """Extract and display Phase Summary from the agent's spec file."""
-        import textwrap
-
+        """Send phase spec summary as markdown to the summary panel."""
         specs_dir = self.project_dir / ".workflow" / "specs"
         if not specs_dir.exists():
             return
 
-        # Find spec file for this phase (pattern: *-ph0X-*.md)
         pattern = f"*-ph{phase.number:02d}-*.md"
         spec_files = list(specs_dir.glob(pattern))
         if not spec_files:
@@ -805,24 +797,14 @@ class Orchestrator:
         summary = _extract_section(content, "Phase Summary")
 
         if not summary:
-            # Fallback: first 4 non-empty lines of the spec
-            lines = [l for l in content.strip().splitlines() if l.strip() and not l.startswith("#")]
-            summary = "\n".join(lines[:4])
+            lines = [l for l in content.strip().splitlines() if l.strip()][:8]
+            summary = "\n".join(lines)
 
-        if not summary:
-            return
-
-        self._emit("")
-        self._emit(f"[bold]  {phase.name} Summary[/]")
-        self._emit("[dim]" + "  " + "─" * 50 + "[/]")
-        for line in summary.strip().splitlines():
-            stripped = line.strip()
-            if not stripped:
-                self._emit("")
-            else:
-                wrapped = textwrap.fill(stripped, width=72, initial_indent="  ", subsequent_indent="  ")
-                self._emit(f"[dim]{wrapped}[/]")
-        self._emit("")
+        if summary:
+            self._emit_summary(
+                f"Phase {phase.number}: {phase.name}",
+                f"## Phase Summary\n\n{summary}",
+            )
 
     def _update_codebase_context(self) -> None:
         """Regenerate structure.md and ensure architecture.md exists."""
@@ -833,6 +815,14 @@ class Orchestrator:
     def _emit(self, text: str) -> None:
         if self.on_output:
             self.on_output(text)
+
+    def _emit_live(self, text: str) -> None:
+        if self.on_live_log:
+            self.on_live_log(text)
+
+    def _emit_summary(self, title: str, markdown: str) -> None:
+        if self.on_summary:
+            self.on_summary(title, markdown)
 
     def _notify_phase(self, phase_num: int, status: PhaseStatus) -> None:
         if self.on_phase_change:

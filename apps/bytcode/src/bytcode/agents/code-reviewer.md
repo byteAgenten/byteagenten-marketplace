@@ -450,6 +450,30 @@ mkdir -p .workflow/specs
 # Inhalt: Vollständiger Code Review Report (Issues, Fixes, Empfehlungen)
 ```
 
+**⚠️ PFLICHT: `## Phase Summary` Section am Anfang der MD-Datei!**
+
+Die TUI zeigt dem User eine Zusammenfassung im Markdown-Panel. Deine Spec-Datei MUSS
+als **erste Section** ein `## Phase Summary` enthalten:
+
+```markdown
+## Phase Summary
+
+### Overall Assessment: APPROVED / CHANGES REQUIRED
+
+### Findings Overview
+| Prio | Count | Details |
+|------|-------|---------|
+| Critical | 0 | - |
+| Major | X | [Kurzbeschreibung] |
+| Minor | X | [Kurzbeschreibung] |
+
+### Coverage Verification
+- Target: XX% | Backend: XX% | Frontend: XX%
+
+### Recommendation
+[Ein Satz: Was als nächstes passieren soll]
+```
+
 **Schritt 2: Context in workflow-state.json schreiben**
 
 **⚠️ PFLICHT: `status` und `fixes[]` werden vom Orchestrator fuer Rollback-Routing gelesen!**

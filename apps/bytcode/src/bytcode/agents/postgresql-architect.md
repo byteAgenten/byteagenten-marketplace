@@ -566,6 +566,27 @@ mkdir -p .workflow/specs
 # Inhalt: Schema-Übersicht, Tabellen, Indexes, Constraints, Entscheidungen
 ```
 
+**⚠️ PFLICHT: `## Phase Summary` Section am Anfang der MD-Datei!**
+
+Die TUI zeigt dem User eine Zusammenfassung im Markdown-Panel. Deine Spec-Datei MUSS
+als **erste Section** ein `## Phase Summary` enthalten:
+
+```markdown
+## Phase Summary
+
+### Migrations Created
+- `V{N}__{description}.sql` — [Kurzbeschreibung]
+
+### Schema Changes
+| Table | Change | Details |
+|-------|--------|---------|
+| `table_name` | NEW / ALTERED | Columns, constraints |
+
+### Key Decisions
+- [Warum diese Schema-Struktur?]
+- [Trade-offs, Indexing-Strategie]
+```
+
 Die MD-Datei ist SINGLE SOURCE OF TRUTH. Downstream-Agents (spring-boot-developer, etc.) lesen diese Datei selbst via Read-Tool.
 
 **Schritt 2: Minimalen Context in workflow-state.json schreiben**

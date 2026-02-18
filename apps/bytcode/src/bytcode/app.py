@@ -5,7 +5,7 @@ import sys
 import time
 from pathlib import Path
 
-from textual import work
+from textual import events, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Center, Horizontal, Vertical
@@ -17,6 +17,7 @@ from textual.widgets import (
     Header,
     Input,
     Label,
+    Markdown,
     RadioButton,
     RadioSet,
     RichLog,
@@ -67,6 +68,81 @@ def _fetch_branches(project_dir: Path) -> list[str]:
         return branches if branches else ["main"]
     except Exception:
         return ["main"]
+
+
+class ResizeHandle(Static):
+    """Draggable handle to resize adjacent panels."""
+
+    can_focus = False
+
+    def __init__(self, direction: str = "vertical", **kwargs: object) -> None:
+        label = "─── drag ───" if direction == "vertical" else ""
+        super().__init__(label, **kwargs)
+        self.direction = direction
+        self._dragging = False
+        self._last_pos = 0
+        self.add_class(f"-{direction}")
+
+    def on_mouse_down(self, event: events.MouseDown) -> None:
+        self._dragging = True
+        self._last_pos = event.screen_y if self.direction == "vertical" else event.screen_x
+        self.capture_mouse()
+        self.add_class("-dragging")
+        event.stop()
+
+    def on_mouse_move(self, event: events.MouseMove) -> None:
+        if not self._dragging:
+            return
+        pos = event.screen_y if self.direction == "vertical" else event.screen_x
+        delta = pos - self._last_pos
+        if delta == 0:
+            return
+        self._last_pos = pos
+        self._adjust_siblings(delta)
+        event.stop()
+
+    def on_mouse_up(self, event: events.MouseUp) -> None:
+        if self._dragging:
+            self._dragging = False
+            self.release_mouse()
+            self.remove_class("-dragging")
+            event.stop()
+
+    def _adjust_siblings(self, delta: int) -> None:
+        parent = self.parent
+        if parent is None:
+            return
+        children = list(parent.children)
+        try:
+            idx = children.index(self)
+        except ValueError:
+            return
+        if idx == 0 or idx >= len(children) - 1:
+            return
+
+        before = children[idx - 1]
+        after = children[idx + 1]
+
+        if self.direction == "vertical":
+            before_h = before.size.height
+            after_h = after.size.height
+            total = before_h + after_h
+            min_size = 4
+
+            new_before = max(min_size, before_h + delta)
+            new_after = max(min_size, total - new_before)
+            new_before = total - new_after
+
+            before.styles.height = f"{new_before}fr"
+            after.styles.height = f"{new_after}fr"
+        else:
+            before_w = before.size.width
+            min_size = 15
+            parent_w = parent.size.width
+            max_size = parent_w - min_size - 1
+
+            new_before = max(min_size, min(max_size, before_w + delta))
+            before.styles.width = new_before
 
 
 class SetupScreen(ModalScreen[WorkflowConfig | None]):
@@ -273,7 +349,19 @@ class BytcodeApp(App[None]):
         yield Header()
         with Horizontal():
             yield self._build_sidebar()
-            yield RichLog(id="log-panel", highlight=True, markup=True)
+            yield ResizeHandle(direction="horizontal")
+            with Vertical(id="main-content"):
+                summary = Markdown(id="summary-panel")
+                summary.border_title = "Summary"
+                yield summary
+                yield ResizeHandle(direction="vertical", id="summary-handle")
+                main_panel = RichLog(id="main-panel", highlight=True, markup=True)
+                main_panel.border_title = "Output"
+                yield main_panel
+                yield ResizeHandle(direction="vertical")
+                live_log = RichLog(id="live-log", highlight=True, markup=True)
+                live_log.border_title = "Live Activity"
+                yield live_log
         yield Footer()
 
     def _build_sidebar(self) -> Static:
@@ -353,7 +441,7 @@ class BytcodeApp(App[None]):
         config = self.config
         if not config:
             return
-        log = self.query_one("#log-panel", RichLog)
+        log = self.query_one("#main-panel", RichLog)
         log.write("[bold]bytcode v0.1.0[/]")
         log.write(f"Issue:    #{config.issue_num}")
         log.write(f"Branch:   {config.from_branch}")
@@ -376,6 +464,8 @@ class BytcodeApp(App[None]):
             on_output=self._on_output,
             on_phase_change=self._on_phase_change,
             on_activity=self._on_activity,
+            on_live_log=self._on_live_log,
+            on_summary=self._on_summary,
         )
         result = await self.orchestrator.run(resume_from=self._resume_from)
         self._handle_phase_result(result)
@@ -384,11 +474,30 @@ class BytcodeApp(App[None]):
         self.call_from_thread(self._append_log, text)
 
     def _append_log(self, text: str) -> None:
-        log = self.query_one("#log-panel", RichLog)
+        log = self.query_one("#main-panel", RichLog)
         log.write(text)
 
     def _on_phase_change(self, phase_num: int, status: PhaseStatus) -> None:
         self.call_from_thread(self._update_phase_status, phase_num, status)
+
+    def _on_live_log(self, text: str) -> None:
+        self.call_from_thread(self._append_live_log, text)
+
+    def _append_live_log(self, text: str) -> None:
+        live = self.query_one("#live-log", RichLog)
+        live.write(text)
+
+    def _on_summary(self, title: str, markdown: str) -> None:
+        self.call_from_thread(self._update_summary, title, markdown)
+
+    def _update_summary(self, title: str, markdown: str) -> None:
+        panel = self.query_one("#summary-panel", Markdown)
+        handle = self.query_one("#summary-handle", ResizeHandle)
+        panel.border_title = title
+        panel.update(markdown)
+        if not panel.display:
+            panel.display = True
+            handle.display = True
 
     def _on_activity(self, activity: str) -> None:
         """Called from orchestrator when agent uses a tool."""

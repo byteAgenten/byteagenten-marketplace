@@ -473,6 +473,33 @@ mkdir -p .workflow/specs
 # Inhalt: Vollständiger Audit-Report (OWASP Checklist, alle Findings, Empfehlungen)
 ```
 
+**⚠️ PFLICHT: `## Phase Summary` Section am Anfang der MD-Datei!**
+
+Die TUI zeigt dem User eine Zusammenfassung im Markdown-Panel. Deine Spec-Datei MUSS
+als **erste Section** ein `## Phase Summary` enthalten:
+
+```markdown
+## Phase Summary
+
+### OWASP Top 10 Status
+| Category | Status |
+|----------|--------|
+| A01: Access Control | PASSED / FINDING |
+| A02: Crypto Failures | PASSED / FINDING |
+| ... | ... |
+
+### Findings
+| Severity | Count | Fixed |
+|----------|-------|-------|
+| Critical | 0 | - |
+| High | 0 | - |
+| Medium | X | X applied |
+| Low | X | X noted |
+
+### Recommendation
+[Ein Satz: Overall assessment]
+```
+
 Die MD-Datei ist SINGLE SOURCE OF TRUTH. Der Code-Reviewer liest diese Datei selbst via Read-Tool.
 
 **Schritt 2: Minimalen Context in workflow-state.json schreiben**

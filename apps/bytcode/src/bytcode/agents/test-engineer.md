@@ -97,7 +97,23 @@ Wenn du in der PLAN-Runde eingesetzt wirst, ist deine WICHTIGSTE Aufgabe die Ana
 | `*.component.ts` | `*.component.spec.ts` |
 | `*.service.ts` | `*.service.spec.ts` |
 
-### E2E (Playwright)
+### E2E (Playwright) — PFLICHT bei UI-Änderungen!
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  E2E-Tests sind KEIN Optional!                                              │
+│                                                                             │
+│  Wenn Frontend-Code geändert wurde (Components, Routes, Services),         │
+│  MUSST du Playwright E2E-Tests schreiben.                                  │
+│                                                                             │
+│  E2E-Tests ≠ Karma-Tests!                                                  │
+│  - Karma = Unit-Tests (isoliert, kein Backend)                             │
+│  - Playwright = E2E-Tests (Browser, voller Stack mit Testcontainers)       │
+│                                                                             │
+│  NUR bei reinen Backend-Änderungen (scope: backend-only) darfst du         │
+│  E2E-Tests weglassen.                                                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 | Feature | PFLICHT-Tests |
 |---------|---------------|
@@ -362,6 +378,32 @@ Metadaten direkt im Prompt: Issue-Nr, Coverage-Ziel.
 
 ### Output (Test Results speichern) - MUSS ausgeführt werden!
 
+**⚠️ PFLICHT: `## Phase Summary` Section am Anfang der MD-Datei!**
+
+Die TUI zeigt dem User eine Zusammenfassung im Markdown-Panel. Deine Spec-Datei MUSS
+als **erste Section** ein `## Phase Summary` enthalten:
+
+```markdown
+## Phase Summary
+
+### Test Results
+| Suite | Tests | Passed | Failed |
+|-------|-------|--------|--------|
+| Backend Unit | X | X | 0 |
+| Backend Integration | X | X | 0 |
+| Frontend Unit | X | X | 0 |
+| E2E (Playwright) | X | X | 0 |
+
+### Coverage
+| Layer | Coverage | Target |
+|-------|----------|--------|
+| Backend | XX% | XX% |
+| Frontend | XX% | XX% |
+
+### Bug Fixes Applied
+- [Kleine Fixes die du selbst gemacht hast, oder "None"]
+```
+
 **⚠️ KRITISCH: Tests MÜSSEN vor dem Speichern erfolgreich laufen!**
 
 ```
@@ -371,7 +413,7 @@ Metadaten direkt im Prompt: Issue-Nr, Coverage-Ziel.
 │  Du DARFST "allPassed": true NUR setzen wenn:                              │
 │  1. mvn verify ERFOLGREICH war (Backend Unit + Integration Tests)          │
 │  2. npm test ERFOLGREICH war (Frontend Unit Tests)                         │
-│  3. npx playwright test ERFOLGREICH war (E2E Tests - falls relevant)       │
+│  3. npx playwright test ERFOLGREICH war (E2E Tests — PFLICHT bei UI!)      │
 │                                                                             │
 │  Bei JEDEM Test-Fehler:                                                     │
 │  - Fehler fixen, Tests erneut ausführen                                    │
@@ -388,7 +430,7 @@ cd backend && mvn verify
 # 2. Frontend Tests ausführen (PFLICHT!)
 cd frontend && npm test -- --no-watch --browsers=ChromeHeadless
 
-# 3. E2E Tests ausführen (falls vorhanden)
+# 3. E2E Tests ausführen (PFLICHT bei Features mit UI-Änderungen!)
 cd frontend && npx playwright test
 
 # 4. NUR bei ALLEN GRÜN: Test Report als MD-Datei speichern

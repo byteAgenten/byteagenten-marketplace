@@ -10,11 +10,72 @@
     padding: 1 1;
 }
 
-#log-panel {
+#main-content {
     height: 100%;
+}
+
+#summary-panel {
+    display: none;
+    height: 2fr;
+    min-height: 6;
+    background: $surface-darken-1;
+    border: solid $accent-darken-1;
+    padding: 0 1;
+    overflow-y: auto;
+}
+
+#summary-handle {
+    display: none;
+}
+
+#main-panel {
+    height: 1fr;
+    min-height: 6;
     background: $surface-darken-1;
     border: solid $primary-darken-1;
     padding: 0 1;
+}
+
+#live-log {
+    height: 1fr;
+    min-height: 4;
+    background: $surface-darken-2;
+    border: solid $primary-darken-2;
+    padding: 0 1;
+}
+
+/* --- Resize Handles --- */
+
+ResizeHandle.-vertical {
+    height: 1;
+    width: 100%;
+    background: $surface-lighten-1;
+    content-align: center middle;
+    color: $text-muted;
+}
+
+ResizeHandle.-vertical:hover {
+    background: $primary;
+    color: $text;
+}
+
+ResizeHandle.-vertical.-dragging {
+    background: $primary-lighten-1;
+    color: $text;
+}
+
+ResizeHandle.-horizontal {
+    width: 1;
+    height: 100%;
+    background: $surface-lighten-1;
+}
+
+ResizeHandle.-horizontal:hover {
+    background: $primary;
+}
+
+ResizeHandle.-horizontal.-dragging {
+    background: $primary-lighten-1;
 }
 
 /* --- Setup Screen (Modal) --- */

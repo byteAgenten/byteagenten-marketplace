@@ -140,8 +140,8 @@ PHASES: list[Phase] = [
         criteria=[
             Criterion("glob", ".workflow/specs/*-ph06-*.md"),
         ],
-        tools=["Read", "Glob", "Grep"],
-        model="sonnet",    # review is read-only analysis
+        tools=["Read", "Write", "Bash", "Glob", "Grep"],
+        model="sonnet",    # review is read-only analysis (Write/Bash for spec + state output)
         max_turns=25,
     ),
     Phase(

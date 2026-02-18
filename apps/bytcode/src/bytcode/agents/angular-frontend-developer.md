@@ -222,6 +222,32 @@ mkdir -p .workflow/specs
 # 3. Test-Ergebnisse (npm test Output, Coverage %)
 ```
 
+**⚠️ PFLICHT: `## Phase Summary` Section am Anfang der MD-Datei!**
+
+Die TUI zeigt dem User eine Zusammenfassung im Markdown-Panel. Deine Spec-Datei MUSS
+als **erste Section** ein `## Phase Summary` enthalten:
+
+```markdown
+## Phase Summary
+
+### Components Created/Modified
+| Component | Type | Status |
+|-----------|------|--------|
+| `feature.component.ts` | new | done |
+
+### Services & Routes
+- **Services:** `feature.service.ts` (new/modified)
+- **Routes:** `/feature` added to `app.routes.ts`
+
+### Requirements Map
+| # | Requirement | Status |
+|---|-------------|--------|
+| 1 | ... | done |
+
+### Test Status
+- `npm test`: PASSED | `npm run build`: PASSED
+```
+
 Die MD-Datei ist SINGLE SOURCE OF TRUTH. Downstream-Agents (test-engineer, security-auditor, code-reviewer) lesen diese Datei selbst via Read-Tool.
 
 **Schritt 2: Minimalen Context in workflow-state.json schreiben**

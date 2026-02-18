@@ -285,6 +285,30 @@ mkdir -p .workflow/specs
 # Inhalt: Alle implementierten Dateien, Endpoints, DTOs, Test-Ergebnisse
 ```
 
+**⚠️ PFLICHT: `## Phase Summary` Section am Anfang der MD-Datei!**
+
+Die TUI zeigt dem User eine Zusammenfassung im Markdown-Panel. Deine Spec-Datei MUSS
+als **erste Section** ein `## Phase Summary` enthalten:
+
+```markdown
+## Phase Summary
+
+### Endpoints Implemented
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/...` | ... |
+| POST | `/api/v1/...` | ... |
+
+### Files Created/Modified
+- **Entities:** `Entity.java` (new/modified)
+- **Services:** `Service.java` (new/modified)
+- **Controllers:** `Controller.java` (new/modified)
+- **DTOs:** `Dto.java` (new)
+
+### Test Status
+- `mvn test`: PASSED (X/X tests)
+```
+
 Die MD-Datei ist SINGLE SOURCE OF TRUTH. Downstream-Agents (test-engineer, security-auditor, code-reviewer) lesen diese Datei selbst via Read-Tool.
 
 **Schritt 2: Minimalen Context in workflow-state.json schreiben**
