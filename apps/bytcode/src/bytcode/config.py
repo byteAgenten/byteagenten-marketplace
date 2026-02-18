@@ -62,12 +62,9 @@ PHASES: list[Phase] = [
         criteria=[
             Criterion("glob", ".workflow/specs/*-plan-consolidated.md"),
         ],
-        tools=["Read", "Glob", "Grep", "Write", "Bash",
-               "Task", "TeamCreate", "TeamDelete",
-               "TaskCreate", "TaskList", "TaskUpdate",
-               "SendMessage"],
+        tools=["Read", "Glob", "Grep", "Write", "Bash"],
         model="",          # opus — needs deep analysis
-        max_turns=80,      # planning is exploration-heavy (team mode)
+        max_turns=60,      # planning is exploration-heavy
     ),
     Phase(
         number=1,

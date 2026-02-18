@@ -83,34 +83,82 @@ Problem aus Issue: [X]
 
 ---
 
-## Hub-Consolidator Role (Phase 0 Team Planning)
+## Specialist-Analyse (PFLICHT in Phase 0!)
 
-Wenn du als Hub in einem Team arbeitest (erkennbar an "Consolidator" im Prompt):
+Du planst als EINZIGER Agent die gesamte Architektur. Dazu analysierst du die Codebase
+aus drei Perspektiven — Backend, Frontend, und Quality. Keine separaten Spezialisten.
 
-1. Du empfaengst Plan-Summaries von Teammates via SendMessage
-2. Zaehle eingehende Summaries — warte auf ALLE erwarteten (Anzahl steht im Prompt)
-3. Lies die vollen Plaene von Disk INKREMENTELL (einer nach dem anderen):
-   - `.workflow/specs/issue-{N}-plan-backend.md`
-   - `.workflow/specs/issue-{N}-plan-frontend.md`
-   - `.workflow/specs/issue-{N}-plan-quality.md`
-   - `.workflow/specs/issue-{N}-plan-ui.md` (falls UI-Designer dabei)
-4. Pruefe Konsistenz:
-   - Endpoints ↔ Services (z.B. `POST /api/reports` ↔ `ReportService.create()`)
-   - DTOs ↔ Field-Names (z.B. `configId` vs `config` — Konflikte aufloesen!)
-   - data-testid ↔ Tests (Wireframe-Attribute muessen in E2E-Szenarien vorkommen)
-5. Bei Konflikten: SendMessage an betroffenen Spezialisten → warte auf Korrektur
-6. Schreibe CONSOLIDATED SPEC zu `.workflow/specs/issue-{N}-plan-consolidated.md` mit:
-   - ## Architecture Overview
-   - ## API Contract (Endpoints, DTOs, Response-Formate)
-   - ## Data Model (Entities, Relations, Migrations)
-   - ## Frontend Structure (Components, Services, Routes)
-   - ## Implementation Scope (`backend-only` / `frontend-only` / `full-stack`)
-   - ## Existing Tests to Update (aus Quality-Plan uebernehmen!)
-7. Setze Context-Key in workflow-state.json:
+### Backend-Analyse (Spring Boot 4 Perspektive)
+
+Analysiere den bestehenden Backend-Code BEVOR du planst:
+
+```bash
+# Entities und Relations verstehen
+find backend/src -name "*.java" -path "*/model/*" | grep -v test
+# Bestehende Services und deren Methoden
+find backend/src -name "*Service.java" | grep -v test
+# Bestehende Controller und deren Endpoints
+find backend/src -name "*Controller.java" | grep -v test
+# DTOs verstehen
+find backend/src -name "*Dto.java" -o -name "*DTO.java" | grep -v test
+```
+
+**Plane konkret:**
+- Welche Entities muessen geaendert/erstellt werden?
+- Welche Endpoints (Method + Path + Request/Response DTO)?
+- Welche Services und deren Methoden?
+- Braucht es eine DB-Migration?
+
+### Frontend-Analyse (Angular 21 Perspektive)
+
+Analysiere den bestehenden Frontend-Code BEVOR du planst:
+
+```bash
+# Bestehende Components und deren Struktur
+find frontend/src/app -name "*.component.ts" | grep -v spec | head -20
+# Bestehende Services
+find frontend/src/app -name "*.service.ts" | grep -v spec
+# Routing-Konfiguration
+find frontend/src -name "*.routes.ts" -o -name "app.routes.ts"
+# Models/Interfaces
+find frontend/src -name "*.model.ts" -o -name "*.interface.ts" | grep -v spec
+```
+
+**Plane konkret:**
+- Welche Components muessen geaendert/erstellt werden?
+- Welche Services und deren Methoden?
+- Aenderungen an Routes?
+- Welche DTOs/Interfaces fuer die API-Kommunikation?
+
+### Existing Test Impact Analysis (KRITISCH!)
+
+**Diese Analyse verhindert teure Fix-Zyklen in Phase 4 (Tests).**
+
+Fuer JEDE Datei die laut Plan geaendert wird:
+
+1. **Backend-Tests finden:**
    ```bash
-   jq '.context.technicalSpec = {"specFile":".workflow/specs/issue-{N}-plan-consolidated.md"}' .workflow/workflow-state.json > tmp && mv tmp .workflow/workflow-state.json
+   # Fuer jede geaenderte Java-Klasse:
+   find backend/src/test -name "{ClassName}Test.java"
+   find backend/src/test -name "{ClassName}IT.java"
    ```
-8. Fuehre Phase-Skipping aus (wie im normalen Phase-0-Workflow)
+
+2. **Frontend-Tests finden:**
+   ```bash
+   # Fuer jede geaenderte Component/Service:
+   find frontend/src -name "{dateiname}.spec.ts"
+   ```
+
+3. **Tests LESEN** — Identifiziere konkrete Test-Cases die brechen werden
+   (z.B. Tests die eine alte Method-Signature mocken, oder `navigate(['/old-path'])` erwarten)
+
+4. **Dokumentiere in der Spec unter `## Existing Tests to Update`:**
+   - Dateipfad des Tests
+   - Welcher Test-Case bricht
+   - WARUM er bricht
+   - WIE der Implement-Agent ihn fixen soll
+
+**Der Backend- und Frontend-Entwickler (Phase 2+3) MUSS diese Tests reparieren!**
 
 ---
 
@@ -322,12 +370,15 @@ mkdir -p .workflow/specs
 
 **Hinweis:** `.workflow/` ist in `.gitignore` — die Spec ist temporäre Workflow-Daten, keine permanente Dokumentation.
 
-Die Spec-Datei enthält ALLE Details:
-- 5x Warum Root Cause Analyse
-- Architektur-Entscheidungen mit Begründungen
-- Konkrete Code-Snippets und Queries
-- Detaillierte Test-Szenarien
-- Risiko-Mitigationen
+Die Spec-Datei MUSS diese Sections enthalten:
+- ## Executive Summary (mit ### Sub-Headings: What & Why, Architecture Approach, Scope of Changes, Key Design Decisions, Risks & Mitigations)
+- ## Architecture Overview
+- ## Implementation Scope (full-stack / frontend-only / backend-only)
+- ## API Contract (Endpoints, DTOs, Response-Formate)
+- ## Data Model (Entities, Relations, Migrations — oder "keine Migration noetig" mit Begruendung)
+- ## Frontend Structure (Components, Services, Routes)
+- ## Existing Tests to Update (aus der Test Impact Analysis!)
+- ## Risks & Security Considerations
 
 ### 2. Spec-Pfad in workflow-state.json speichern
 
