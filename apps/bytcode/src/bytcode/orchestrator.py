@@ -13,6 +13,7 @@ from typing import Callable, TextIO
 from .codebase import init_architecture, write_structure
 from .config import PHASES, Phase, PhaseType, WorkflowConfig
 from .prompts import build_prompt
+from .team_planning import build_team_planning_prompt
 from .verify import verify_phase
 
 import re
@@ -302,9 +303,13 @@ class Orchestrator:
             phase_log.open(attempt)
             phase_log.write_header(phase.number, phase.name, phase.agent, attempt)
 
-            prompt = build_prompt(
-                phase, self.config, self.project_dir
-            )
+            # Phase 0 uses team planning protocol; others use standard prompt
+            if phase.number == 0 and not extra_context:
+                prompt = build_team_planning_prompt(self.config)
+            else:
+                prompt = build_prompt(
+                    phase, self.config, self.project_dir
+                )
             if extra_context:
                 prompt += f"\n\n## Additional Context\n{extra_context}"
 
@@ -353,12 +358,12 @@ class Orchestrator:
 
     async def _run_claude(self, phase: Phase, prompt: str) -> bool:
         """Invoke claude -p with stream-json output for live activity."""
-        tools = ",".join(phase.allowed_tools)
+        tools = ",".join(phase.tools)
         cmd = [
             "claude",
             "-p",
             prompt,
-            "--allowedTools",
+            "--tools",
             tools,
             "--output-format",
             "stream-json",
@@ -367,8 +372,15 @@ class Orchestrator:
         ]
         if phase.model:
             cmd.extend(["--model", phase.model])
+        if phase.number == 0:
+            # Team planning needs teammate mode for parallel agents
+            cmd.extend(["--teammate-mode", "in-process"])
+        if phase.max_turns > 0:
+            cmd.extend(["--max-turns", str(phase.max_turns)])
 
-        env = {"CLAUDECODE": ""}  # Prevent nested-session error
+        env: dict[str, str] = {"CLAUDECODE": ""}  # Prevent nested-session error
+        if phase.number == 0:
+            env["CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"] = "1"
 
         try:
             import os

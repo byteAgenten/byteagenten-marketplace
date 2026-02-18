@@ -48,8 +48,9 @@ class Phase:
     agent: str
     phase_type: PhaseType
     criteria: list[Criterion] = field(default_factory=list)
-    allowed_tools: list[str] = field(default_factory=list)
-    model: str = ""  # "" = default (opus), or "sonnet", "haiku"
+    tools: list[str] = field(default_factory=list)  # --tools: restricts available tools
+    model: str = ""       # "" = default (opus), or "sonnet", "haiku"
+    max_turns: int = 0    # 0 = no limit, >0 = --max-turns safety cap
 
 
 PHASES: list[Phase] = [
@@ -61,8 +62,12 @@ PHASES: list[Phase] = [
         criteria=[
             Criterion("glob", ".workflow/specs/*-plan-consolidated.md"),
         ],
-        allowed_tools=["Read", "Glob", "Grep", "Write", "Bash"],
-        model="",       # opus — needs deep analysis
+        tools=["Read", "Glob", "Grep", "Write", "Bash",
+               "Task", "TeamCreate", "TeamDelete",
+               "TaskCreate", "TaskList", "TaskUpdate",
+               "SendMessage"],
+        model="",          # opus — needs deep analysis
+        max_turns=80,      # planning is exploration-heavy (team mode)
     ),
     Phase(
         number=1,
@@ -73,8 +78,9 @@ PHASES: list[Phase] = [
             Criterion("glob", "backend/**/V*.sql"),
             Criterion("glob", ".workflow/specs/*-ph01-*.md"),
         ],
-        allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
-        model="sonnet",  # migrations are straightforward
+        tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+        model="sonnet",    # migrations are straightforward
+        max_turns=30,
     ),
     Phase(
         number=2,
@@ -84,9 +90,9 @@ PHASES: list[Phase] = [
         criteria=[
             Criterion("glob", ".workflow/specs/*-ph02-*.md"),
         ],
-        allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
-        model="",       # opus — complex implementation
-
+        tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+        model="",          # opus — complex implementation
+        max_turns=60,
     ),
     Phase(
         number=3,
@@ -96,9 +102,9 @@ PHASES: list[Phase] = [
         criteria=[
             Criterion("glob", ".workflow/specs/*-ph03-*.md"),
         ],
-        allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
-        model="",       # opus — complex implementation
-
+        tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+        model="",          # opus — complex implementation
+        max_turns=60,
     ),
     Phase(
         number=4,
@@ -113,9 +119,9 @@ PHASES: list[Phase] = [
             ),
             Criterion("glob", ".workflow/specs/*-ph04-*.md"),
         ],
-        allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
-        model="sonnet",  # test writing follows patterns
-
+        tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+        model="sonnet",    # test writing follows patterns
+        max_turns=40,
     ),
     Phase(
         number=5,
@@ -125,9 +131,9 @@ PHASES: list[Phase] = [
         criteria=[
             Criterion("glob", ".workflow/specs/*-ph05-*.md"),
         ],
-        allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
-        model="sonnet",  # audit is read-heavy, pattern-based
-
+        tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+        model="sonnet",    # audit is read-heavy, pattern-based
+        max_turns=30,
     ),
     Phase(
         number=6,
@@ -137,9 +143,9 @@ PHASES: list[Phase] = [
         criteria=[
             Criterion("glob", ".workflow/specs/*-ph06-*.md"),
         ],
-        allowed_tools=["Read", "Glob", "Grep"],
-        model="sonnet",  # review is read-only analysis
-
+        tools=["Read", "Glob", "Grep"],
+        model="sonnet",    # review is read-only analysis
+        max_turns=25,
     ),
     Phase(
         number=7,
@@ -149,8 +155,9 @@ PHASES: list[Phase] = [
         criteria=[
             Criterion("glob", ".workflow/pr-draft.md"),
         ],
-        allowed_tools=["Read", "Write", "Bash", "Glob", "Grep"],
-        model="sonnet",  # summary writing
+        tools=["Read", "Write", "Bash", "Glob", "Grep"],
+        model="sonnet",    # summary writing
+        max_turns=20,
     ),
     Phase(
         number=8,
@@ -164,7 +171,8 @@ PHASES: list[Phase] = [
                 ".workflow/workflow-state.json",
             ),
         ],
-        allowed_tools=["Bash", "Read", "Glob", "Grep"],
-        model="sonnet",  # just git commands
+        tools=["Bash", "Read", "Glob", "Grep"],
+        model="sonnet",    # just git commands
+        max_turns=15,
     ),
 ]
