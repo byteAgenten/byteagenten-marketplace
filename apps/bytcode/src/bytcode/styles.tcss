@@ -1,0 +1,106 @@
+/* bytcode Terminal UI Styles */
+
+/* --- Main Workflow Screen --- */
+
+#phase-sidebar {
+    width: 24;
+    height: 100%;
+    background: $surface;
+    border-right: solid $primary-darken-1;
+    padding: 1 1;
+}
+
+#log-panel {
+    height: 100%;
+    background: $surface-darken-1;
+    border: solid $primary-darken-1;
+    padding: 0 1;
+}
+
+/* --- Setup Screen (Modal) --- */
+
+SetupScreen {
+    align: center middle;
+}
+
+#setup-container {
+    width: 60;
+    height: auto;
+    max-height: 90%;
+    overflow-y: auto;
+    background: $surface;
+    border: tall $primary;
+    padding: 1 2;
+}
+
+#setup-title {
+    width: 100%;
+    text-align: center;
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
+#setup-container > Label {
+    margin: 1 0 0 0;
+    height: 1;
+}
+
+#setup-container Select {
+    width: 100%;
+}
+
+#setup-container RadioSet {
+    width: 100%;
+    height: auto;
+}
+
+#btn-start {
+    margin: 1 0 0 0;
+    width: 100%;
+}
+
+/* --- Resume Screen (Modal) --- */
+
+ResumeScreen {
+    align: center middle;
+}
+
+#resume-container {
+    width: 60;
+    height: auto;
+    max-height: 90%;
+    overflow-y: auto;
+    background: $surface;
+    border: tall $warning;
+    padding: 1 2;
+}
+
+#resume-title {
+    width: 100%;
+    text-align: center;
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
+#resume-buttons {
+    margin: 1 0 0 0;
+}
+
+#resume-buttons Button {
+    width: 100%;
+    margin: 0 0 1 0;
+}
+
+/* --- Feedback Screen (Modal) --- */
+
+FeedbackScreen {
+    align: center middle;
+}
+
+#feedback-container {
+    width: 60;
+    height: auto;
+    background: $surface;
+    border: tall $primary;
+    padding: 1 2;
+}
