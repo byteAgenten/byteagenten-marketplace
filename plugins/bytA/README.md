@@ -1,6 +1,6 @@
 # bytA Plugin
 
-**Version 4.6.0** | Deterministic Orchestration: Boomerang + Ralph-Loop + Team Planning
+**Version 4.7.0** | Deterministic Orchestration: Boomerang + Ralph-Loop + Team Planning
 
 Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 8-Phasen-Workflow und Team-basiertem Planning.
 
@@ -44,6 +44,8 @@ Der Orchestrator ist ein **Bash-Script**, kein LLM. Claude dient nur als Transpo
 |---------|-------------|
 | `/bytA:feature` | Deterministischer 8-Phasen-Workflow fuer Full-Stack Features |
 | `/bytA:prd-generator` | PRD-Generator: Product Requirements Documents + GitHub Issues |
+| `/bytA:wf-status` | Aktuellen Workflow-Status anzeigen (Phase, Hints, Pause, Retries) |
+| `/bytA:wf-skip` | Aktuelle Phase ueberspringen (Notfall) |
 
 ## Workflow
 
@@ -66,6 +68,17 @@ Der Orchestrator ist ein **Bash-Script**, kein LLM. Claude dient nur als Transpo
 
 **APPROVAL** = User muss approven (Workflow pausiert)
 **AUTO** = Externe Verifikation, dann naechste Phase automatisch
+**CHECKPOINT** = Konfigurierbar beim Startup: AUTO-Phasen koennen als Checkpoint laufen (Enter = weiter, oder Feedback geben)
+
+### Flexibility Features (v4.7.0)
+
+| Feature | Beschreibung | Bedienung |
+|---------|-------------|-----------|
+| **Pause/Resume** | Workflow nach aktueller Phase pausieren | `wf_advance.sh pause` / `resume` |
+| **User Hints** | Persistenter Kontext fuer alle Agents | `wf_advance.sh hint 'TEXT'` / `hint-clear` |
+| **Phase Summaries** | Zusammenfassung bei AUTO-Advance | Automatisch (erste 10 Zeilen der Spec) |
+| **Checkpoint-Modus** | AUTO-Phasen optional als Checkpoint | Startup-Frage: Keine / Nur Tests / Alle |
+| **Rollback-Findings** | Review-Findings im Rollback-Kontext | Automatisch (erste 20 Zeilen der Approval-Spec) |
 
 ### Phase 0: Hub-and-Spoke Team Planning (v4.0)
 

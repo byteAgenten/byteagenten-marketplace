@@ -81,10 +81,16 @@ echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] UserPromptSubmit: Phase $PHASE ($PHASE_
 
 if [ "$STATUS" = "paused" ]; then
   PAUSE_REASON=$(jq -r '.pauseReason // "unbekannt"' "$WORKFLOW_FILE" 2>/dev/null)
+  _ADVANCE_CMD="${SCRIPT_DIR}/wf_advance.sh"
   echo "<user-prompt-submit-hook>"
   echo "WORKFLOW PAUSIERT | Phase $PHASE ($PHASE_NAME) | Issue #$ISSUE_NUM"
   echo "Grund: $PAUSE_REASON"
-  echo "Optionen: /bytA:wf-resume | /bytA:wf-retry-reset | /bytA:wf-skip"
+  echo ""
+  echo "Optionen:"
+  echo "  Bash: $_ADVANCE_CMD resume    — Workflow fortsetzen"
+  echo "  Bash: $_ADVANCE_CMD hint 'TEXT' — Hinweis fuer naechste Agents"
+  echo "  /bytA:wf-status               — Detaillierten Status anzeigen"
+  echo "  /bytA:wf-skip                 — Aktuelle Phase ueberspringen (Notfall)"
   echo "</user-prompt-submit-hook>"
   exit 0
 fi
@@ -92,9 +98,13 @@ fi
 if [ "$STATUS" = "awaiting_approval" ]; then
   # ADVANCE_CMD Prefix — deterministisch, kein manuelles jq noetig
   ADVANCE_CMD="${SCRIPT_DIR}/wf_advance.sh"
+  _HINT_COUNT_APPROVAL=$(jq '.hints // [] | length' "$WORKFLOW_FILE" 2>/dev/null || echo "0")
 
   echo "<user-prompt-submit-hook>"
   echo "WORKFLOW APPROVAL GATE | Phase $PHASE ($PHASE_NAME) | Issue #$ISSUE_NUM: $ISSUE_TITLE"
+  if [ "$_HINT_COUNT_APPROVAL" -gt 0 ] 2>/dev/null; then
+    echo "Aktive Hints: $_HINT_COUNT_APPROVAL (werden in Agent-Prompts injiziert)"
+  fi
   echo ""
   echo "WICHTIG: State-Aenderungen passieren DETERMINISTISCH im wf_advance.sh Script."
   echo "Du musst NUR den passenden Bash-Befehl ausfuehren und die EXECUTE-Anweisung aus dem Output befolgen."
@@ -162,6 +172,31 @@ if [ "$STATUS" = "awaiting_approval" ]; then
       echo "  Nach erfolgreichem Push+PR:"
       echo "  Bash: $ADVANCE_CMD complete"
       ;;
+
+    *)
+      # CHECKPOINT-Phasen (dynamisch aktiviert via checkpointMode)
+      if is_checkpoint "$PHASE"; then
+        echo "CHECKPOINT | Phase $PHASE ($PHASE_NAME)"
+        echo "Phase $PHASE ist fertig. Enter = weiter, oder gib Feedback."
+        echo ""
+        echo "BEI APPROVAL (Enter/OK/Weiter — DEFAULT):"
+        echo "  Bash: $ADVANCE_CMD approve"
+        echo "  Fuehre die EXECUTE-Anweisung aus dem Output aus."
+        echo ""
+        echo "BEI FEEDBACK:"
+        echo "  Bash: $ADVANCE_CMD feedback 'DEIN_FEEDBACK'"
+        echo "  Fuehre die EXECUTE-Anweisung aus dem Output aus."
+        echo ""
+        echo "REGEL: Kurze Antworten (ok, weiter, ja, Enter) = APPROVAL."
+        echo "       Ausfuehrliche Antworten = Feedback."
+      else
+        echo "Phase $PHASE ($PHASE_NAME) wartet auf Approval."
+        echo ""
+        echo "BEI APPROVAL:"
+        echo "  Bash: $ADVANCE_CMD approve"
+        echo "  Fuehre die EXECUTE-Anweisung aus dem Output aus."
+      fi
+      ;;
   esac
 
   echo "</user-prompt-submit-hook>"
@@ -169,9 +204,18 @@ if [ "$STATUS" = "awaiting_approval" ]; then
 fi
 
 if [ "$STATUS" = "active" ]; then
+  _HINT_COUNT=$(jq '.hints // [] | length' "$WORKFLOW_FILE" 2>/dev/null || echo "0")
+  _ADVANCE_CMD="${SCRIPT_DIR}/wf_advance.sh"
   echo "<user-prompt-submit-hook>"
   echo "AKTIVER WORKFLOW | Phase $PHASE ($PHASE_NAME) | Issue #$ISSUE_NUM | Status: active"
-  echo "Workflow laeuft. Bei Phase-Aktionen: lies .workflow/workflow-state.json fuer aktuellen State."
+  if [ "$_HINT_COUNT" -gt 0 ] 2>/dev/null; then
+    echo "Aktive Hints: $_HINT_COUNT"
+  fi
+  echo ""
+  echo "Aktionen waehrend aktiver Phase:"
+  echo "  Bash: $_ADVANCE_CMD pause       — Workflow nach aktueller Phase pausieren"
+  echo "  Bash: $_ADVANCE_CMD hint 'TEXT'  — Hinweis fuer Agents hinzufuegen"
+  echo "  /bytA:wf-status                 — Detaillierten Status anzeigen"
   echo "</user-prompt-submit-hook>"
   exit 0
 fi

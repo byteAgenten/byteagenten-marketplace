@@ -7,7 +7,7 @@ Private Claude Code Plugins for byteAgenten team members.
 | Plugin | Description | Version |
 |--------|-------------|---------|
 | [byt8](./plugins/byt8) | Full-stack development toolkit for Angular 21 + Spring Boot 4 | 7.5.7 |
-| [bytA](./plugins/bytA) | Deterministic full-stack workflow (Boomerang + Ralph-Loop + Team Planning) | 4.6.0 |
+| [bytA](./plugins/bytA) | Deterministic full-stack workflow (Boomerang + Ralph-Loop + Team Planning) | 4.7.0 |
 | [bytM](./plugins/bytM) | 4-Agent Team workflow with cross-validation (native Agent Teams) | 1.5.0 |
 
 ## Prerequisites
@@ -115,8 +115,10 @@ Falls du eine feste Version verwenden möchtest:
 | `/byt8:ui-theming` | One-time design system initialization (theme, tokens, typography) |
 | `/byt8:python-expert` | Python development support |
 | `/byt8:prd-generator` | Generate PRDs (user stories, requirements) and create GitHub Issues |
-| `/bytA:feature` | Deterministic 10-phase workflow (Boomerang + Ralph-Loop) |
+| `/bytA:feature` | Deterministic 8-phase workflow (Boomerang + Ralph-Loop) |
 | `/bytA:prd-generator` | Generate PRDs (user stories, requirements) and create GitHub Issues |
+| `/bytA:wf-status` | Show current workflow status (phase, hints, retries, pause) |
+| `/bytA:wf-skip` | Skip current phase (emergency use only) |
 | `/bytM:feature` | 4-Agent Team workflow with cross-validation |
 | `/bytM:prd-generator` | Generate PRDs (user stories, requirements) and create GitHub Issues |
 

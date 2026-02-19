@@ -45,6 +45,24 @@ PHASE_NAME=$(get_phase_name "$PHASE")
 RETRY_COUNT=$(jq -r ".recovery.phase_${PHASE}_attempts // 0" "$WORKFLOW_FILE" 2>/dev/null || echo "0")
 
 # ═══════════════════════════════════════════════════════════════════════════
+# USER HINTS (persistenter Kontext fuer alle Agents)
+# ═══════════════════════════════════════════════════════════════════════════
+HINTS_SECTION=""
+_HINTS_RAW=$(jq -r '.hints // [] | .[]' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+if [ -n "$_HINTS_RAW" ]; then
+  HINTS_SECTION="
+
+## USER HINTS (vom User fuer diesen Workflow gesetzt)
+"
+  _HINT_IDX=1
+  while IFS= read -r _HINT_LINE; do
+    HINTS_SECTION="${HINTS_SECTION}${_HINT_IDX}. ${_HINT_LINE}
+"
+    _HINT_IDX=$((_HINT_IDX + 1))
+  done <<< "$_HINTS_RAW"
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════
 # HOTFIX-KONTEXT (wenn Rollback)
 # ═══════════════════════════════════════════════════════════════════════════
 HOTFIX_SECTION=""
@@ -65,6 +83,7 @@ if [ -z "$HOTFIX_FEEDBACK" ]; then
   # Nur wenn KEIN direktes Hotfix-Feedback (dann ist es die Ziel-Phase selbst)
   ROLLBACK_FB=$(jq -r '.recovery.rollbackContext.feedback // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")
   ROLLBACK_TGT=$(jq -r '.recovery.rollbackContext.targetPhase // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+  ROLLBACK_FINDINGS=$(jq -r '.recovery.rollbackContext.findingsPreview // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")
   if [ -n "$ROLLBACK_FB" ] && [ -n "$ROLLBACK_TGT" ] && [ "$PHASE" -gt "$ROLLBACK_TGT" ] 2>/dev/null; then
     DOWNSTREAM_SECTION="
 
@@ -72,6 +91,23 @@ if [ -z "$HOTFIX_FEEDBACK" ]; then
 Phase $ROLLBACK_TGT was re-run due to the following feedback:
 $ROLLBACK_FB
 Your phase runs AFTER this fix. Pay special attention to changes that may affect your work.
+"
+    if [ -n "$ROLLBACK_FINDINGS" ]; then
+      DOWNSTREAM_SECTION="${DOWNSTREAM_SECTION}
+### Review Findings (from approval phase)
+$ROLLBACK_FINDINGS
+"
+    fi
+  fi
+fi
+
+# Findings-Preview auch fuer direkte Hotfix-Phase (Rollback-Ziel selbst)
+if [ -n "$HOTFIX_FEEDBACK" ]; then
+  _HOTFIX_FINDINGS=$(jq -r '.recovery.rollbackContext.findingsPreview // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+  if [ -n "$_HOTFIX_FINDINGS" ]; then
+    HOTFIX_SECTION="${HOTFIX_SECTION}
+### Review Findings (from approval phase)
+$_HOTFIX_FINDINGS
 "
   fi
 fi
@@ -323,7 +359,7 @@ After architect says 'Done.':
 1. Send shutdown_request to ALL teammates (${BACKEND_SHUTDOWN}${FRONTEND_SHUTDOWN}quality, ${UI_SHUTDOWN}architect)
 2. TeamDelete (ignore errors — agents may already be gone)
 3. Say "Done."
-$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
+$HINTS_SECTION$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
 TEAM_EOF
     ;;
 
@@ -345,7 +381,7 @@ context.migrations = {"databaseFile":"backend/src/main/resources/db/migration/V[
 
 ## YOUR TASK
 Create Flyway SQL migrations. Normalize schema (3NF). Add indexes and constraints.
-$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
+$HINTS_SECTION$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
 EOF
     ;;
 
@@ -369,7 +405,7 @@ context.backendImpl = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-ph02-sprin
 
 ## YOUR TASK
 Implement Spring Boot 4 REST controllers, services, repositories. Add Swagger annotations. Run mvn verify before completing. MANDATORY: Load current docs via Context7 BEFORE coding.
-$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
+$HINTS_SECTION$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
 EOF
     ;;
 
@@ -393,7 +429,7 @@ context.frontendImpl = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-ph03-angu
 
 ## YOUR TASK
 Implement ALL functional requirements from the Technical Spec. Use Angular 21+, Signals, inject(). Add data-testid on ALL interactive elements. Run npm test before completing. MANDATORY: Load current docs via Context7 + Angular CLI MCP BEFORE coding.
-$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
+$HINTS_SECTION$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
 EOF
     ;;
 
@@ -419,7 +455,7 @@ WICHTIG: allPassed MUSS true sein! NUR setzen wenn ALLE Tests bestanden haben!
 
 ## YOUR TASK
 Write comprehensive tests: JUnit 5 + Mockito (backend), Jasmine + TestBed (frontend), Playwright E2E. Run mvn verify + npm test + npx playwright test.
-$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
+$HINTS_SECTION$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
 EOF
     ;;
 
@@ -443,7 +479,7 @@ context.securityAudit = {"specFile":".workflow/specs/issue-${ISSUE_NUM}-ph05-sec
 
 ## YOUR TASK
 Perform OWASP Top 10 (2021) security audit. Check A01-A10. Report findings with severity levels.
-$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
+$HINTS_SECTION$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
 EOF
     ;;
 
@@ -471,7 +507,7 @@ context.reviewFeedback = {"reviewFile":".workflow/specs/issue-${ISSUE_NUM}-ph06-
 
 ## YOUR TASK
 Independent code quality review. Verify coverage targets. Check SOLID, DRY, KISS.
-$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
+$HINTS_SECTION$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
 EOF
     ;;
 
@@ -489,7 +525,7 @@ Phase 7: Push & PR for Issue #$ISSUE_NUM: $ISSUE_TITLE
 ## YOUR TASK (KEIN SUBAGENT — wird direkt vom Orchestrator ausgefuehrt)
 Phase 7 wird durch den UserPromptSubmit-Hook gesteuert.
 Sage "Done." und folge den Anweisungen des Hooks.
-$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
+$HINTS_SECTION$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
 EOF
     ;;
 

@@ -10,6 +10,10 @@
 #   feedback 'MESSAGE'   — Gleiche Phase nochmal mit Feedback
 #   rollback TARGET 'MSG'— Rollback zu frueherer Phase
 #   complete             — Workflow als completed markieren
+#   hint 'MESSAGE'       — Persistenten Hinweis fuer Agents hinzufuegen
+#   hint-clear           — Alle Hints loeschen
+#   pause                — Workflow nach aktueller Phase pausieren
+#   resume               — Pausierten Workflow fortsetzen
 #
 # ═══════════════════════════════════════════════════════════════════════════
 # BASH 3.x KOMPATIBEL (macOS default)
@@ -431,10 +435,24 @@ rollback)
     done
   fi
 
+  # ─── Findings-Preview extrahieren (fuer besseren Rollback-Kontext) ────
+  _APPROVAL_PAD=$(printf "%02d" "$APPROVAL_PHASE")
+  _APPROVAL_SPEC=$(ls .workflow/specs/issue-*-ph${_APPROVAL_PAD}-*.md 2>/dev/null | head -1 || echo "")
+  _FINDINGS_PREVIEW=""
+  if [ -n "$_APPROVAL_SPEC" ]; then
+    _FINDINGS_PREVIEW=$(head -20 "$_APPROVAL_SPEC" 2>/dev/null || echo "")
+  fi
+
   if [ -n "$FEEDBACK" ]; then
-    jq --arg fb "$FEEDBACK" --argjson tgt "$TARGET" \
-      "$CLEAR_CMD$RESET_CMD$SKIP_CMD | del(.recovery.phase_${TARGET}_attempts) | .currentPhase = \$tgt | .status = \"active\" | .recovery.rollbackContext = {\"feedback\": \$fb, \"targetPhase\": \$tgt}" \
-      "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+    if [ -n "$_FINDINGS_PREVIEW" ]; then
+      jq --arg fb "$FEEDBACK" --argjson tgt "$TARGET" --arg fp "$_FINDINGS_PREVIEW" \
+        "$CLEAR_CMD$RESET_CMD$SKIP_CMD | del(.recovery.phase_${TARGET}_attempts) | .currentPhase = \$tgt | .status = \"active\" | .recovery.rollbackContext = {\"feedback\": \$fb, \"targetPhase\": \$tgt, \"findingsPreview\": \$fp}" \
+        "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+    else
+      jq --arg fb "$FEEDBACK" --argjson tgt "$TARGET" \
+        "$CLEAR_CMD$RESET_CMD$SKIP_CMD | del(.recovery.phase_${TARGET}_attempts) | .currentPhase = \$tgt | .status = \"active\" | .recovery.rollbackContext = {\"feedback\": \$fb, \"targetPhase\": \$tgt}" \
+        "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+    fi
   else
     jq "$CLEAR_CMD$RESET_CMD$SKIP_CMD | del(.recovery.phase_${TARGET}_attempts) | .currentPhase = $TARGET | .status = \"active\" | del(.recovery.rollbackContext)" \
       "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
@@ -527,16 +545,99 @@ complete)
   ;;
 
 # ═══════════════════════════════════════════════════════════════════════════
+# HINT — Persistenten Kontext fuer alle Agents hinzufuegen
+# ═══════════════════════════════════════════════════════════════════════════
+hint)
+  _HINT_MSG="${2:-}"
+  if [ -z "$_HINT_MSG" ]; then
+    echo "ERROR: Hint-Text fehlt. Usage: wf_advance.sh hint 'MESSAGE'" >&2
+    exit 1
+  fi
+
+  jq --arg h "$_HINT_MSG" '.hints = (.hints // []) + [$h]' \
+    "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+
+  _HINT_COUNT=$(jq '.hints | length' "$WORKFLOW_FILE" 2>/dev/null || echo "1")
+  log "HINT added: ${_HINT_MSG:0:100} (total: $_HINT_COUNT)"
+
+  echo "=== bytA: Hint gespeichert ==="
+  echo "Hint: $_HINT_MSG"
+  echo "Aktive Hints: $_HINT_COUNT"
+  echo ""
+  echo "Hint wird in ALLE nachfolgenden Agent-Prompts injiziert."
+  echo "Zum Zuruecksetzen: wf_advance.sh hint-clear"
+  ;;
+
+# ═══════════════════════════════════════════════════════════════════════════
+# HINT-CLEAR — Alle Hints loeschen
+# ═══════════════════════════════════════════════════════════════════════════
+hint-clear)
+  jq 'del(.hints)' \
+    "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+
+  log "HINTS cleared"
+
+  echo "=== bytA: Alle Hints geloescht ==="
+  ;;
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PAUSE — Workflow nach aktueller Phase pausieren
+# ═══════════════════════════════════════════════════════════════════════════
+pause)
+  if [ "$STATUS" = "paused" ]; then
+    echo "Workflow ist bereits pausiert." >&2
+    exit 0
+  fi
+  if [ "$STATUS" = "awaiting_approval" ]; then
+    echo "Workflow wartet auf Approval — kein Pause noetig." >&2
+    exit 0
+  fi
+
+  touch "${WORKFLOW_DIR}/.pause-requested"
+  log "PAUSE requested by user"
+
+  echo "=== bytA: Pause vorgemerkt ==="
+  echo "Workflow stoppt nach der aktuellen Phase ($PHASE_NAME)."
+  echo "Zum Fortsetzen: wf_advance.sh resume"
+  ;;
+
+# ═══════════════════════════════════════════════════════════════════════════
+# RESUME — Pausierten Workflow fortsetzen
+# ═══════════════════════════════════════════════════════════════════════════
+resume)
+  if [ "$STATUS" != "paused" ]; then
+    echo "ERROR: Status ist '$STATUS', nicht 'paused'." >&2
+    exit 1
+  fi
+
+  rm -f "${WORKFLOW_DIR}/.pause-requested"
+  jq '.status = "active" | del(.pauseReason)' \
+    "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+
+  log "RESUME: Workflow resumed by user"
+  log_transition "user_advance" "action=resume"
+
+  echo "=== bytA: Workflow fortgesetzt ==="
+  echo "Status: active | Phase: $PHASE ($PHASE_NAME)"
+  echo ""
+  echo "Sage 'Done.' damit der Stop-Hook weitermacht."
+  ;;
+
+# ═══════════════════════════════════════════════════════════════════════════
 # UNKNOWN
 # ═══════════════════════════════════════════════════════════════════════════
 *)
   echo "ERROR: Unbekannter Befehl '$ACTION'" >&2
-  echo "Usage: wf_advance.sh {approve|feedback|rollback|complete}" >&2
+  echo "Usage: wf_advance.sh {approve|feedback|rollback|complete|hint|hint-clear|pause|resume}" >&2
   echo ""
   echo "  approve              — Advance nach User-Approval"
   echo "  feedback 'MESSAGE'   — Gleiche Phase nochmal mit Feedback"
   echo "  rollback TARGET 'MSG'— Rollback zu frueherer Phase"
   echo "  complete             — Workflow als completed markieren"
+  echo "  hint 'MESSAGE'       — Persistenten Hinweis fuer Agents hinzufuegen"
+  echo "  hint-clear           — Alle Hints loeschen"
+  echo "  pause                — Workflow nach aktueller Phase pausieren"
+  echo "  resume               — Pausierten Workflow fortsetzen"
   exit 1
   ;;
 

@@ -385,6 +385,19 @@ if [ "$STATUS" != "active" ]; then
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
+# PAUSE CHECK: User hat Pause angefordert → Workflow pausieren
+# ═══════════════════════════════════════════════════════════════════════════
+if [ -f "${WORKFLOW_DIR}/.pause-requested" ]; then
+  rm -f "${WORKFLOW_DIR}/.pause-requested"
+  jq '.status = "paused" | .pauseReason = "user_requested"' \
+    "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+  log "PAUSE: User-requested at Phase $PHASE ($PHASE_NAME)"
+  log_transition "user_pause" "phase=$PHASE"
+  play_notification
+  exit 0
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════
 # AB HIER: status = active → RALPH LOOP
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -540,9 +553,23 @@ if "${SCRIPT_DIR}/wf_verify.sh" "$PHASE"; then
     log "AUTO-ADVANCE: Phase $PHASE ($PHASE_NAME) → Phase $NEXT_PHASE ($NEXT_NAME)"
     log_transition "auto_advance" "from=$PHASE to=$NEXT_PHASE"
 
+    # ─── Phase Summary extrahieren (Sichtbarkeit fuer User) ──────────
+    _SUMMARY_PAD=$(printf "%02d" "$PHASE")
+    _SUMMARY_SPEC=$(ls .workflow/specs/issue-*-ph${_SUMMARY_PAD}-*.md 2>/dev/null | head -1 || echo "")
+    _PHASE_SUMMARY=""
+    if [ -n "$_SUMMARY_SPEC" ]; then
+      _PHASE_SUMMARY=$(head -10 "$_SUMMARY_SPEC" 2>/dev/null | tr '\n' ' ' | sed 's/  */ /g' || echo "")
+    fi
+
     # Build prompt for next phase
     PROMPT=$("${SCRIPT_DIR}/wf_prompt_builder.sh" "$NEXT_PHASE")
-    output_block "Phase $PHASE ($PHASE_NAME) DONE. Auto-Advance zu Phase $NEXT_PHASE ($NEXT_NAME). Starte sofort: Task(bytA:$NEXT_AGENT, '$PROMPT')"
+
+    _BLOCK_MSG="Phase $PHASE ($PHASE_NAME) DONE."
+    if [ -n "$_PHASE_SUMMARY" ]; then
+      _BLOCK_MSG="$_BLOCK_MSG [SUMMARY: ${_PHASE_SUMMARY:0:300}]"
+    fi
+    _BLOCK_MSG="$_BLOCK_MSG Auto-Advance zu Phase $NEXT_PHASE ($NEXT_NAME). Starte sofort: Task(bytA:$NEXT_AGENT, '$PROMPT')"
+    output_block "$_BLOCK_MSG"
   fi
 
 else

@@ -93,6 +93,14 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════
 rm -f "${WORKFLOW_DIR}/.team-planning-active" 2>/dev/null || true
 
+# Stale Pause-Marker: Kann nach Session-Crash uebrig bleiben.
+# Wenn Status bereits paused ist, wurde der Marker verarbeitet.
+# Wenn Status active/awaiting_approval ist, war der Marker stale.
+if [ -f "${WORKFLOW_DIR}/.pause-requested" ]; then
+  rm -f "${WORKFLOW_DIR}/.pause-requested"
+  echo "[$TIMESTAMP] STALE MARKER: .pause-requested removed (session restart)" >> "$LOG_DIR/hooks.log" 2>/dev/null || true
+fi
+
 if [ "$SOURCE" = "compact" ]; then
   # ═══════════════════════════════════════════════════════════════════════
   # COMPACT RECOVERY: Starke Transport-Layer Instruktionen

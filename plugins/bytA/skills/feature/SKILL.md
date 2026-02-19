@@ -60,13 +60,14 @@ grep -q "^\.workflow/" .gitignore 2>/dev/null || echo ".workflow/" >> .gitignore
 git fetch --prune
 ```
 
-**Frage den User nach 5 Einstellungen (EIN AskUserQuestion-Call, WARTE auf Antwort!):**
+**Frage den User nach 6 Einstellungen (EIN AskUserQuestion-Call, WARTE auf Antwort!):**
 
 1. "Von welchem Branch starten?" — Optionen: main (default) / develop
 2. "Coverage-Ziel?" — Optionen: 50% / 70% (default) / 85% / 95%
 3. "Welches Model fuer Agents?" — Optionen: fast (Sonnet, default) / quality (Opus)
 4. "UI Designer einschliessen? (Wireframe + data-testid)" — Optionen: Nein (default) / Ja
 5. "Issue Scope?" — Optionen: Full-Stack (default) / Frontend-only / Backend-only
+6. "Checkpoint-Modus?" — Optionen: Keine (default) / Nur Tests (Phase 4) / Alle AUTO-Phasen
 
 ### Schritt 4: Issue laden
 
@@ -91,6 +92,7 @@ cat > .workflow/workflow-state.json << EOF
   "modelTier": "MODEL_TIER",
   "uiDesigner": UI_DESIGNER_BOOL,
   "scope": "SCOPE_VALUE",
+  "checkpointMode": "CHECKPOINT_MODE",
   "currentPhase": 0,
   "startedAt": "$STARTED_AT",
   "phases": {},
