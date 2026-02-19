@@ -127,10 +127,13 @@ Prompt: |
   ROUND 1: PLAN for Issue #${ISSUE_NUM} - ${ISSUE_TITLE}.
   Target Coverage: ${TARGET_COV}%.
   Analyze the codebase. Plan: DB schema changes, new/modified entities, services, controllers, endpoint signatures, Flyway migrations, test approach.
-  Write full plan to .workflow/specs/issue-${ISSUE_NUM}-plan-backend.md
-  Then send SHORT SUMMARY (max 20 lines) to teammate \"architect\" via SendMessage.
-  Summary must include: entity count, endpoint count, migration version.
-  After sending, say 'Done.'
+
+  OUTPUT PROTOCOL (Reihenfolge EINHALTEN!):
+  1. ERST: Write full plan to .workflow/specs/issue-${ISSUE_NUM}-plan-backend.md
+     Die Datei auf Disk ist die Single Source of Truth. OHNE Datei kein Fortschritt!
+  2. DANN: Send SHORT SUMMARY (max 20 lines) to teammate \"architect\" via SendMessage.
+     Summary must include: entity count, endpoint count, migration version.
+  3. After sending, say 'Done.'
 "
       BACKEND_PLAN_READ="
      - .workflow/specs/issue-${ISSUE_NUM}-plan-backend.md"
@@ -153,10 +156,13 @@ Prompt: |
   ROUND 1: PLAN for Issue #${ISSUE_NUM} - ${ISSUE_TITLE}.
   Target Coverage: ${TARGET_COV}%.
   Analyze the codebase. Plan: new/modified components, services, routing, state management, data-testid attributes.
-  Write full plan to .workflow/specs/issue-${ISSUE_NUM}-plan-frontend.md
-  Then send SHORT SUMMARY (max 20 lines) to teammate \"architect\" via SendMessage.
-  Summary must include: component count, new routes, service count.
-  After sending, say 'Done.'
+
+  OUTPUT PROTOCOL (Reihenfolge EINHALTEN!):
+  1. ERST: Write full plan to .workflow/specs/issue-${ISSUE_NUM}-plan-frontend.md
+     Die Datei auf Disk ist die Single Source of Truth. OHNE Datei kein Fortschritt!
+  2. DANN: Send SHORT SUMMARY (max 20 lines) to teammate \"architect\" via SendMessage.
+     Summary must include: component count, new routes, service count.
+  3. After sending, say 'Done.'
 "
       FRONTEND_PLAN_READ="
      - .workflow/specs/issue-${ISSUE_NUM}-plan-frontend.md"
@@ -183,11 +189,14 @@ Prompt: |
   Use ONLY actual project token values — never hardcode colors or spacing.
   Create HTML wireframe with Angular Material components matching the project's design system.
   Include data-testid on ALL interactive elements.
-  Write wireframe to wireframes/issue-${ISSUE_NUM}-plan-ui.html
-  Write plan summary to .workflow/specs/issue-${ISSUE_NUM}-plan-ui.md
-  Then send SHORT SUMMARY (max 20 lines) to teammate \"architect\" via SendMessage.
-  Summary must include: number of data-testid attributes, Material components used.
-  After sending, say 'Done.'
+
+  OUTPUT PROTOCOL (Reihenfolge EINHALTEN!):
+  1. ERST: Write wireframe to wireframes/issue-${ISSUE_NUM}-plan-ui.html
+     Write plan summary to .workflow/specs/issue-${ISSUE_NUM}-plan-ui.md
+     Die Dateien auf Disk sind die Single Source of Truth. OHNE Dateien kein Fortschritt!
+  2. DANN: Send SHORT SUMMARY (max 20 lines) to teammate \"architect\" via SendMessage.
+     Summary must include: number of data-testid attributes, Material components used.
+  3. After sending, say 'Done.'
 "
       UI_PLAN_READ="
      - .workflow/specs/issue-${ISSUE_NUM}-plan-ui.md"
@@ -252,11 +261,14 @@ Prompt: |
   Target Coverage: ${TARGET_COV}%.
   Start with Existing Test Impact Analysis (see your agent instructions!).
   Plan E2E scenarios, unit test strategy, integration test strategy.
-  Write full plan to .workflow/specs/issue-${ISSUE_NUM}-plan-quality.md
-  MUST include section: ## Existing Tests to Update
-  Then send SHORT SUMMARY (max 20 lines) to teammate "architect" via SendMessage.
-  Summary must include: count of existing tests that will break, new test count, coverage estimate.
-  After sending, say 'Done.'
+
+  OUTPUT PROTOCOL (Reihenfolge EINHALTEN!):
+  1. ERST: Write full plan to .workflow/specs/issue-${ISSUE_NUM}-plan-quality.md
+     MUST include section: ## Existing Tests to Update
+     Die Datei auf Disk ist die Single Source of Truth. OHNE Datei kein Fortschritt!
+  2. DANN: Send SHORT SUMMARY (max 20 lines) to teammate "architect" via SendMessage.
+     Summary must include: count of existing tests that will break, new test count, coverage estimate.
+  3. After sending, say 'Done.'
 ${UI_DESIGNER_BLOCK}
 --- HUB: architect ---
 Agent: bytA:architect-planner
@@ -273,6 +285,15 @@ Prompt: |
   After receiving all summaries:
   1. Read full plans from disk INCREMENTALLY (one at a time):${BACKEND_PLAN_READ}${FRONTEND_PLAN_READ}
      - .workflow/specs/issue-${ISSUE_NUM}-plan-quality.md${UI_PLAN_READ}
+
+     RECOVERY bei fehlenden Dateien:
+     Wenn eine Plan-Datei NICHT existiert obwohl die Summary empfangen wurde:
+     a) SendMessage an den betroffenen Spezialisten:
+        "Deine Plan-Datei [Pfad] fehlt auf Disk. Bitte schreibe sie JETZT."
+     b) Warte auf Bestaetigung, dann lies die Datei.
+     c) Wenn nach 2 Nachrichten keine Datei: Nutze den Summary-Inhalt aus der
+        empfangenen SendMessage als Fallback und fahre fort.
+
   2. Validate CONSISTENCY (between existing plans):
      - Endpoints match between backend and frontend (field names, types, URLs)
      - DTOs match (same field names, same types)

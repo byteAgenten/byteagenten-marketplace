@@ -1,0 +1,19 @@
+[project]
+name = "bytcode"
+version = "0.1.0"
+description = "External workflow orchestrator for bytA with Terminal UI"
+requires-python = ">=3.11"
+dependencies = [
+    "textual>=1.0",
+    "rich>=13.0",
+]
+
+[project.scripts]
+bytcode = "bytcode.app:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bytcode"]
