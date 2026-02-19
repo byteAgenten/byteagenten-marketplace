@@ -112,7 +112,7 @@ build_dispatch_msg() {
     # Phase 0 = Team Planning Protocol — inline instructions (survive compaction)
     # WICHTIG: $prompt IST bereits der komplette Output von wf_prompt_builder.sh.
     # Claude soll ihn DIREKT parsen, NICHT nochmal wf_prompt_builder.sh aufrufen!
-    echo "TEAM PLANNING PROTOCOL — Parse und fuehre das folgende Protokoll DIREKT aus (NICHT nochmal wf_prompt_builder.sh aufrufen!): 0) touch .workflow/.team-planning-active, 1) TeamCreate(team_name aus TEAM_NAME-Zeile), 2) Spawne ALLE Specialists + HUB parallel via Task() mit den Prompts aus den SPECIALIST/HUB-Bloecken, 3) WICHTIG: BEENDE jetzt deinen Turn! KEIN sleep, KEIN polling, KEIN aktives Warten! Agent-Messages werden AUTOMATISCH als neue Conversation-Turns an dich delivered. Der Architect-HUB wird dir eine Nachricht senden wenn er fertig ist. Wenn du diese Nachricht erhaeltst fahre mit Schritt 4 fort. 4) Pruefe ob ALLE Spec-Dateien aus VERIFY-Block existieren, 5) Sende shutdown_request an alle Teammates, 6) TeamDelete, 7) rm -f .workflow/.team-planning-active, 8) Sage Done. Bei TeamCreate-Fehler: rm -f .workflow/.team-planning-active, dann Fallback auf single Task(bytA:architect-planner). --- PROTOKOLL-START --- $prompt --- PROTOKOLL-ENDE ---"
+    echo "TEAM SPAWN — NUR spawnen, SOFORT Done sagen! 1) touch .workflow/.team-planning-active, 2) TeamCreate(team_name aus TEAM_NAME-Zeile), 3) Spawne ALLE Specialists + HUB parallel via Task() mit den Prompts aus SPECIALIST/HUB-Bloecken, 4) Sage GENAU: Done. — KEIN sleep, KEIN polling, KEIN warten, KEIN pruefen, KEIN cleanup! Der Orchestrator uebernimmt automatisch. Bei TeamCreate-Fehler: rm -f .workflow/.team-planning-active, dann Fallback auf single Task(bytA:architect-planner). --- PROMPT-START --- $prompt --- PROMPT-ENDE ---"
   else
     echo "Task(bytA:$phase_agent, '$prompt')"
   fi
@@ -237,15 +237,24 @@ if [ "$WORKFLOW_TYPE" != "bytA-feature" ]; then
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
-# TEAM PLANNING GUARD: Skip orchestrator while Phase 0 team is active.
-# During team planning, the transport layer manages the entire flow
-# (TeamCreate → spawn agents → wait → cleanup → Done). The Stop hook
-# must NOT fire until the transport layer says "Done." after cleanup.
-# The marker is set by SKILL.md before TeamCreate and removed after TeamDelete.
+# TEAM PLANNING GUARD: Orchestrator-managed completion detection.
+# While marker is present, agents are working on Phase 0 plans.
+# When consolidated plan appears → dispatch cleanup to Claude.
+# When no plan yet → exit 0 (wait for next Stop hook trigger).
 # ═══════════════════════════════════════════════════════════════════════════
 if [ -f "${WORKFLOW_DIR}/.team-planning-active" ]; then
-  log "Team planning active: skipping orchestrator (transport layer handles Phase 0)"
-  exit 0
+  _CONSOLIDATED=$(ls .workflow/specs/issue-*-plan-consolidated.md 2>/dev/null | head -1 || echo "")
+  if [ -n "$_CONSOLIDATED" ] && [ -f "$_CONSOLIDATED" ]; then
+    log "Team planning DONE: consolidated plan found at $_CONSOLIDATED"
+    rm -f "${WORKFLOW_DIR}/.team-planning-active"
+    log_transition "team_planning_done" "phase=0"
+    _ISSUE_NUM=$(jq -r '.issueNumber // ""' "$WORKFLOW_FILE" 2>/dev/null || echo "")
+    output_block "TEAM PLANNING FERTIG — Consolidated plan gefunden. CLEANUP: 1) Sende shutdown_request an ALLE Teammates (Team: bytA-plan-${_ISSUE_NUM}), 2) TeamDelete (Fehler ignorieren — Agents koennen schon weg sein), 3) Sage GENAU: Done."
+    exit 0
+  else
+    log "Team planning active, no consolidated plan yet. Waiting."
+    exit 0
+  fi
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════

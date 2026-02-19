@@ -354,11 +354,10 @@ Files that MUST exist after team completes:
   .workflow/specs/issue-${ISSUE_NUM}-plan-consolidated.md${BACKEND_PLAN_VERIFY}${FRONTEND_PLAN_VERIFY}
   .workflow/specs/issue-${ISSUE_NUM}-plan-quality.md
 
---- CLEANUP ---
-After architect says 'Done.':
-1. Send shutdown_request to ALL teammates (${BACKEND_SHUTDOWN}${FRONTEND_SHUTDOWN}quality, ${UI_SHUTDOWN}architect)
-2. TeamDelete (ignore errors — agents may already be gone)
-3. Say "Done."
+--- ORCHESTRATOR MANAGED ---
+Nach dem Spawnen SOFORT "Done." sagen. NICHT warten, NICHT cleanup!
+Der Orchestrator erkennt automatisch wenn plan-consolidated.md existiert
+und gibt dir dann separate Cleanup-Anweisungen.
 $HINTS_SECTION$RETRY_SECTION$HOTFIX_SECTION$DOWNSTREAM_SECTION
 TEAM_EOF
     ;;
