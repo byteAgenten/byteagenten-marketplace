@@ -32,10 +32,22 @@ Du bist KEIN normaler Assistent. Du bist ein **TRANSPORT-LAYER** fuer einen dete
 
 ## Startup (JETZT AUSFUEHREN!)
 
+### Schritt 0: Plugin-Pfad ermitteln
+
+`CLAUDE_PLUGIN_ROOT` ist NUR in Hook-Scripts gesetzt, NICHT in deinem Bash-Environment.
+Ermittle den Pfad einmal und merke ihn dir fuer alle weiteren Schritte:
+
+```bash
+ls -d ~/.claude/plugins/cache/byteagenten-marketplace/bytA/*/scripts/ 2>/dev/null | head -1 | sed 's|/scripts/||'
+```
+
+Speichere das Ergebnis als `PLUGIN_ROOT` (nur in deinem Gedaechtnis, nicht als Shell-Variable).
+Nutze diesen Pfad fuer ALLE folgenden `$PLUGIN_ROOT/scripts/...` Aufrufe.
+
 ### Schritt 1: Cleanup
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/wf_cleanup.sh
+$PLUGIN_ROOT/scripts/wf_cleanup.sh
 ```
 
 | Exit Code | Bedeutung | Aktion |
@@ -139,7 +151,7 @@ jq '.phases["3"] = {"name":"angular-frontend-developer","status":"skipped","reas
 Baue den Prompt mit dem Prompt-Builder:
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/wf_prompt_builder.sh 0
+$PLUGIN_ROOT/scripts/wf_prompt_builder.sh 0
 ```
 
 Pruefe den Output:

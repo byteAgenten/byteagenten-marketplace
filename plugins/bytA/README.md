@@ -1,6 +1,6 @@
 # bytA Plugin
 
-**Version 4.7.5** | Deterministic Orchestration: Boomerang + Ralph-Loop + Team Planning
+**Version 4.7.6** | Deterministic Orchestration: Boomerang + Ralph-Loop + Team Planning
 
 Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 8-Phasen-Workflow und Team-basiertem Planning.
 
