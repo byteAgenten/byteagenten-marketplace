@@ -60,11 +60,21 @@ grep -q "^\.workflow/" .gitignore 2>/dev/null || echo ".workflow/" >> .gitignore
 git fetch --prune
 ```
 
+Ermittle die zuletzt aktiven Branches fuer die erste Frage:
+
+```bash
+git branch --sort=-committerdate --format='%(refname:short)' | head -10
+```
+
+Baue daraus die Optionen fuer Frage 1: Nimm `main` als erste Option (Recommended).
+Fuege bis zu 2 weitere Branches aus der Liste hinzu (keine Duplikate, kein `HEAD`).
+Der User kann immer "Other" waehlen fuer manuelle Eingabe.
+
 **Frage den User nach 6 Einstellungen (EIN AskUserQuestion-Call, WARTE auf Antwort!):**
 
-1. "Von welchem Branch starten?" — Optionen: main (default) / develop
-2. "Coverage-Ziel?" — Optionen: 50% / 70% (default) / 85% / 95%
-3. "Welches Model fuer Agents?" — Optionen: fast (Sonnet, default) / quality (Opus)
+1. "Von welchem Branch starten?" — Optionen: main (Recommended) + bis zu 2 weitere aus der Branch-Liste
+2. "Coverage-Ziel?" — Optionen: 85% (default) / 70% / 95% / 50%
+3. "Welches Model fuer Agents?" — Optionen: quality (Opus, default) / fast (Sonnet)
 4. "UI Designer einschliessen? (Wireframe + data-testid)" — Optionen: Nein (default) / Ja
 5. "Issue Scope?" — Optionen: Full-Stack (default) / Frontend-only / Backend-only
 6. "Checkpoint-Modus?" — Optionen: Keine (default) / Nur Tests (Phase 4) / Alle AUTO-Phasen
