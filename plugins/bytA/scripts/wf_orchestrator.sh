@@ -112,9 +112,9 @@ build_dispatch_msg() {
     # Phase 0 = Team Planning Protocol — inline instructions (survive compaction)
     # WICHTIG: $prompt IST bereits der komplette Output von wf_prompt_builder.sh.
     # Claude soll ihn DIREKT parsen, NICHT nochmal wf_prompt_builder.sh aufrufen!
-    echo "TEAM SPAWN — NUR spawnen, SOFORT Done sagen! 1) touch .workflow/.team-planning-active, 2) TeamCreate(team_name aus TEAM_NAME-Zeile), 3) Spawne ALLE Specialists + HUB parallel via Task() mit den Prompts aus SPECIALIST/HUB-Bloecken, 4) Sage GENAU: Done. — KEIN sleep, KEIN polling, KEIN warten, KEIN pruefen, KEIN cleanup! Der Orchestrator uebernimmt automatisch. Bei TeamCreate-Fehler: rm -f .workflow/.team-planning-active, dann Fallback auf single Task(bytA:architect-planner). --- PROMPT-START --- $prompt --- PROMPT-ENDE ---"
+    echo "TEAM SPAWN — NUR spawnen, SOFORT Done sagen! 1) touch .workflow/.team-planning-active, 2) TeamDelete (Fehler ignorieren — stale Teams aufraeumen), 3) TeamCreate(team_name aus TEAM_NAME-Zeile), 4) Spawne ALLE Specialists + HUB parallel via Task() mit den Prompts aus SPECIALIST/HUB-Bloecken. WICHTIG: JEDER Task MUSS mode: bypassPermissions haben! 5) Sage GENAU: Done. — KEIN sleep, KEIN polling, KEIN warten, KEIN pruefen, KEIN cleanup! Der Orchestrator uebernimmt automatisch. Bei TeamCreate-Fehler: rm -f .workflow/.team-planning-active, dann Fallback auf single Task(bytA:architect-planner, mode: bypassPermissions). --- PROMPT-START --- $prompt --- PROMPT-ENDE ---"
   else
-    echo "Task(bytA:$phase_agent, '$prompt')"
+    echo "Task(bytA:$phase_agent, mode: bypassPermissions, '$prompt')"
   fi
 }
 
@@ -509,7 +509,7 @@ if "${SCRIPT_DIR}/wf_verify.sh" "$PHASE"; then
     log_transition "skip_advance" "from=$PHASE to=$NEXT_PHASE"
 
     PROMPT=$("${SCRIPT_DIR}/wf_prompt_builder.sh" "$NEXT_PHASE")
-    output_block "Phase $PHASE ($PHASE_NAME) uebersprungen (pre-skipped). Starte Phase $NEXT_PHASE ($NEXT_NAME): Task(bytA:$NEXT_AGENT, '$PROMPT')"
+    output_block "Phase $PHASE ($PHASE_NAME) uebersprungen (pre-skipped). Starte Phase $NEXT_PHASE ($NEXT_NAME): Task(bytA:$NEXT_AGENT, mode: bypassPermissions, '$PROMPT')"
   fi
 
   reset_retry "$PHASE"
@@ -593,7 +593,7 @@ if "${SCRIPT_DIR}/wf_verify.sh" "$PHASE"; then
     if [ -n "$_PHASE_SUMMARY" ]; then
       _BLOCK_MSG="$_BLOCK_MSG [SUMMARY: ${_PHASE_SUMMARY:0:300}]"
     fi
-    _BLOCK_MSG="$_BLOCK_MSG Auto-Advance zu Phase $NEXT_PHASE ($NEXT_NAME). Starte sofort: Task(bytA:$NEXT_AGENT, '$PROMPT')"
+    _BLOCK_MSG="$_BLOCK_MSG Auto-Advance zu Phase $NEXT_PHASE ($NEXT_NAME). Starte sofort: Task(bytA:$NEXT_AGENT, mode: bypassPermissions, '$PROMPT')"
     output_block "$_BLOCK_MSG"
   fi
 

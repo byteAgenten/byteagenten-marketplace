@@ -163,9 +163,10 @@ fuehre das folgende Protokoll aus:
 touch .workflow/.team-planning-active
 ```
 
-Dann:
+Dann (Reihenfolge EINHALTEN!):
 
 ```
+TeamDelete  ← Stale Teams aufraeumen (Fehler ignorieren!)
 TeamCreate(team_name: <TEAM_NAME aus Protokoll>)
 ```
 
@@ -179,14 +180,17 @@ Spawne ALLE Agents IN PARALLEL in EINEM Aufruf:
 ```
 Fuer JEDEN Block:
   Task(subagent_type: <Agent>, name: <Name>, team_name: <TEAM_NAME>,
-       model: <MODEL>, prompt: <Prompt aus Block>)
+       model: <MODEL>, mode: "bypassPermissions", prompt: <Prompt aus Block>)
 ```
 
+**WICHTIG:** `mode: "bypassPermissions"` ist PFLICHT! Ohne blockiert Claude Code Write/Edit-Operationen
+der Teammates und sendet Permission-Requests an den Team-Lead, der damit nichts anfangen kann.
+
 **Beispiel mit 4 Agents (3 Specialists + 1 Hub):**
-- Task(bytA:spring-boot-developer, name: "backend", team_name: "bytA-plan-42", model: "sonnet", prompt: "...")
-- Task(bytA:angular-frontend-developer, name: "frontend", team_name: "bytA-plan-42", model: "sonnet", prompt: "...")
-- Task(bytA:test-engineer, name: "quality", team_name: "bytA-plan-42", model: "sonnet", prompt: "...")
-- Task(bytA:architect-planner, name: "architect", team_name: "bytA-plan-42", model: "sonnet", prompt: "...")
+- Task(bytA:spring-boot-developer, name: "backend", team_name: "bytA-plan-42", model: "sonnet", mode: "bypassPermissions", prompt: "...")
+- Task(bytA:angular-frontend-developer, name: "frontend", team_name: "bytA-plan-42", model: "sonnet", mode: "bypassPermissions", prompt: "...")
+- Task(bytA:test-engineer, name: "quality", team_name: "bytA-plan-42", model: "sonnet", mode: "bypassPermissions", prompt: "...")
+- Task(bytA:architect-planner, name: "architect", team_name: "bytA-plan-42", model: "sonnet", mode: "bypassPermissions", prompt: "...")
 
 ### 3. Warten
 
@@ -221,7 +225,7 @@ Wenn TeamCreate einen Fehler wirft (z.B. Agent Teams nicht aktiviert):
 1. Marker entfernen: `rm -f .workflow/.team-planning-active`
 2. Extrahiere den `--- HUB: architect ---` Block aus dem Protokoll
 3. Entferne alle SendMessage-Referenzen aus dem Prompt
-4. Fuehre aus: `Task(bytA:architect-planner, "<bereinigter Architect-Prompt>")`
+4. Fuehre aus: `Task(bytA:architect-planner, mode: "bypassPermissions", "<bereinigter Architect-Prompt>")`
 5. Sage "Done." — Phase 0 wird dann wie bisher single-agent ausgefuehrt
 
 ---
