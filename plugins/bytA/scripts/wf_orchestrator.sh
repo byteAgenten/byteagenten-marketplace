@@ -559,7 +559,7 @@ if "${SCRIPT_DIR}/wf_verify.sh" "$PHASE"; then
       APPROVAL_MSG="$APPROVAL_MSG Ergebnis: $SPEC_FILE — VORSCHAU (erste 40 Zeilen, NICHT die Datei lesen!): --- $SPEC_PREVIEW ---"
     fi
 
-    APPROVAL_MSG="$APPROVAL_MSG Praesentiere dem User die Vorschau/Ergebnisse. Frage dann: 'Soll ich mit dem Workflow fortfahren? (approve/weiter) oder hast du Aenderungswuensche?' WICHTIG: KEINE Datei lesen! Die Vorschau oben reicht. Fuehre KEINE weiteren Aktionen aus — warte auf die Antwort des Users."
+    APPROVAL_MSG="$APPROVAL_MSG Praesentiere dem User die Vorschau/Ergebnisse als TEXT (KEIN AskUserQuestion!). Schreibe am Ende: 'Optionen: approve/weiter | feedback | rollback PHASE'. Sage dann GENAU: Done. — Der User antwortet mit seiner naechsten Nachricht und der UserPromptSubmit-Hook uebernimmt. WICHTIG: KEINE Datei lesen! Die Vorschau oben reicht. KEIN AskUserQuestion benutzen!"
 
     output_block "$APPROVAL_MSG"
 
