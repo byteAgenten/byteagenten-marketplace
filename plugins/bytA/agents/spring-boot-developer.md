@@ -3,7 +3,6 @@ name: spring-boot-developer
 last_updated: 2026-01-31
 description: Implement Spring Boot backend, REST controllers, JPA entities, services. TRIGGER "Spring Boot", "backend", "REST controller", "Java", "endpoint". NOT FOR frontend, database schema, API design only.
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "mcp__plugin_bytA_context7__resolve-library-id", "mcp__plugin_bytA_context7__query-docs"]
-model: inherit
 color: purple
 ---
 

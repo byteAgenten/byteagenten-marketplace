@@ -3,7 +3,6 @@ name: api-architect
 last_updated: 2026-01-26
 description: Design REST APIs, OpenAPI specs, API contracts. TRIGGER "design API", "API endpoints", "REST API", "OpenAPI spec". NOT FOR API implementation, frontend, database schema.
 tools: ["Read", "Write", "Edit", "Glob", "Grep", "mcp__plugin_bytA_context7__resolve-library-id", "mcp__plugin_bytA_context7__query-docs"]
-model: inherit
 color: blue
 ---
 

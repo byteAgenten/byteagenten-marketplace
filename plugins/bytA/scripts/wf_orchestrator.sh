@@ -356,6 +356,22 @@ if [ "$STATUS" = "awaiting_approval" ]; then
     jq '.status = "active"' \
       "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
 
+    # Phase 0 Partial Progress Guard (same as in Ralph-Loop)
+    if [ "$PHASE" = "0" ]; then
+      _HAS_PARTIAL=false
+      for _f in .workflow/specs/issue-*-plan-*.md; do
+        [ -f "$_f" ] || continue
+        case "$_f" in *plan-consolidated*) continue ;; esac
+        _HAS_PARTIAL=true
+        break
+      done
+      if [ "$_HAS_PARTIAL" = "true" ]; then
+        log "PHASE 0 PARTIAL PROGRESS: Individual plan files exist in criterion bypass. Agents still working. Waiting."
+        log_transition "phase0_partial_wait" "phase=0 source=criterion_bypass"
+        exit 0
+      fi
+    fi
+
     RETRY=$(increment_retry "$PHASE")
     if [ "$RETRY" -ge "$MAX_RETRIES" ]; then
       jq --arg reason "criterion_bypass_phase_${PHASE}" \
@@ -587,6 +603,26 @@ else
     jq --argjson p "$PHASE" --arg name "$PHASE_NAME" \
       '.phases[($p | tostring)] = {"name": $name, "status": "active"}' \
       "$WORKFLOW_FILE" > "${WORKFLOW_FILE}.tmp" && mv "${WORKFLOW_FILE}.tmp" "$WORKFLOW_FILE"
+  fi
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # PHASE 0 PARTIAL PROGRESS GUARD: Team agents still producing specs?
+  # If individual plan files exist but consolidated plan is missing,
+  # team agents are actively working. Don't retry — wait for next Stop hook.
+  # ─────────────────────────────────────────────────────────────────────────
+  if [ "$PHASE" = "0" ]; then
+    _HAS_PARTIAL=false
+    for _f in .workflow/specs/issue-*-plan-*.md; do
+      [ -f "$_f" ] || continue
+      case "$_f" in *plan-consolidated*) continue ;; esac
+      _HAS_PARTIAL=true
+      break
+    done
+    if [ "$_HAS_PARTIAL" = "true" ]; then
+      log "PHASE 0 PARTIAL PROGRESS: Individual plan files exist but consolidated plan missing. Agents still working. Waiting."
+      log_transition "phase0_partial_wait" "phase=0"
+      exit 0
+    fi
   fi
 
   # ─────────────────────────────────────────────────────────────────────────
