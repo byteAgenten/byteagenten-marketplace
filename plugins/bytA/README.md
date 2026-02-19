@@ -1,6 +1,6 @@
 # bytA Plugin
 
-**Version 4.5.0** | Deterministic Orchestration: Boomerang + Ralph-Loop + Team Planning
+**Version 4.6.0** | Deterministic Orchestration: Boomerang + Ralph-Loop + Team Planning
 
 Full-Stack Development Toolkit fuer Angular 21 + Spring Boot 4 mit deterministischem 8-Phasen-Workflow und Team-basiertem Planning.
 
@@ -86,9 +86,15 @@ Phase 0 — Team Planning (Hub-and-Spoke):
               └─────────────┘
 ```
 
-Jeder Spezialist schreibt einen Plan auf Disk + sendet Summary an den Architect.
+Jeder Spezialist schreibt ERST einen Plan auf Disk, DANN sendet er eine Summary an den Architect.
 Der Architect wartet auf ALLE Summaries, liest volle Plaene, validiert Konsistenz,
 und schreibt die konsolidierte Spec. Der User-Model-Tier bestimmt ob Sonnet oder Opus.
+
+**Recovery bei fehlenden Plan-Dateien (v4.6.0):**
+Wenn ein Spezialist die Summary sendet aber die Datei auf Disk fehlt:
+1. Architect triggert den Spezialisten per SendMessage → "Schreibe die Datei"
+2. Spezialist wacht auf und schreibt die Datei
+3. Falls nach 2 Retries keine Datei: Summary-Inhalt als Fallback verwenden
 
 **Fallback:** Wenn Agent Teams nicht aktiviert, laeuft Phase 0 als single architect-planner.
 

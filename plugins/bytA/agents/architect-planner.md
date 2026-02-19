@@ -87,18 +87,42 @@ Problem aus Issue: [X]
 
 Wenn du als Hub in einem Team arbeitest (erkennbar an "Consolidator" im Prompt):
 
+### Schritt 1: Summaries empfangen
+
 1. Du empfaengst Plan-Summaries von Teammates via SendMessage
 2. Zaehle eingehende Summaries — warte auf ALLE erwarteten (Anzahl steht im Prompt)
-3. Lies die vollen Plaene von Disk INKREMENTELL (einer nach dem anderen):
-   - `.workflow/specs/issue-{N}-plan-backend.md`
-   - `.workflow/specs/issue-{N}-plan-frontend.md`
-   - `.workflow/specs/issue-{N}-plan-quality.md`
-   - `.workflow/specs/issue-{N}-plan-ui.md` (falls UI-Designer dabei)
+3. **Merke dir den Inhalt jeder Summary** — du brauchst ihn ggf. als Fallback
+
+### Schritt 2: Plan-Dateien von Disk lesen (mit Recovery)
+
+Lies die vollen Plaene von Disk INKREMENTELL (einer nach dem anderen):
+- `.workflow/specs/issue-{N}-plan-backend.md`
+- `.workflow/specs/issue-{N}-plan-frontend.md`
+- `.workflow/specs/issue-{N}-plan-quality.md`
+- `.workflow/specs/issue-{N}-plan-ui.md` (falls UI-Designer dabei)
+
+**RECOVERY bei fehlender Datei:**
+
+Wenn eine Plan-Datei NICHT existiert obwohl du die Summary empfangen hast:
+
+| Versuch | Aktion |
+|---------|--------|
+| 1. Retry | SendMessage an den Spezialisten: "Deine Plan-Datei `[Pfad]` fehlt auf Disk. Bitte schreibe sie JETZT und bestaetige." → Warte auf Antwort, dann lies die Datei. |
+| 2. Retry | SendMessage erneut: "Datei `[Pfad]` existiert immer noch nicht. Schreibe die Datei und sage 'Done'." → Warte auf Antwort. |
+| 3. Fallback | Nutze den Summary-Inhalt aus der empfangenen SendMessage als Ersatz. Markiere im Consolidated Spec: `(Quelle: Summary, keine Disk-Datei)`. Fahre fort. |
+
+**NIEMALS endlos warten!** Nach 2 Retry-Versuchen → Fallback nutzen und weiterarbeiten.
+
+### Schritt 3: Konsistenz pruefen
+
 4. Pruefe Konsistenz:
    - Endpoints ↔ Services (z.B. `POST /api/reports` ↔ `ReportService.create()`)
    - DTOs ↔ Field-Names (z.B. `configId` vs `config` — Konflikte aufloesen!)
    - data-testid ↔ Tests (Wireframe-Attribute muessen in E2E-Szenarien vorkommen)
 5. Bei Konflikten: SendMessage an betroffenen Spezialisten → warte auf Korrektur
+
+### Schritt 4: Consolidated Spec schreiben
+
 6. Schreibe CONSOLIDATED SPEC zu `.workflow/specs/issue-{N}-plan-consolidated.md` mit:
    - ## Architecture Overview
    - ## API Contract (Endpoints, DTOs, Response-Formate)
