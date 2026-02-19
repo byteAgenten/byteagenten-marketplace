@@ -328,11 +328,17 @@ def _architecture_update_instructions(phase: Phase, project_dir: Path) -> str:
     )
 
 
-def build_prompt(phase: Phase, config: WorkflowConfig, project_dir: Path) -> str:
+def build_prompt(
+    phase: Phase,
+    config: WorkflowConfig,
+    project_dir: Path,
+    feedback: str = "",
+) -> str:
     """Build the full prompt for a phase's Claude invocation.
 
     Structure:
     1. Phase header + metadata
+    1b. USER CORRECTION (if feedback — injected early for maximum visibility)
     2. Codebase Context (structure.md + architecture.md)
     3. GitHub Issue (from .workflow/issue.json)
     4. Agent definition (from agents/*.md — full persona + instructions)
@@ -351,6 +357,22 @@ def build_prompt(phase: Phase, config: WorkflowConfig, project_dir: Path) -> str
         f"Target Coverage: {config.target_coverage}%",
         f"Project directory: {project_dir}",
     ]
+
+    # Inject user feedback EARLY — right after the header, before all other content.
+    # This ensures the agent sees the correction before reading the codebase context,
+    # issue, or agent instructions, preventing it from forming wrong assumptions first.
+    if feedback:
+        parts.extend([
+            "",
+            "## ⛔ USER CORRECTION — YOU MUST ADDRESS THIS",
+            "The user reviewed your previous output and found a problem.",
+            "You MUST fix this issue in your new output. Do NOT repeat the same mistake.",
+            "",
+            f"**User says:** {feedback}",
+            "",
+            "Re-analyze the codebase with this correction in mind BEFORE writing your plan.",
+            "Your output will be rejected if it does not address the above feedback.",
+        ])
 
     # 1. Codebase context (structure + architecture)
     context = read_context(project_dir)
@@ -441,17 +463,42 @@ def build_prompt(phase: Phase, config: WorkflowConfig, project_dir: Path) -> str
         )
     elif phase.number == 4:
         phase_context.append(f"Target coverage: {config.target_coverage}%")
-        phase_context.append(
-            "CRITICAL — After tests pass, you MUST update .workflow/workflow-state.json:\n"
-            "Use this jq command to set the test results:\n"
-            "```bash\n"
+
+        # Build the jq commands as a clean block to avoid nested quoting hell
+        jq_case1 = (
             'jq \'.phases["4"].context.testResults = '
             '{"allPassed": true, "reportFile": '
             f'"issue-{issue_num}-ph04-test-engineer.md"'
             "}'  .workflow/workflow-state.json > /tmp/ws.json "
-            "&& mv /tmp/ws.json .workflow/workflow-state.json\n"
-            "```\n"
-            "This is required for phase verification to pass."
+            "&& mv /tmp/ws.json .workflow/workflow-state.json"
+        )
+        jq_case2_json = (
+            '{"allPassed": true, '
+            f'"reportFile": "issue-{issue_num}-ph04-test-engineer.md", '
+            '"preExisting": {"count": N, "failures": ['
+            '{"test": "TestName", "file": "file.spec.ts", "layer": "frontend|backend"}'
+            "]}}"
+        )
+        jq_case2 = (
+            f'jq \'.phases["4"].context.testResults = {jq_case2_json}\''
+            "  .workflow/workflow-state.json > /tmp/ws.json "
+            "&& mv /tmp/ws.json .workflow/workflow-state.json"
+        )
+
+        phase_context.append(
+            "CRITICAL — After running tests, you MUST update .workflow/workflow-state.json.\n\n"
+            "**Case 1: All tests pass (no failures at all):**\n"
+            f"```bash\n{jq_case1}\n```\n\n"
+            "**Case 2: Some tests fail that are NOT caused by this issue's changes (pre-existing):**\n"
+            "Check `git diff` — if the failing test files and their source files were NOT modified\n"
+            "by this branch, they are pre-existing failures. Set `allPassed: true` (no regressions)\n"
+            "and report the pre-existing failures separately:\n"
+            f"```bash\n{jq_case2}\n```\n"
+            "Each failure needs: `test` (test name), `file` (test file path), "
+            "`layer` (`frontend` or `backend`).\n\n"
+            "**Case 3: Tests fail that ARE caused by this issue's changes (regressions):**\n"
+            "Fix the regressions first. If unfixable (> 20 lines / > 2 files), set `allPassed: false`.\n\n"
+            "Phase verification requires `allPassed == true` to pass."
         )
     elif phase.number == 7:
         # PR Draft phase — needs from_branch for git diff

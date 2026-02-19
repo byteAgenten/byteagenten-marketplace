@@ -23,10 +23,11 @@ from textual.widgets import (
     RichLog,
     Select,
     Static,
+    TextArea,
 )
 
 from .config import COVERAGE_OPTIONS, PHASES, PhaseType, Scope, WorkflowConfig
-from .orchestrator import Orchestrator, PhaseResult, PhaseStatus, detect_existing_workflow
+from .orchestrator import Orchestrator, PhaseResult, PhaseStatus, PreExistingInfo, detect_existing_workflow
 
 # Status indicator symbols
 STATUS_ICONS: dict[PhaseStatus, str] = {
@@ -35,6 +36,7 @@ STATUS_ICONS: dict[PhaseStatus, str] = {
     PhaseStatus.PASSED: "[green]✓[/]",
     PhaseStatus.FAILED: "[red]✗[/]",
     PhaseStatus.AWAITING_APPROVAL: "[cyan]⧖[/]",
+    PhaseStatus.AWAITING_PREEXISTING: "[yellow]⚠[/]",
 }
 
 
@@ -80,68 +82,110 @@ class ResizeHandle(Static):
         super().__init__(label, **kwargs)
         self.direction = direction
         self._dragging = False
-        self._last_pos = 0
+        self._drag_start = 0
+        self._initial_before = 0
+        self._initial_after = 0
+        self._before_widget: object | None = None
+        self._after_widget: object | None = None
         self.add_class(f"-{direction}")
 
+    def _find_visible_neighbors(self) -> tuple[object, object] | None:
+        """Find the visible widgets immediately before and after this handle."""
+        parent = self.parent
+        if parent is None:
+            return None
+        visible = [c for c in parent.children if c.display]
+        try:
+            idx = visible.index(self)
+        except ValueError:
+            return None
+        if idx == 0 or idx >= len(visible) - 1:
+            return None
+        return visible[idx - 1], visible[idx + 1]
+
+    def _normalize_sibling_heights(self) -> None:
+        """Set ALL visible content panels to pixel-based fr values.
+
+        Without this, dragging two panels to e.g. 25fr/10fr while a third
+        panel stays at 1fr (from CSS) causes the third to collapse.
+        Normalizing puts everything on the same scale.
+        """
+        parent = self.parent
+        if parent is None:
+            return
+        for child in parent.children:
+            if child.display and not isinstance(child, ResizeHandle):
+                h = child.size.height
+                if h > 0:
+                    child.styles.height = f"{h}fr"
+
     def on_mouse_down(self, event: events.MouseDown) -> None:
+        neighbors = self._find_visible_neighbors()
+        if neighbors is None:
+            return
+        before, after = neighbors
         self._dragging = True
-        self._last_pos = event.screen_y if self.direction == "vertical" else event.screen_x
+        self._before_widget = before
+        self._after_widget = after
+        if self.direction == "vertical":
+            # Normalize ALL panels to same fr scale before capturing sizes
+            self._normalize_sibling_heights()
+            self._drag_start = event.screen_y
+            self._initial_before = before.size.height
+            self._initial_after = after.size.height
+        else:
+            self._drag_start = event.screen_x
+            self._initial_before = before.size.width
+            self._initial_after = 0  # horizontal only adjusts 'before'
         self.capture_mouse()
         self.add_class("-dragging")
         event.stop()
 
     def on_mouse_move(self, event: events.MouseMove) -> None:
-        if not self._dragging:
+        if not self._dragging or self._before_widget is None:
             return
         pos = event.screen_y if self.direction == "vertical" else event.screen_x
-        delta = pos - self._last_pos
-        if delta == 0:
+        total_delta = pos - self._drag_start
+        if total_delta == 0:
             return
-        self._last_pos = pos
-        self._adjust_siblings(delta)
+        self._apply_resize(total_delta)
         event.stop()
 
     def on_mouse_up(self, event: events.MouseUp) -> None:
         if self._dragging:
             self._dragging = False
+            self._before_widget = None
+            self._after_widget = None
             self.release_mouse()
             self.remove_class("-dragging")
             event.stop()
 
-    def _adjust_siblings(self, delta: int) -> None:
-        parent = self.parent
-        if parent is None:
-            return
-        children = list(parent.children)
-        try:
-            idx = children.index(self)
-        except ValueError:
-            return
-        if idx == 0 or idx >= len(children) - 1:
+    def _apply_resize(self, total_delta: int) -> None:
+        """Apply resize based on total delta from drag start (not incremental).
+
+        Uses fr units so panels always fill 100% of the container.
+        Initial pixel sizes are captured once at mouse_down — no stale reads.
+        """
+        before = self._before_widget
+        after = self._after_widget
+        if before is None:
             return
 
-        before = children[idx - 1]
-        after = children[idx + 1]
-
-        if self.direction == "vertical":
-            before_h = before.size.height
-            after_h = after.size.height
-            total = before_h + after_h
+        if self.direction == "vertical" and after is not None:
+            total = self._initial_before + self._initial_after
             min_size = 4
-
-            new_before = max(min_size, before_h + delta)
+            new_before = max(min_size, self._initial_before + total_delta)
             new_after = max(min_size, total - new_before)
             new_before = total - new_after
-
             before.styles.height = f"{new_before}fr"
             after.styles.height = f"{new_after}fr"
         else:
-            before_w = before.size.width
+            parent = self.parent
+            if parent is None:
+                return
             min_size = 15
-            parent_w = parent.size.width
-            max_size = parent_w - min_size - 1
-
-            new_before = max(min_size, min(max_size, before_w + delta))
+            max_size = parent.size.width - min_size - 1
+            new_before = max(min_size, min(max_size, self._initial_before + total_delta))
             before.styles.width = new_before
 
 
@@ -226,20 +270,242 @@ class SetupScreen(ModalScreen[WorkflowConfig | None]):
 
 
 class FeedbackScreen(ModalScreen[str]):
-    """Modal dialog for entering approval feedback."""
+    """Modal dialog for entering approval feedback (multi-line)."""
 
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
 
     def compose(self) -> ComposeResult:
         with Vertical(id="feedback-container"):
             yield Label("Enter feedback for the agent:")
-            yield Input(placeholder="Your feedback...", id="feedback-input")
+            yield TextArea("", id="feedback-input", language=None)
+            with Horizontal(id="feedback-actions"):
+                yield Button("Submit", variant="success", id="btn-feedback-submit")
+                yield Button("Cancel", variant="default", id="btn-feedback-cancel")
 
-    def on_input_submitted(self, event: Input.Submitted) -> None:
-        self.dismiss(event.value)
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-feedback-submit":
+            self.dismiss(self.query_one("#feedback-input", TextArea).text.strip())
+        elif event.button.id == "btn-feedback-cancel":
+            self.dismiss("")
 
     def action_cancel(self) -> None:
         self.dismiss("")
+
+
+class RollbackScreen(ModalScreen[tuple[int, str]]):
+    """Modal to select target phase for rollback, with optional feedback.
+
+    Two-step flow:
+    1. Select target phase (buttons)
+    2. Enter optional feedback explaining what went wrong (input)
+
+    Dismisses with:
+    - (phase_number, feedback_text) to roll back
+    - (-1, "") to cancel
+    """
+
+    BINDINGS = [Binding("escape", "cancel", "Cancel")]
+
+    def __init__(self, current_phase: int, passed_phases: list[int]) -> None:
+        super().__init__()
+        self.current_phase = current_phase
+        self.passed_phases = passed_phases
+        self._selected_phase: int = -1
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="rollback-container"):
+            yield Label(
+                f"[bold yellow]Rollback from Phase {self.current_phase}[/]",
+                id="rollback-title",
+            )
+            yield Label("Select target phase to re-run:", id="rollback-step-label")
+            yield Label("")
+            with Vertical(id="rollback-buttons"):
+                for p_num in self.passed_phases:
+                    phase = PHASES[p_num]
+                    yield Button(
+                        f"Phase {p_num}: {phase.name} ({phase.agent})",
+                        variant="warning",
+                        id=f"btn-rollback-{p_num}",
+                    )
+                yield Button("Cancel", variant="default", id="btn-rollback-cancel")
+            with Vertical(id="rollback-feedback-box"):
+                yield TextArea(
+                    "",
+                    id="rollback-feedback",
+                    language=None,
+                )
+                with Horizontal(id="rollback-feedback-actions"):
+                    yield Button(
+                        "Submit", variant="success", id="btn-rollback-submit"
+                    )
+                    yield Button(
+                        "Skip", variant="default", id="btn-rollback-skip"
+                    )
+
+    def on_mount(self) -> None:
+        # Hide feedback area until phase is selected
+        self.query_one("#rollback-feedback-box").display = False
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        btn_id = event.button.id or ""
+        if btn_id.startswith("btn-rollback-") and btn_id not in (
+            "btn-rollback-cancel",
+            "btn-rollback-submit",
+            "btn-rollback-skip",
+        ):
+            self._selected_phase = int(btn_id.split("-")[-1])
+            # Switch to feedback step
+            self.query_one("#rollback-step-label", Label).update(
+                f"Rolling back to Phase {self._selected_phase}. "
+                "Describe what went wrong (or click Skip):"
+            )
+            self.query_one("#rollback-buttons").display = False
+            feedback_box = self.query_one("#rollback-feedback-box")
+            feedback_box.display = True
+            self.query_one("#rollback-feedback", TextArea).focus()
+        elif btn_id == "btn-rollback-cancel":
+            self.dismiss((-1, ""))
+        elif btn_id == "btn-rollback-submit":
+            text = self.query_one("#rollback-feedback", TextArea).text.strip()
+            self.dismiss((self._selected_phase, text))
+        elif btn_id == "btn-rollback-skip":
+            self.dismiss((self._selected_phase, ""))
+
+    def action_cancel(self) -> None:
+        self.dismiss((-1, ""))
+
+
+class PreExistingScreen(ModalScreen[tuple[int | None, str]]):
+    """Modal shown when pre-existing test failures are detected.
+
+    Two-step flow:
+    1. Choose action: Fix Frontend / Fix Backend / Fix All / Ignore
+    2. Enter feedback describing what to fix (pre-populated with failure list)
+
+    Dismisses with:
+    - (target_phase, feedback) to fix via rollback
+    - (None, "") to ignore and continue
+    """
+
+    BINDINGS = [Binding("escape", "cancel", "Cancel")]
+
+    def __init__(self, pre_existing: PreExistingInfo) -> None:
+        super().__init__()
+        self.pre_existing = pre_existing
+        self._selected_target: int | None = None
+
+    def compose(self) -> ComposeResult:
+        fe = self.pre_existing.frontend_failures
+        be = self.pre_existing.backend_failures
+
+        with Vertical(id="preexisting-container"):
+            yield Label(
+                f"[bold yellow]{self.pre_existing.count} Pre-Existing "
+                f"Test Failures Detected[/]",
+                id="preexisting-title",
+            )
+            yield Label("")
+
+            if fe:
+                yield Label(f"  Frontend: {len(fe)} failures")
+            if be:
+                yield Label(f"  Backend: {len(be)} failures")
+
+            # Show individual failures (max 10)
+            for f in self.pre_existing.failures[:10]:
+                test = f.get("test", "")
+                file = f.get("file", "?")
+                label = f"  [dim]- {test}[/]" if test else f"  [dim]- {file}[/]"
+                yield Label(label)
+            if len(self.pre_existing.failures) > 10:
+                yield Label(
+                    f"  [dim]... and {len(self.pre_existing.failures) - 10} more[/]"
+                )
+
+            yield Label("")
+
+            with Vertical(id="preexisting-buttons"):
+                if fe and be:
+                    yield Button(
+                        f"Fix All ({len(be)} backend + {len(fe)} frontend)",
+                        variant="warning",
+                        id="btn-fix-all",
+                    )
+                if be:
+                    yield Button(
+                        f"Fix Backend ({len(be)} failures)",
+                        variant="warning",
+                        id="btn-fix-backend",
+                    )
+                if fe:
+                    yield Button(
+                        f"Fix Frontend ({len(fe)} failures)",
+                        variant="warning",
+                        id="btn-fix-frontend",
+                    )
+                yield Button(
+                    "Ignore (continue without fixing)",
+                    variant="default",
+                    id="btn-ignore",
+                )
+
+            with Vertical(id="preexisting-feedback-box"):
+                yield Label("Describe what should be fixed:")
+                yield TextArea("", id="preexisting-feedback", language=None)
+                with Horizontal(id="preexisting-feedback-actions"):
+                    yield Button(
+                        "Submit", variant="success", id="btn-preexisting-submit"
+                    )
+                    yield Button(
+                        "Back", variant="default", id="btn-preexisting-back"
+                    )
+
+    def on_mount(self) -> None:
+        self.query_one("#preexisting-feedback-box").display = False
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        btn_id = event.button.id or ""
+        if btn_id == "btn-fix-all":
+            self._selected_target = 2  # Backend first, then frontend
+            self._show_feedback()
+        elif btn_id == "btn-fix-backend":
+            self._selected_target = 2
+            self._show_feedback()
+        elif btn_id == "btn-fix-frontend":
+            self._selected_target = 3
+            self._show_feedback()
+        elif btn_id == "btn-ignore":
+            self.dismiss((None, ""))
+        elif btn_id == "btn-preexisting-submit":
+            text = self.query_one("#preexisting-feedback", TextArea).text.strip()
+            self.dismiss((self._selected_target, text))
+        elif btn_id == "btn-preexisting-back":
+            self.query_one("#preexisting-feedback-box").display = False
+            self.query_one("#preexisting-buttons").display = True
+
+    def _show_feedback(self) -> None:
+        """Switch to feedback step, pre-populated with failure list."""
+        self.query_one("#preexisting-buttons").display = False
+        fb_box = self.query_one("#preexisting-feedback-box")
+        fb_box.display = True
+
+        # Pre-populate with failure list
+        lines = ["Fix these pre-existing test failures:"]
+        for f in self.pre_existing.failures:
+            test = f.get("test", "")
+            file = f.get("file", "")
+            if test:
+                lines.append(f"- {test} ({file})")
+            else:
+                lines.append(f"- {file}")
+
+        ta = self.query_one("#preexisting-feedback", TextArea)
+        ta.text = "\n".join(lines)
+        ta.focus()
+
+    def action_cancel(self) -> None:
+        self.dismiss((None, ""))
 
 
 class ResumeScreen(ModalScreen[int]):
@@ -329,6 +595,9 @@ class BytcodeApp(App[None]):
     BINDINGS = [
         Binding("f1", "approve", "Approve"),
         Binding("f2", "feedback", "Feedback"),
+        Binding("f3", "rollback", "Rollback"),
+        Binding("f5", "resize_up", "Output+"),
+        Binding("f6", "resize_down", "Output-"),
         Binding("q", "quit", "Quit"),
     ]
 
@@ -351,13 +620,13 @@ class BytcodeApp(App[None]):
             yield self._build_sidebar()
             yield ResizeHandle(direction="horizontal")
             with Vertical(id="main-content"):
-                summary = Markdown(id="summary-panel")
-                summary.border_title = "Summary"
-                yield summary
-                yield ResizeHandle(direction="vertical", id="summary-handle")
                 main_panel = RichLog(id="main-panel", highlight=True, markup=True)
                 main_panel.border_title = "Output"
                 yield main_panel
+                yield ResizeHandle(direction="vertical", id="summary-handle")
+                summary = Markdown(id="summary-panel")
+                summary.border_title = "Summary"
+                yield summary
                 yield ResizeHandle(direction="vertical")
                 live_log = RichLog(id="live-log", highlight=True, markup=True)
                 live_log.border_title = "Live Activity"
@@ -580,8 +849,8 @@ class BytcodeApp(App[None]):
             self._show_approval_bindings()
 
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
-        """Hide approve/feedback bindings unless awaiting approval."""
-        if action in ("approve", "feedback"):
+        """Hide approve/feedback/rollback bindings unless awaiting approval."""
+        if action in ("approve", "feedback", "rollback"):
             return self._awaiting_result is not None
         return True
 
@@ -589,7 +858,7 @@ class BytcodeApp(App[None]):
         self._append_log("")
         self._append_log(
             "[bold cyan]>>> Awaiting approval: "
-            "F1=Approve  F2=Feedback  Q=Quit[/]"
+            "F1=Approve  F2=Feedback  F3=Rollback  Q=Quit[/]"
         )
 
     def _hide_approval_bindings(self) -> None:
@@ -598,6 +867,9 @@ class BytcodeApp(App[None]):
     def _handle_phase_result(self, result: PhaseResult | None) -> None:
         if result is None:
             self.call_from_thread(self._workflow_complete)
+        elif result.status == PhaseStatus.AWAITING_PREEXISTING:
+            self._awaiting_result = result
+            self.call_from_thread(self._show_preexisting_screen, result)
         else:
             self._awaiting_result = result
 
@@ -642,6 +914,40 @@ class BytcodeApp(App[None]):
 
         self.push_screen(FeedbackScreen(), on_feedback)
 
+    def action_rollback(self) -> None:
+        if not self._awaiting_result or not self.orchestrator:
+            return
+
+        current_phase = self._awaiting_result.phase.number
+
+        # Collect passed phases the user can roll back to
+        passed: list[int] = []
+        for p in PHASES:
+            if p.number >= current_phase:
+                break
+            result = self.orchestrator.results.get(p.number)
+            if result and result.status in (PhaseStatus.PASSED, PhaseStatus.AWAITING_APPROVAL):
+                passed.append(p.number)
+
+        if not passed:
+            self._append_log("[yellow]No earlier phases to roll back to.[/]")
+            return
+
+        def on_rollback_choice(result: tuple[int, str]) -> None:
+            target, feedback = result
+            if target == -1 or not self._awaiting_result or not self.orchestrator:
+                return
+            phase_num = self._awaiting_result.phase.number
+            self._awaiting_result = None
+            self._hide_approval_bindings()
+            msg = f"[bold yellow]>>> Rollback: Phase {phase_num} → Phase {target}[/]"
+            if feedback:
+                msg += f"\n[yellow]Feedback: {feedback}[/]"
+            self._append_log(msg)
+            self._resume_rollback(phase_num, target, feedback)
+
+        self.push_screen(RollbackScreen(current_phase, passed), on_rollback_choice)
+
     @work(thread=True)
     async def _resume_workflow(
         self, from_phase: int, *, approved: bool = True, feedback: str = ""
@@ -652,6 +958,85 @@ class BytcodeApp(App[None]):
             from_phase, approved=approved, feedback=feedback
         )
         self._handle_phase_result(result)
+
+    @work(thread=True)
+    async def _resume_rollback(
+        self, current_phase: int, target_phase: int, feedback: str = ""
+    ) -> None:
+        if not self.orchestrator:
+            return
+        result = await self.orchestrator.rollback_to_phase(
+            current_phase, target_phase, feedback=feedback
+        )
+        self._handle_phase_result(result)
+
+    def _show_preexisting_screen(self, result: PhaseResult) -> None:
+        """Show the pre-existing failures dialog after Phase 4."""
+        if not result.pre_existing:
+            return
+
+        def on_choice(choice: tuple[int | None, str]) -> None:
+            target, feedback = choice
+            if not self.orchestrator:
+                return
+            phase_num = result.phase.number
+            self._awaiting_result = None
+            if target is not None:
+                # Fix — rollback to target phase
+                msg = f"[bold yellow]>>> Fix pre-existing: Rollback to Phase {target}[/]"
+                if feedback:
+                    msg += f"\n[yellow]Feedback: {feedback}[/]"
+                self._append_log(msg)
+                self._resume_rollback(phase_num, target, feedback)
+            else:
+                # Ignore — continue from next phase
+                self._append_log(
+                    "[dim]>>> Ignoring pre-existing failures, continuing...[/]"
+                )
+                self._resume_after_preexisting(phase_num)
+
+        self.push_screen(PreExistingScreen(result.pre_existing), on_choice)
+
+    @work(thread=True)
+    async def _resume_after_preexisting(self, phase_num: int) -> None:
+        """Continue workflow after ignoring pre-existing failures."""
+        if not self.orchestrator:
+            return
+        # Treat as approved — mark phase 4 as passed and continue from phase 5
+        result = await self.orchestrator.resume_after_approval(
+            phase_num, approved=True
+        )
+        self._handle_phase_result(result)
+
+    def _keyboard_resize(self, delta: int) -> None:
+        """Resize Output panel by delta rows (positive=grow, negative=shrink)."""
+        # Normalize all panels to same fr scale first
+        content = self.query_one("#main-content")
+        for child in content.children:
+            if child.display and not isinstance(child, ResizeHandle):
+                h = child.size.height
+                if h > 0:
+                    child.styles.height = f"{h}fr"
+
+        main = self.query_one("#main-panel", RichLog)
+        live = self.query_one("#live-log", RichLog)
+        main_h = main.size.height
+        live_h = live.size.height
+        total = main_h + live_h
+        min_size = 4
+
+        new_main = max(min_size, main_h + delta)
+        new_live = max(min_size, total - new_main)
+        new_main = total - new_live
+
+        main.styles.height = f"{new_main}fr"
+        live.styles.height = f"{new_live}fr"
+
+    def action_resize_up(self) -> None:
+        self._keyboard_resize(3)
+
+    def action_resize_down(self) -> None:
+        self._keyboard_resize(-3)
 
     def action_quit(self) -> None:
         self._stop_tick_timer()

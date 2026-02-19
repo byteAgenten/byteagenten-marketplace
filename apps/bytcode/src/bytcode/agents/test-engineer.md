@@ -387,12 +387,12 @@ als **erste Section** ein `## Phase Summary` enthalten:
 ## Phase Summary
 
 ### Test Results
-| Suite | Tests | Passed | Failed |
-|-------|-------|--------|--------|
-| Backend Unit | X | X | 0 |
-| Backend Integration | X | X | 0 |
-| Frontend Unit | X | X | 0 |
-| E2E (Playwright) | X | X | 0 |
+| Suite | Tests | Passed | Failed | Pre-Existing |
+|-------|-------|--------|--------|--------------|
+| Backend Unit | X | X | 0 | 0 |
+| Backend Integration | X | X | 0 | 0 |
+| Frontend Unit | X | X | 0 | 0 |
+| E2E (Playwright) | X | X | 0 | 0 |
 
 ### Coverage
 | Layer | Coverage | Target |
@@ -402,6 +402,9 @@ als **erste Section** ein `## Phase Summary` enthalten:
 
 ### Bug Fixes Applied
 - [Kleine Fixes die du selbst gemacht hast, oder "None"]
+
+### Pre-Existing Failures (if any)
+- [Test name — file — reason not fixed, oder "None"]
 ```
 
 **⚠️ KRITISCH: Tests MÜSSEN vor dem Speichern erfolgreich laufen!**
@@ -433,18 +436,25 @@ cd frontend && npm test -- --no-watch --browsers=ChromeHeadless
 # 3. E2E Tests ausführen (PFLICHT bei Features mit UI-Änderungen!)
 cd frontend && npx playwright test
 
-# 4. NUR bei ALLEN GRÜN: Test Report als MD-Datei speichern
+# 4. Test Report als MD-Datei speichern
 mkdir -p .workflow/specs
 # Dateiname: .workflow/specs/issue-{N}-ph04-test-engineer.md
 # Inhalt: Test-Ergebnisse (Backend, Frontend, E2E), Coverage, neue Test-Dateien
 
-# 5. Minimalen Context in workflow-state.json schreiben
-jq '.context.testResults = {
-  "reportFile": ".workflow/specs/issue-42-ph04-test-engineer.md",
-  "allPassed": true
-}' .workflow/workflow-state.json > .workflow/workflow-state.json.tmp && \
-mv .workflow/workflow-state.json.tmp .workflow/workflow-state.json
+# 5. Context in workflow-state.json schreiben (PFLICHT!)
+# ⛔ Verwende den EXAKTEN jq-Befehl aus dem "Phase Context" Abschnitt oben!
+# Der Orchestrator gibt dir dort den korrekten Befehl mit der Issue-Nummer vor.
 ```
+
+### Klassifikation: Regression vs. Pre-Existing
+
+Wenn Tests fehlschlagen, prüfe mit `git diff`:
+- **Regression**: Test oder getesteter Code wurde auf diesem Branch geändert → FIX IT
+- **Pre-Existing**: Test und getesteter Code wurden NICHT geändert → Report als `preExisting`
+
+**`allPassed: true`** darf gesetzt werden wenn es KEINE Regressionen gibt.
+Pre-existing Failures werden separat im `preExisting`-Objekt gemeldet.
+Der Orchestrator fragt dann den User ob die pre-existing Failures gefixt werden sollen.
 
 **⚠️ OHNE `allPassed: true` schlägt die Phase-Validierung fehl!**
 **⚠️ Mit falschem `allPassed: true` (Tests nicht gelaufen) werden Bugs in Production gepusht!**

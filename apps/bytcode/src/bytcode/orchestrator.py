@@ -45,6 +45,23 @@ class PhaseStatus(Enum):
     PASSED = "passed"
     FAILED = "failed"
     AWAITING_APPROVAL = "awaiting_approval"
+    AWAITING_PREEXISTING = "awaiting_preexisting"
+
+
+@dataclass
+class PreExistingInfo:
+    """Pre-existing test failures detected after test phase."""
+
+    count: int
+    failures: list[dict]  # each: {test, file, layer}
+
+    @property
+    def frontend_failures(self) -> list[dict]:
+        return [f for f in self.failures if f.get("layer") == "frontend"]
+
+    @property
+    def backend_failures(self) -> list[dict]:
+        return [f for f in self.failures if f.get("layer") == "backend"]
 
 
 @dataclass
@@ -54,6 +71,7 @@ class PhaseResult:
     message: str = ""
     attempts: int = 0
     duration_s: float = 0.0
+    pre_existing: PreExistingInfo | None = None
 
 
 OutputCallback = Callable[[str], None]
@@ -228,7 +246,7 @@ class Orchestrator:
                 )
                 break
 
-            if result.status == PhaseStatus.AWAITING_APPROVAL:
+            if result.status in (PhaseStatus.AWAITING_APPROVAL, PhaseStatus.AWAITING_PREEXISTING):
                 return result
 
         return None
@@ -244,12 +262,14 @@ class Orchestrator:
         if not approved:
             self._emit(f"\nUser feedback: {feedback}")
             phase = PHASES[from_phase]
-            result = await self._run_phase(
-                phase, extra_context=f"User feedback on your output: {feedback}"
-            )
+            result = await self._run_phase(phase, feedback=feedback)
             self.results[phase.number] = result
             self._persist_phase_status(phase.number, result)
-            if result.status in (PhaseStatus.FAILED, PhaseStatus.AWAITING_APPROVAL):
+            if result.status in (
+                PhaseStatus.FAILED,
+                PhaseStatus.AWAITING_APPROVAL,
+                PhaseStatus.AWAITING_PREEXISTING,
+            ):
                 return result
         else:
             # Mark approved phase as passed
@@ -273,13 +293,152 @@ class Orchestrator:
                 )
                 break
 
-            if result.status == PhaseStatus.AWAITING_APPROVAL:
+            if result.status in (PhaseStatus.AWAITING_APPROVAL, PhaseStatus.AWAITING_PREEXISTING):
                 return result
 
         return None
 
+    async def rollback_to_phase(
+        self, current_phase: int, target_phase: int, feedback: str = ""
+    ) -> PhaseResult | None:
+        """Rollback from an approval phase to an earlier phase.
+
+        1. Read review/audit findings from the current phase's spec
+        2. Clean specs and state for target_phase..current_phase
+        3. Resume workflow from target_phase with findings as extra context
+        """
+        self._emit(
+            f"\n[bold yellow]ROLLBACK[/] Phase {current_phase} → Phase {target_phase}"
+        )
+        self._emit_live(
+            f"[bold yellow]ROLLBACK[/] Phase {current_phase} → Phase {target_phase}"
+        )
+
+        # 1. Collect review findings to pass as context (separate from user feedback)
+        findings = self._collect_rollback_context(current_phase)
+
+        # 2. Clean specs for rolled-back phases
+        self._clean_rollback_specs(target_phase, current_phase)
+
+        # 3. Reset phase statuses in workflow-state.json
+        self._reset_phase_statuses(target_phase, current_phase)
+
+        # 4. Clear in-memory results for rolled-back phases
+        for p in PHASES:
+            if target_phase <= p.number <= current_phase:
+                self.results.pop(p.number, None)
+
+        # 5. Run from target phase with findings as context
+        extra = ""
+        if findings:
+            extra = (
+                f"## Rollback Context — Findings from Phase {current_phase}\n\n"
+                f"The following issues were found during review/audit. "
+                f"Fix them in this phase:\n\n{findings}"
+            )
+
+        for phase in PHASES:
+            if phase.number < target_phase:
+                continue
+            if self._cancelled:
+                break
+
+            ctx = extra if phase.number == target_phase else ""
+            fb = feedback if phase.number == target_phase else ""
+            result = await self._run_phase(phase, extra_context=ctx, feedback=fb)
+            self.results[phase.number] = result
+            self._persist_phase_status(phase.number, result)
+
+            if result.status == PhaseStatus.FAILED:
+                self._emit(f"\n--- Phase {phase.number} failed: {result.message}")
+                break
+            if result.status in (PhaseStatus.AWAITING_APPROVAL, PhaseStatus.AWAITING_PREEXISTING):
+                return result
+
+        return None
+
+    def _check_pre_existing_failures(self) -> PreExistingInfo | None:
+        """Check workflow-state.json for pre-existing test failures after Phase 4."""
+        state_file = self.project_dir / ".workflow" / "workflow-state.json"
+        if not state_file.exists():
+            return None
+        try:
+            state = json.loads(state_file.read_text(encoding="utf-8"))
+            test_results = (
+                state.get("phases", {})
+                .get("4", {})
+                .get("context", {})
+                .get("testResults", {})
+            )
+            pre = test_results.get("preExisting", {})
+            count = pre.get("count", 0)
+            if count == 0:
+                return None
+            return PreExistingInfo(
+                count=count,
+                failures=pre.get("failures", []),
+            )
+        except Exception:
+            return None
+
+    def _collect_rollback_context(self, phase_num: int) -> str:
+        """Read findings from a phase's spec file for rollback context."""
+        specs_dir = self.project_dir / ".workflow" / "specs"
+        if not specs_dir.exists():
+            return ""
+
+        pattern = f"*-ph{phase_num:02d}-*.md"
+        spec_files = list(specs_dir.glob(pattern))
+        if not spec_files:
+            return ""
+
+        content = spec_files[0].read_text(encoding="utf-8", errors="replace")
+
+        # Try extracting structured sections
+        for heading in ("Phase Summary", "Findings Overview", "Critical Issues",
+                        "Major Issues", "Implementation Bugs"):
+            section = _extract_section(content, heading)
+            if section:
+                return section
+
+        # Fallback: first 30 lines
+        lines = [l for l in content.strip().splitlines() if l.strip()][:30]
+        return "\n".join(lines)
+
+    def _clean_rollback_specs(self, from_phase: int, to_phase: int) -> None:
+        """Delete spec files for phases in the rollback range."""
+        specs_dir = self.project_dir / ".workflow" / "specs"
+        if not specs_dir.exists():
+            return
+
+        for p in PHASES:
+            if from_phase <= p.number <= to_phase:
+                pattern = f"*-ph{p.number:02d}-*.md"
+                for f in specs_dir.glob(pattern):
+                    self._emit(f"[dim]  Removing {f.name}[/]")
+                    f.unlink()
+
+    def _reset_phase_statuses(self, from_phase: int, to_phase: int) -> None:
+        """Reset phase statuses in workflow-state.json for rollback range."""
+        state_file = self.project_dir / ".workflow" / "workflow-state.json"
+        if not state_file.exists():
+            return
+
+        try:
+            state = json.loads(state_file.read_text(encoding="utf-8"))
+            phases = state.get("phases", {})
+            for p in PHASES:
+                if from_phase <= p.number <= to_phase:
+                    phases.pop(str(p.number), None)
+            state["currentPhase"] = from_phase
+            state_file.write_text(
+                json.dumps(state, indent=2) + "\n", encoding="utf-8"
+            )
+        except Exception:
+            pass
+
     async def _run_phase(
-        self, phase: Phase, extra_context: str = ""
+        self, phase: Phase, extra_context: str = "", feedback: str = ""
     ) -> PhaseResult:
         # Regenerate codebase context before each phase
         self._update_codebase_context()
@@ -311,7 +470,7 @@ class Orchestrator:
             phase_log.write_header(phase.number, phase.name, phase.agent, attempt)
 
             prompt = build_prompt(
-                phase, self.config, self.project_dir
+                phase, self.config, self.project_dir, feedback=feedback
             )
             if extra_context:
                 prompt += f"\n\n## Additional Context\n{extra_context}"
@@ -331,7 +490,20 @@ class Orchestrator:
 
             if not success:
                 last_failure = "Claude process exited with non-zero exit code"
-                self._emit(f"--- Claude process failed (attempt {attempt})")
+                fail_msg = (
+                    f"[bold red]FAILED[/] Phase {phase.number} "
+                    f"attempt {attempt}/{self.MAX_RETRIES}: "
+                    f"Claude process crashed"
+                )
+                self._emit(f"\n{fail_msg}")
+                self._emit_live(fail_msg)
+                if attempt < self.MAX_RETRIES:
+                    retry_msg = (
+                        f"[bold yellow]RETRY[/] Starting attempt "
+                        f"{attempt + 1}/{self.MAX_RETRIES}..."
+                    )
+                    self._emit(retry_msg)
+                    self._emit_live(retry_msg)
                 phase_log.write_verification(False, "Claude process failed")
                 phase_log.close()
                 continue
@@ -341,7 +513,12 @@ class Orchestrator:
 
             if ok:
                 elapsed = time.monotonic() - self.phase_start_time
-                self._emit(f"\n  Verification passed: {msg} ({elapsed:.0f}s)")
+                pass_msg = (
+                    f"[bold green]PASSED[/] Phase {phase.number}: "
+                    f"{phase.name} ({elapsed:.0f}s)"
+                )
+                self._emit(f"\n{pass_msg}")
+                self._emit_live(pass_msg)
                 phase_log.close()
                 self._current_log = None
 
@@ -353,6 +530,20 @@ class Orchestrator:
                 elif phase.number != 8:
                     self._show_phase_summary(phase)
 
+                # Check for pre-existing test failures (Phase 4 only)
+                if phase.number == 4:
+                    pre_existing = self._check_pre_existing_failures()
+                    if pre_existing:
+                        self._emit(
+                            f"\n[bold yellow]⚠ {pre_existing.count} pre-existing "
+                            f"test failures detected[/]"
+                        )
+                        self._notify_phase(phase.number, PhaseStatus.AWAITING_PREEXISTING)
+                        return PhaseResult(
+                            phase, PhaseStatus.AWAITING_PREEXISTING, msg, attempt, elapsed,
+                            pre_existing=pre_existing,
+                        )
+
                 if phase.phase_type == PhaseType.APPROVAL:
                     self._notify_phase(phase.number, PhaseStatus.AWAITING_APPROVAL)
                     return PhaseResult(
@@ -362,11 +553,29 @@ class Orchestrator:
                 return PhaseResult(phase, PhaseStatus.PASSED, msg, attempt, elapsed)
 
             last_failure = msg
-            self._emit(f"\n  Verification failed: {msg}")
+            fail_msg = (
+                f"[bold red]FAILED[/] Phase {phase.number} "
+                f"attempt {attempt}/{self.MAX_RETRIES}: {msg}"
+            )
+            self._emit(f"\n{fail_msg}")
+            self._emit_live(fail_msg)
+            if attempt < self.MAX_RETRIES:
+                retry_msg = (
+                    f"[bold yellow]RETRY[/] Starting attempt "
+                    f"{attempt + 1}/{self.MAX_RETRIES}..."
+                )
+                self._emit(retry_msg)
+                self._emit_live(retry_msg)
             phase_log.close()
 
         self._current_log = None
         total_elapsed = time.monotonic() - self.phase_start_time
+        final_msg = (
+            f"[bold red]ABORTED[/] Phase {phase.number}: {phase.name} "
+            f"— {self.MAX_RETRIES} attempts exhausted"
+        )
+        self._emit(f"\n{final_msg}")
+        self._emit_live(final_msg)
         self._notify_phase(phase.number, PhaseStatus.FAILED)
         return PhaseResult(
             phase, PhaseStatus.FAILED, "Max retries exceeded", self.MAX_RETRIES, total_elapsed
@@ -587,7 +796,12 @@ class Orchestrator:
             return False
 
     async def _setup_branch(self) -> bool:
-        """Checkout from_branch and create feature branch."""
+        """Checkout from_branch and create a fresh feature branch.
+
+        For "Start Fresh": force-checks out the base branch, deletes any
+        existing feature branch (discarding all code changes), and creates
+        a new one.  This ensures a truly clean slate.
+        """
         cfg = self.config
         branch_name = f"feature/issue-{cfg.issue_num}"
 
@@ -603,9 +817,9 @@ class Orchestrator:
             )
             await proc.wait()
 
-            # Checkout base branch
+            # Force-checkout base branch (discards uncommitted changes)
             proc = await asyncio.create_subprocess_exec(
-                "git", "checkout", cfg.from_branch,
+                "git", "checkout", "-f", cfg.from_branch,
                 cwd=str(self.project_dir),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -616,7 +830,18 @@ class Orchestrator:
                 self._emit(f"Failed to checkout {cfg.from_branch}: {stderr.decode()}")
                 return False
 
-            # Create feature branch
+            # Delete existing feature branch if it exists (discards all commits)
+            proc = await asyncio.create_subprocess_exec(
+                "git", "branch", "-D", branch_name,
+                cwd=str(self.project_dir),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await proc.wait()
+            if proc.returncode == 0:
+                self._emit(f"Deleted old branch: {branch_name}")
+
+            # Create fresh feature branch from base
             proc = await asyncio.create_subprocess_exec(
                 "git", "checkout", "-b", branch_name,
                 cwd=str(self.project_dir),
@@ -625,22 +850,11 @@ class Orchestrator:
             )
             await proc.wait()
             if proc.returncode != 0:
-                # Branch might already exist, try switching to it
-                proc = await asyncio.create_subprocess_exec(
-                    "git", "checkout", branch_name,
-                    cwd=str(self.project_dir),
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                await proc.wait()
-                if proc.returncode != 0:
-                    stderr = await proc.stderr.read() if proc.stderr else b""
-                    self._emit(f"Failed to create/switch to {branch_name}: {stderr.decode()}")
-                    return False
-                self._emit(f"Switched to existing branch: {branch_name}")
-            else:
-                self._emit(f"Created branch: {branch_name}")
+                stderr = await proc.stderr.read() if proc.stderr else b""
+                self._emit(f"Failed to create {branch_name}: {stderr.decode()}")
+                return False
 
+            self._emit(f"Created fresh branch: {branch_name}")
             return True
 
         except Exception as e:

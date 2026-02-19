@@ -165,3 +165,31 @@ FeedbackScreen {
     border: tall $primary;
     padding: 1 2;
 }
+
+/* --- Rollback Screen (Modal) --- */
+
+RollbackScreen {
+    align: center middle;
+}
+
+#rollback-container {
+    width: 60;
+    height: auto;
+    max-height: 90%;
+    overflow-y: auto;
+    background: $surface;
+    border: tall $warning;
+    padding: 1 2;
+}
+
+#rollback-title {
+    width: 100%;
+    text-align: center;
+    text-style: bold;
+    padding: 0 0 1 0;
+}
+
+#rollback-buttons Button {
+    width: 100%;
+    margin: 0 0 1 0;
+}
