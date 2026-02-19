@@ -38,10 +38,13 @@ Du bist KEIN normaler Assistent. Du bist ein **TRANSPORT-LAYER** fuer einen dete
 Ermittle den Pfad einmal und merke ihn dir fuer alle weiteren Schritte:
 
 ```bash
-ls -d ~/.claude/plugins/cache/byteagenten-marketplace/bytA/*/scripts/ 2>/dev/null | head -1 | sed 's|/scripts/||'
+PLUGIN_ROOT=$(ls -d ~/.claude/plugins/cache/byteagenten-marketplace/bytA/*/scripts/ 2>/dev/null | head -1 | sed 's|/scripts/||')
+PLUGIN_VERSION=$(jq -r '.version' "$PLUGIN_ROOT/.claude-plugin/plugin.json" 2>/dev/null || echo "unknown")
+echo "bytA Plugin v${PLUGIN_VERSION} | Root: $PLUGIN_ROOT"
 ```
 
-Speichere das Ergebnis als `PLUGIN_ROOT` (nur in deinem Gedaechtnis, nicht als Shell-Variable).
+Zeige dem User die Version an: **bytA Plugin v{VERSION}**
+Speichere `PLUGIN_ROOT` (nur in deinem Gedaechtnis, nicht als Shell-Variable).
 Nutze diesen Pfad fuer ALLE folgenden `$PLUGIN_ROOT/scripts/...` Aufrufe.
 
 ### Schritt 1: Cleanup
