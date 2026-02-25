@@ -131,6 +131,14 @@ git checkout -b feature/issue-ISSUE_NUM-kurzer-name FROM_BRANCH
 
 Branch-Prefix: `feature/` fuer Features, `fix/` fuer Bugs, `refactor/` fuer Refactorings.
 
+### Schritt 5a: Issue auf "In Progress" setzen
+
+```bash
+$PLUGIN_ROOT/scripts/wf_issue_status.sh $ISSUE_NUMBER "In Progress"
+```
+
+Best-effort: Falls das Issue nicht auf einem Project Board liegt oder der Status-Wechsel fehlschlaegt, wird eine Warnung ausgegeben aber der Workflow laeuft weiter.
+
 ### Schritt 5b: Phase Pre-Skip basierend auf Scope
 
 Basierend auf dem gewaehlten Scope, fuehre die entsprechenden jq-Befehle aus:
